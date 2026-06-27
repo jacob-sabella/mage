@@ -189,20 +189,26 @@ missed `gameStart` still opens it.
 These are out of scope for this module (the gateway reuses the shared engine
 unchanged), documented here from root-cause investigation:
 
-- **Draft → match handoff.** Draft pick + deck construction + `submitDeck` work,
-  and the tournament's `construct` phase completes (both human and AI bots
-  submit — traced via instrumented `TournamentImpl`). But the `COMPETE` phase
-  (`runTournament` → `playRound` → `playMatch` firing `START_MATCH`) never
-  spawns the actual match game vs the AI bots — no `START_GAME`, no error. That's
-  inside the engine's tournament internals, not the gateway.
+- **Draft → match handoff.** Draft pick + deck construction + `submitDeck` work.
+  But a draft *vs AI* never reaches a playable match, for engine reasons traced
+  by instrumenting the engine jar:
+  1. `TournamentImpl.construct()` waits with an unbounded `this.wait()`; a
+     `notifyAll()` from `submitDeck` that races ahead of the wait is lost, so the
+     construct phase can hang (a lost-wakeup; a polling `wait(ms)` fixes it).
+  2. The only draft-capable AI is `COMPUTER_DRAFT_BOT`, whose
+     `autoLoseGame()` returns `true` — so even past construct, `runTournament`
+     eliminates the bots and there is no opponent to play (by design, the bots
+     forfeit). `COMPUTER_MAD` *can* play but is rejected when seating a draft.
+  Net: draft-vs-AI is fundamentally "draft + auto-win" in this engine, and even
+  that path has the construct lost-wakeup. Fixing it means changing the shared
+  engine — out of scope for this module.
 - **Replay playback.** The server's `GameReplay` is abandoned dead code (reads a
   `saved/<id>.game` file the modern engine never writes); needs a new pipeline.
 - **Strict variant modes** (Oathbreaker/Brawl): the game types exist and the
   create path can target them, but there are no sample decks to exercise them;
   a user supplying a legal `.dck` could play them.
 
-Other follow-ups (view-layer): profile/avatar · broader preferences persistence
-· rejoin an in-progress game after a full page reload.
+Other follow-ups (view-layer): profile/avatar · broader preferences persistence.
 
 ### Notes on interactive play
 
