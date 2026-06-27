@@ -1101,3 +1101,13 @@ html, body { overflow-x: hidden; }
 .theme-swatch.t-mythic-verdant { background: linear-gradient(120deg, #6fd49a, #e8c35a); color: #0a1810; font-family: "Cinzel Decorative", serif; }
 .theme-swatch.t-noir-sepia { background: linear-gradient(120deg, #2a2318, #d9a441); color: #100c08; font-family: "Special Elite", monospace; }
 .theme-swatch.t-cutesy-mint { background: linear-gradient(120deg, #9be8d8, #ffc6e6); color: #142a28; font-family: "Baloo 2", sans-serif; }
+
+/* ----- modals: report + deck import ----- */
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; }
+.modal .setting-row-col { width: 100%; }
+.modal .setting-input { width: 100%; box-sizing: border-box; }
+.import-textarea { width: 100%; box-sizing: border-box; resize: vertical; font-family: ui-monospace, "Cascadia Code", monospace; font-size: 13px; margin: 4px 0 10px; }
+.report-modal .subtitle { margin-bottom: 12px; }
+.report-done { display: flex; flex-direction: column; gap: 10px; }
+.report-done a { color: var(--accent); }
+.form-error { color: var(--danger, #e0555f); font-size: 13px; margin-top: 8px; }

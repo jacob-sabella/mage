@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { loadDeck, saveDeck, searchCards } from '../api'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { importDeck, loadDeck, saveDeck, searchCards, uploadDeck } from '../api'
 import { DeckPicker } from './DeckPicker'
 import { ManaCost } from './ManaCost'
 import type { CardInfoDto, DeckCardEntry } from '../types'
@@ -76,6 +76,56 @@ export function DeckEditor() {
   }, [])
 
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
+  const [importText, setImportText] = useState('')
+  const [importUrl, setImportUrl] = useState('')
+  const [importing, setImporting] = useState(false)
+  const [unresolved, setUnresolved] = useState<string[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const doImport = useCallback(async () => {
+    setImporting(true)
+    setUnresolved([])
+    setSaveStatus(null)
+    try {
+      const res = await importDeck({ text: importText.trim() || undefined, moxfieldUrl: importUrl.trim() || undefined })
+      setDeck(res.cards)
+      setSideboard(res.sideboard ?? [])
+      setDeckName(res.name)
+      setUnresolved(res.unresolved ?? [])
+      setSaveStatus(
+        res.unresolved?.length ? `Imported “${res.name}” — ${res.unresolved.length} card(s) not found` : `Imported “${res.name}”`,
+      )
+      setImportOpen(false)
+      setImportText('')
+      setImportUrl('')
+    } catch (err) {
+      setSaveStatus(err instanceof Error ? `Error: ${err.message}` : 'Import failed')
+    } finally {
+      setImporting(false)
+    }
+  }, [importText, importUrl])
+
+  const onUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = '' // allow re-selecting the same file
+    if (!file) return
+    setSaveStatus(null)
+    try {
+      const res = await uploadDeck(file)
+      setSaveStatus(`Uploaded “${res.name}” to the server`)
+      try {
+        const loaded = await loadDeck(res.path)
+        setDeck(loaded.cards)
+        setSideboard(loaded.sideboard ?? [])
+        setDeckName(loaded.name)
+      } catch {
+        /* upload succeeded; preview is best-effort */
+      }
+    } catch (err) {
+      setSaveStatus(err instanceof Error ? `Error: ${err.message}` : 'Upload failed')
+    }
+  }, [])
 
   const doLoad = useCallback(async (path: string) => {
     setPickerOpen(false)
@@ -201,9 +251,16 @@ export function DeckEditor() {
           <h2 className="deck-title">{deckName}</h2>
           <span className="spacer" />
           <span className="chip">{total} cards</span>
+          <button className="btn watch-btn" onClick={() => setImportOpen(true)}>
+            Import
+          </button>
+          <button className="btn watch-btn" onClick={() => fileInputRef.current?.click()}>
+            Upload
+          </button>
           <button className="btn watch-btn" onClick={() => setPickerOpen(true)}>
             Open
           </button>
+          <input ref={fileInputRef} type="file" accept=".dck" style={{ display: 'none' }} onChange={onUpload} />
         </div>
 
         {deck.length > 0 && <DeckStats stats={stats} />}
@@ -253,11 +310,50 @@ export function DeckEditor() {
             {saving ? 'Saving…' : 'Save deck (.dck)'}
           </button>
           {saveStatus && <p className="deck-save-status muted">{saveStatus}</p>}
+          {unresolved.length > 0 && <p className="deck-error">Not found: {unresolved.join(', ')}</p>}
         </div>
       </section>
 
       {pickerOpen && (
         <DeckPicker title="Open a deck" onPick={(d) => doLoad(d.path)} onClose={() => setPickerOpen(false)} />
+      )}
+
+      {importOpen && (
+        <div className="modal-backdrop" onClick={() => setImportOpen(false)}>
+          <div className="modal panel" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h2 className="deck-title">Import deck</h2>
+            </div>
+            <label className="muted">Paste a decklist (MTGO / Moxfield export)</label>
+            <textarea
+              className="import-textarea setting-input"
+              rows={10}
+              placeholder={'4 Lightning Bolt\n20 Mountain'}
+              value={importText}
+              onChange={(e) => setImportText(e.target.value)}
+            />
+            <label className="muted">…or a Moxfield public deck URL</label>
+            <input
+              className="setting-input"
+              type="text"
+              placeholder="https://moxfield.com/decks/xxxxxxxx"
+              value={importUrl}
+              onChange={(e) => setImportUrl(e.target.value)}
+            />
+            <div className="modal-actions">
+              <button className="btn ghost" onClick={() => setImportOpen(false)}>
+                Cancel
+              </button>
+              <button
+                className="btn primary"
+                onClick={doImport}
+                disabled={importing || (!importText.trim() && !importUrl.trim())}
+              >
+                {importing ? 'Importing…' : 'Import'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

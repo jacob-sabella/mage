@@ -112,6 +112,42 @@ export function loadDeck(path: string): Promise<DeckLoadResponse> {
   return request<DeckLoadResponse>(`/api/decks/load?path=${encodeURIComponent(path)}`)
 }
 
+export interface DeckImportResponse {
+  name: string
+  cards: DeckCardEntry[]
+  sideboard: DeckCardEntry[]
+  unresolved: string[]
+}
+
+/** Import a deck from pasted text and/or a public Moxfield deck URL. */
+export function importDeck(input: { text?: string; moxfieldUrl?: string; name?: string }): Promise<DeckImportResponse> {
+  return request<DeckImportResponse>('/api/decks/import', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+}
+
+export interface DeckUploadResponse {
+  ok: boolean
+  name: string
+  path: string
+}
+
+/** Upload a .dck file to the server's deck dir (multipart; not JSON). */
+export async function uploadDeck(file: File): Promise<DeckUploadResponse> {
+  const form = new FormData()
+  form.append('file', file, file.name)
+  const res = await fetch('/api/decks/upload', { method: 'POST', body: form })
+  let body: { error?: string } & Partial<DeckUploadResponse> = {}
+  try {
+    body = await res.json()
+  } catch {
+    /* empty body */
+  }
+  if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`)
+  return body as DeckUploadResponse
+}
+
 export function createGameVsAi(
   token: string,
   deckPath: string,

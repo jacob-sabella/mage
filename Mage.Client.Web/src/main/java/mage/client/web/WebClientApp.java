@@ -123,6 +123,8 @@ public class WebClientApp {
         app.get("/api/decks/list", this::handleDecksList);
         app.get("/api/decks/load", this::handleDeckLoad);
         app.post("/api/decks/save", this::handleDeckSave);
+        app.post("/api/decks/import", this::handleDeckImport);
+        app.post("/api/decks/upload", this::handleDeckUpload);
         app.post("/api/report", this::handleReport);
         app.post("/api/disconnect", this::handleDisconnect);
 
@@ -1177,5 +1179,244 @@ public class WebClientApp {
             clean = clean.substring(0, 500) + "…";
         }
         md.append("- **").append(label).append(":** ").append(clean).append("\n");
+    }
+
+    public static class DeckImportRequest {
+        public String text;        // a pasted MTGO/Moxfield-style decklist
+        public String moxfieldUrl; // OR a public Moxfield deck URL / id
+        public String name;
+    }
+
+    private static final java.util.regex.Pattern UNRESOLVED_CARD =
+            java.util.regex.Pattern.compile("Could not find card: '(.+?)' at line");
+    private static final String MOX_UA =
+            "XMageWebClient/1.0 (https://github.com/jacob-sabella/mage; deck import)";
+
+    /**
+     * Import a deck from a pasted text decklist OR a public Moxfield deck URL.
+     * Reuses the engine's text importer (write to a temp .txt, parse it) so card
+     * resolution + sideboard handling come for free. Returns the parsed deck in
+     * the same shape as /api/decks/load, plus any unresolved card names.
+     */
+    private void handleDeckImport(Context ctx) {
+        DeckImportRequest req = ctx.bodyAsClass(DeckImportRequest.class);
+        boolean hasText = req != null && req.text != null && !req.text.trim().isEmpty();
+        boolean hasUrl = req != null && req.moxfieldUrl != null && !req.moxfieldUrl.trim().isEmpty();
+        if (!hasText && !hasUrl) {
+            ctx.status(400).json(error("provide text or moxfieldUrl"));
+            return;
+        }
+
+        String deckText;
+        String defaultName = req.name == null || req.name.isEmpty() ? "Imported deck" : req.name;
+        if (hasUrl) {
+            try {
+                String[] mox = fetchMoxfield(req.moxfieldUrl.trim()); // [text, name]
+                deckText = mox[0];
+                if ((req.name == null || req.name.isEmpty()) && mox[1] != null) {
+                    defaultName = mox[1];
+                }
+            } catch (Exception e) {
+                ctx.status(502).json(error("Moxfield fetch failed: " + e.getMessage()
+                        + " — paste the deck's Export text instead."));
+                return;
+            }
+        } else {
+            deckText = req.text;
+        }
+
+        StringBuilder errors = new StringBuilder();
+        DeckCardLists lists;
+        java.nio.file.Path tmp = null;
+        try {
+            tmp = java.nio.file.Files.createTempFile("mage-import-", ".txt");
+            java.nio.file.Files.writeString(tmp, deckText);
+            lists = DeckImporter.importDeckFromFile(tmp.toString(), errors, false);
+        } catch (Exception e) {
+            ctx.status(400).json(error("could not parse deck: " + e.getMessage()));
+            return;
+        } finally {
+            if (tmp != null) {
+                try {
+                    java.nio.file.Files.deleteIfExists(tmp);
+                } catch (Exception ignored) {
+                }
+            }
+        }
+        lists.setName(defaultName);
+
+        java.util.LinkedHashSet<String> unresolved = new java.util.LinkedHashSet<>();
+        java.util.regex.Matcher m = UNRESOLVED_CARD.matcher(errors.toString());
+        while (m.find()) {
+            unresolved.add(m.group(1));
+        }
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("name", lists.getName());
+        body.put("cards", aggregate(lists.getCards()));
+        body.put("sideboard", aggregate(lists.getSideboard()));
+        body.put("unresolved", new ArrayList<>(unresolved));
+        ctx.json(body);
+    }
+
+    /** Fetch a public Moxfield deck and flatten it to MTGO-style "qty name" text. Returns [text, name]. */
+    private String[] fetchMoxfield(String url) throws Exception {
+        java.util.regex.Matcher idm = java.util.regex.Pattern.compile("/decks/([A-Za-z0-9_-]+)").matcher(url);
+        String publicId;
+        if (idm.find()) {
+            publicId = idm.group(1);
+        } else if (url.matches("[A-Za-z0-9_-]+")) {
+            publicId = url;
+        } else {
+            throw new IllegalArgumentException("not a Moxfield deck URL");
+        }
+
+        com.fasterxml.jackson.databind.JsonNode root = null;
+        for (String api : new String[]{
+                "https://api2.moxfield.com/v2/decks/all/" + publicId,
+                "https://api2.moxfield.com/v3/decks/all/" + publicId}) {
+            java.net.http.HttpRequest r = java.net.http.HttpRequest.newBuilder(java.net.URI.create(api))
+                    .header("User-Agent", MOX_UA)
+                    .header("Accept", "application/json")
+                    .timeout(java.time.Duration.ofSeconds(15))
+                    .GET().build();
+            java.net.http.HttpResponse<String> resp = http.send(r, java.net.http.HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() == 200) {
+                root = json.readTree(resp.body());
+                break;
+            }
+        }
+        if (root == null) {
+            throw new IllegalStateException("deck not public or API blocked");
+        }
+
+        StringBuilder main = new StringBuilder();
+        StringBuilder side = new StringBuilder();
+        com.fasterxml.jackson.databind.JsonNode boards = root.path("boards");
+        appendMoxBoard(main, firstNonEmpty(root.path("mainboard"), boards.path("mainboard").path("cards")));
+        appendMoxBoard(side, firstNonEmpty(root.path("sideboard"), boards.path("sideboard").path("cards")));
+        // commanders → sideboard (XMage .dck convention; UI labels it "Sideboard / Commander")
+        appendMoxBoard(side, firstNonEmpty(root.path("commanders"), boards.path("commanders").path("cards")));
+
+        String name = root.path("name").asText(null);
+        return new String[]{main + "\n\n" + side, name}; // blank line → importer switches to sideboard
+    }
+
+    private static com.fasterxml.jackson.databind.JsonNode firstNonEmpty(
+            com.fasterxml.jackson.databind.JsonNode a, com.fasterxml.jackson.databind.JsonNode b) {
+        return (a != null && a.isObject() && a.size() > 0) ? a : b;
+    }
+
+    private static void appendMoxBoard(StringBuilder sb, com.fasterxml.jackson.databind.JsonNode board) {
+        if (board == null || !board.isObject()) {
+            return;
+        }
+        board.fields().forEachRemaining(e -> {
+            com.fasterxml.jackson.databind.JsonNode entry = e.getValue();
+            int qty = entry.path("quantity").asInt(0);
+            String name = entry.path("card").path("name").asText("");
+            if (qty > 0 && !name.isEmpty()) {
+                sb.append(qty).append(' ').append(name).append('\n');
+            }
+        });
+    }
+
+    /** Directory where uploaded decks live so they surface in /api/decks/list. */
+    private static File userDeckDir() {
+        String custom = System.getenv("MAGE_DECK_DIR");
+        if (custom != null && !custom.isEmpty()) {
+            File dir = new File(custom);
+            dir.mkdirs();
+            return dir;
+        }
+        return new File(System.getProperty("user.home"));
+    }
+
+    /** Reduce a client-supplied name to a safe single-segment *.dck filename. */
+    private static String safeDeckFileName(String raw) {
+        String base = raw == null ? "" : raw;
+        int slash = Math.max(base.lastIndexOf('/'), base.lastIndexOf('\\'));
+        if (slash >= 0) {
+            base = base.substring(slash + 1);
+        }
+        if (base.toLowerCase().endsWith(".dck")) {
+            base = base.substring(0, base.length() - 4);
+        }
+        base = base.replaceAll("[^a-zA-Z0-9-_ ]", "_").trim();
+        if (base.isEmpty()) {
+            base = "deck";
+        }
+        return base + ".dck";
+    }
+
+    /**
+     * Accept an uploaded .dck (multipart field "file", or a raw text body with a
+     * ?name= query), validate it parses as a deck, and store it in the user deck
+     * dir so it appears in /api/decks/list.
+     */
+    private void handleDeckUpload(Context ctx) {
+        String originalName;
+        byte[] data;
+        try {
+            io.javalin.http.UploadedFile up = ctx.uploadedFile("file");
+            if (up != null) {
+                originalName = up.filename();
+                try (java.io.InputStream in = up.content()) {
+                    data = in.readAllBytes();
+                }
+            } else {
+                originalName = ctx.queryParam("name");
+                data = ctx.bodyAsBytes();
+            }
+        } catch (Exception e) {
+            ctx.status(400).json(error("could not read upload: " + e.getMessage()));
+            return;
+        }
+        if (data == null || data.length == 0) {
+            ctx.status(400).json(error("empty upload"));
+            return;
+        }
+        if (data.length > 1_000_000) {
+            ctx.status(413).json(error("deck file too large"));
+            return;
+        }
+
+        File tmp;
+        try {
+            tmp = File.createTempFile("upload-", ".dck");
+            java.nio.file.Files.write(tmp.toPath(), data);
+        } catch (IOException e) {
+            ctx.status(500).json(error("could not buffer upload: " + e.getMessage()));
+            return;
+        }
+        try {
+            StringBuilder errors = new StringBuilder();
+            DeckCardLists parsed = DeckImporter.importDeckFromFile(tmp.getAbsolutePath(), errors, false);
+            int cardCount = (parsed == null || parsed.getCards() == null) ? 0 : parsed.getCards().size();
+            if (cardCount == 0) {
+                String why = errors.length() > 0 ? errors.toString().trim() : "no cards parsed";
+                ctx.status(400).json(error("not a valid .dck deck: " + why));
+                return;
+            }
+            File dir = userDeckDir();
+            String fileName = safeDeckFileName(originalName);
+            File dest = new File(dir, fileName);
+            String stem = fileName.substring(0, fileName.length() - 4);
+            for (int n = 2; dest.exists(); n++) {
+                dest = new File(dir, stem + " (" + n + ").dck");
+            }
+            java.nio.file.Files.copy(tmp.toPath(), dest.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+            String storedName = dest.getName().substring(0, dest.getName().length() - 4);
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("ok", true);
+            body.put("name", storedName);
+            body.put("path", dest.getAbsolutePath());
+            ctx.json(body);
+        } catch (IOException e) {
+            ctx.status(500).json(error("could not store deck: " + e.getMessage()));
+        } finally {
+            tmp.delete();
+        }
     }
 }

@@ -273,6 +273,13 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
   await page.route('**/api/decks/list', json(SAMPLE.decks))
   await page.route('**/api/decks/load**', json(SAMPLE.deckLoad))
   await page.route('**/api/decks/save', json({ ok: true, path: '/decks/out.dck' }))
+  await page.route('**/api/decks/import', json({
+    name: 'Imported deck',
+    cards: [{ name: 'Lightning Bolt', count: 4, manaValue: 1, colors: 'R', types: ['INSTANT'], manaCost: '{R}' }],
+    sideboard: [],
+    unresolved: ['Fake Card'],
+  }))
+  await page.route('**/api/decks/upload', json({ ok: true, name: 'Imported Deck', path: '/decks/imported.dck' }))
   await page.route('**/api/cards/search**', json(SAMPLE.cards))
   await page.route('**/api/tables/create', json({ ok: true, tableId: 'g-1' }))
   await page.route('**/api/draft/create', json({ ok: true, tableId: 'd-1' }))
