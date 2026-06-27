@@ -7,8 +7,10 @@ interface Props {
   onConnected: (session: Session) => void
 }
 
-// The official XMage public servers (from the desktop client's Connect dialog).
+// The official XMage public servers (from the desktop client's Connect dialog),
+// plus this deployment's own co-located server (reached over the docker network).
 const SERVERS = [
+  { label: 'Sockbowl', host: 'mage-server', port: '17171', note: 'this server — play here (version-matched)' },
   { label: 'Beta', host: 'beta.xmage.today', port: '17171', note: 'official beta · no registration' },
   { label: 'USA', host: 'us.xmage.today', port: '17171', note: 'us.xmage.today' },
   { label: 'Europe', host: 'eu.xmage.today', port: '17171', note: 'eu.xmage.today' },
@@ -28,7 +30,7 @@ function savedLogin(): { host?: string; port?: string; username?: string } {
 export function LoginView({ onConnected }: Props) {
   const { prefs } = usePrefs()
   const last = savedLogin()
-  const [host, setHost] = useState(last.host || 'beta.xmage.today')
+  const [host, setHost] = useState(last.host || 'mage-server')
   const [port, setPort] = useState(last.port || '17171')
   const [username, setUsername] = useState(last.username || '')
   const [busy, setBusy] = useState(false)
