@@ -12,7 +12,7 @@ COPY . .
 # module, incl. mage-root which has no descriptor). Produces target/mage-server.zip.
 RUN --mount=type=cache,target=/root/.m2 \
     mvn -q -B -pl Mage.Server -am install -DskipTests && \
-    mvn -q -B -pl Mage.Server assembly:single -DskipTests && \
+    mvn -q -B -pl Mage.Server package assembly:single -DskipTests && \
     mkdir -p /dist && cd /dist && \
     jar xf /src/Mage.Server/target/mage-server.zip   # jar (JDK) avoids needing unzip
 
