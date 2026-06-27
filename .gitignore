@@ -4,6 +4,9 @@ syntax: glob
 **/db
 **/saved
 **/target
+
+# Claude Code agent worktrees (ephemeral harness state)
+.claude/worktrees/
 #un-ignore target implementations
 !Mage/src/main/java/mage/target
 
