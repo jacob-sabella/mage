@@ -1,0 +1,44 @@
+# Add these services + volumes to sockbowl-docker/docker-compose.yml, and append
+# "mage-server mage-web" to the existing watchtower's `command:` list.
+# Both use host networking (matching the reference), so the gateway reaches the
+# server at localhost:17171 — the UI's built-in "Local" preset.
+
+services:
+  mage-server:
+    image: ghcr.io/jacob-sabella/mage-server:latest
+    container_name: mage-server
+    profiles: ["full"]
+    network_mode: "host"          # binds 17171 on the host
+    volumes:
+      - mage_db:/app/db           # generated card DB, shared with the gateway
+    restart: unless-stopped
+
+  mage-web:
+    image: ghcr.io/jacob-sabella/mage-web:latest
+    container_name: mage-web
+    profiles: ["full"]
+    network_mode: "host"          # listens on 8090; reaches the server at localhost:17171
+    environment:
+      MAGE_WEB_PORT: "${MAGE_WEB_PORT:-8090}"
+      MAGE_IMAGE_DIR: /data/images
+      MAGE_DECK_DIR: /data/decks
+      GITHUB_REPO: "${MAGE_GITHUB_REPO:-jacob-sabella/mage}"
+      GITHUB_TOKEN: "${MAGE_GITHUB_TOKEN:-}"   # optional: enables /api/report
+    volumes:
+      - mage_db:/app/db:ro                              # read the server's card DB
+      - mage_decks:/data/decks                          # persisted uploaded decks
+      - ${MAGE_IMAGE_DIR:-mage_images}:/data/images     # optional card-art cache (huge)
+    depends_on:
+      - mage-server
+    restart: unless-stopped
+
+volumes:
+  mage_db:
+    driver: local
+  mage_decks:
+    driver: local
+  mage_images:
+    driver: local
+
+# --- existing watchtower service: extend its watch-list ---
+#   command: sockbowl-game sockbowl-questions sockbowl-ng mage-server mage-web
