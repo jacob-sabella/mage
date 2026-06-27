@@ -7,6 +7,9 @@ import io.javalin.http.staticfiles.Location;
 import io.javalin.websocket.WsContext;
 import mage.client.web.dto.TableDto;
 import mage.client.web.net.ServerConnection;
+import mage.interfaces.callback.ClientCallback;
+import mage.interfaces.callback.ClientCallbackMethod;
+import mage.view.ChatMessage;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -75,6 +78,7 @@ public class WebClientApp {
 
         app.post("/api/connect", this::handleConnect);
         app.get("/api/tables", this::handleTables);
+        app.post("/api/chat", this::handleChat);
         app.post("/api/disconnect", this::handleDisconnect);
 
         app.ws("/ws", ws -> {
@@ -89,8 +93,7 @@ public class WebClientApp {
                 // forward upstream messages/events to this browser
                 conn.getClient().setMessageHandler(msg -> push(ctx, "message", msg));
                 conn.getClient().setErrorHandler(err -> push(ctx, "error", err));
-                conn.getClient().setCallbackHandler(cb -> push(ctx, "event",
-                        cb.getMethod() == null ? "" : cb.getMethod().toString()));
+                conn.getClient().setCallbackHandler(cb -> pushCallback(ctx, cb));
                 push(ctx, "ready", "connected");
             });
             ws.onClose(ctx -> {
@@ -126,11 +129,29 @@ public class WebClientApp {
             ctx.status(502).json(error(err == null || err.isEmpty() ? "could not connect" : err));
             return;
         }
+        // best-effort: join the main room chat so messages start flowing
+        try {
+            conn.joinMainChat();
+        } catch (Exception ignored) {
+            // chat is non-critical for the lobby
+        }
+
         String token = sessions.register(conn);
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("token", token);
         body.put("server", req.host + ":" + port);
         ctx.json(body);
+    }
+
+    private void handleChat(Context ctx) {
+        ChatRequest req = ctx.bodyAsClass(ChatRequest.class);
+        ServerConnection conn = sessions.get(req == null ? null : req.token);
+        if (conn == null) {
+            ctx.status(401).json(error("not connected"));
+            return;
+        }
+        boolean ok = conn.sendChat(req.message);
+        ctx.json(Map.of("ok", ok));
     }
 
     private void handleTables(Context ctx) {
@@ -156,11 +177,35 @@ public class WebClientApp {
         ctx.json(Map.of("ok", true));
     }
 
-    private void push(WsContext ctx, String type, String payload) {
-        try {
+    /** Translate an upstream callback into a browser-friendly WS frame. */
+    private void pushCallback(WsContext ctx, ClientCallback cb) {
+        ClientCallbackMethod method = cb == null ? null : cb.getMethod();
+        if ((method == ClientCallbackMethod.CHATMESSAGE || method == ClientCallbackMethod.SERVER_MESSAGE)
+                && cb.getData() instanceof ChatMessage) {
+            ChatMessage m = (ChatMessage) cb.getData();
             Map<String, Object> msg = new LinkedHashMap<>();
-            msg.put("type", type);
-            msg.put("payload", payload);
+            msg.put("type", "chat");
+            msg.put("user", m.getUsername());
+            msg.put("text", m.getMessage());
+            msg.put("color", m.getColor() == null ? null : m.getColor().toString());
+            msg.put("time", m.getTime() == null ? null : m.getTime().getTime());
+            msg.put("messageType", m.getMessageType() == null ? null : m.getMessageType().toString());
+            pushMap(ctx, msg);
+            return;
+        }
+        // table changes etc. - a cue for the browser to refresh
+        push(ctx, "event", method == null ? "" : method.toString());
+    }
+
+    private void push(WsContext ctx, String type, String payload) {
+        Map<String, Object> msg = new LinkedHashMap<>();
+        msg.put("type", type);
+        msg.put("payload", payload);
+        pushMap(ctx, msg);
+    }
+
+    private void pushMap(WsContext ctx, Map<String, Object> msg) {
+        try {
             ctx.send(json.writeValueAsString(msg));
         } catch (Exception ignored) {
             // socket may have closed; the registry cleanup handles removal
@@ -181,5 +226,10 @@ public class WebClientApp {
 
     public static class DisconnectRequest {
         public String token;
+    }
+
+    public static class ChatRequest {
+        public String token;
+        public String message;
     }
 }

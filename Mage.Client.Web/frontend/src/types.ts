@@ -15,8 +15,21 @@ export interface ConnectResponse {
 }
 
 export interface ServerEvent {
-  type: 'ready' | 'message' | 'error' | 'event' | string
-  payload: string
+  type: 'ready' | 'message' | 'error' | 'event' | 'chat' | string
+  payload?: string
+  // present on chat frames
+  user?: string | null
+  text?: string | null
+  color?: string | null
+  time?: number | null
+  messageType?: string | null
+}
+
+export interface ChatLine {
+  user?: string | null
+  text: string
+  color?: string | null
+  time?: number | null
 }
 
 export interface Session {

@@ -28,6 +28,13 @@ export function fetchTables(token: string): Promise<TableDto[]> {
   return request<TableDto[]>(`/api/tables?token=${encodeURIComponent(token)}`)
 }
 
+export function sendChat(token: string, message: string): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>('/api/chat', {
+    method: 'POST',
+    body: JSON.stringify({ token, message }),
+  })
+}
+
 export async function disconnect(token: string): Promise<void> {
   try {
     await request('/api/disconnect', {

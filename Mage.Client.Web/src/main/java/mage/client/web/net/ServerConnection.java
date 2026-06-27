@@ -9,6 +9,7 @@ import mage.view.TableView;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -24,6 +25,7 @@ public class ServerConnection {
 
     private final WebMageClient client;
     private final Session session;
+    private volatile UUID mainChatId;
 
     public ServerConnection() {
         this.client = new WebMageClient();
@@ -79,7 +81,47 @@ public class ServerConnection {
         }
     }
 
+    /**
+     * Join the main room's chat so its messages start arriving via callbacks.
+     * Best-effort: returns false if the room/chat can't be resolved.
+     */
+    public boolean joinMainChat() {
+        UUID roomId = session.getMainRoomId();
+        if (roomId == null) {
+            return false;
+        }
+        Optional<UUID> chatId = session.getRoomChatId(roomId);
+        if (!chatId.isPresent()) {
+            return false;
+        }
+        boolean joined = session.joinChat(chatId.get());
+        if (joined) {
+            this.mainChatId = chatId.get();
+        }
+        return joined;
+    }
+
+    public UUID getMainChatId() {
+        return mainChatId;
+    }
+
+    /** Send a message to the main room chat. */
+    public boolean sendChat(String message) {
+        if (mainChatId == null || message == null || message.trim().isEmpty()) {
+            return false;
+        }
+        return session.sendChatMessage(mainChatId, message);
+    }
+
     public void disconnect() {
+        if (mainChatId != null) {
+            try {
+                session.leaveChat(mainChatId);
+            } catch (Exception ignored) {
+                // ignore - disconnecting anyway
+            }
+            mainChatId = null;
+        }
         if (session.isConnected()) {
             session.connectStop(false, false);
         }
