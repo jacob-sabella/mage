@@ -13,6 +13,32 @@ import java.awt.*;
  */
 public enum ThemeType {
     // https://docs.oracle.com/javase/tutorial/uiswing/lookandfeel/_nimbusDefaults.html
+    // Modern, refreshed default look: a deep slate dark theme with indigo/cyan accents.
+    // Reuses the cohesive dark image assets so every screen matches out of the box.
+    OBSIDIAN("Obsidian",                    // name
+            "carbon_fiber-theme/",         // path (reuse the polished dark assets)
+            true,                          // hasBackground
+            true,                          // hasLoginBackground
+            true,                          // hasBattleBackground
+            true,                          // hasSkipButtons
+            true,                          // hasPhaseIcons
+            true,                          // hasWinLossImages
+            true,                          // shortcutsVisibleForSkipButtons
+            new Color(38, 42, 52),         // nimbusBlueGrey - buttons, scrollbar background, disabled inputs
+            new Color(28, 31, 38),         // control - window background (deep slate)
+            new Color(34, 38, 47),         // nimbusLightBackground - inputs, table rows
+            new Color(44, 50, 62),         // info - tooltips
+            new Color(40, 52, 82),         // nimbusBase - title bars, scrollbar foreground, selection (indigo)
+            new Color(24, 27, 33),         // mageToolbar
+            new Color(38, 42, 52, 220),    // playerPanel_inactiveBackgroundColor
+            new Color(46, 78, 96, 220),    // playerPanel_activeBackgroundColor (teal glow)
+            new Color(88, 46, 52, 230),    // playerPanel_deadBackgroundColor
+            new Color(24, 27, 33, 240),    // deckEditorToolbarBackgroundColor
+            new Color(120, 170, 230),      // cardIconsFillColor (soft blue)
+            Color.BLACK,                   // cardIconsStrokeColor
+            new Color(225, 230, 240),      // cardIconsTextColor
+            new Color(222, 226, 234)       // textColor
+    ),
     DEFAULT("Default",                     // name
             "",                            // path
             true,                          // hasBackground

@@ -244,6 +244,22 @@
         <module>Mage.Reports</module>
     </modules>
 
+    <profiles>
+        <!--
+            New JavaFX desktop client (modern UI rewrite). Kept out of the default
+            reactor because it targets Java 17 (OpenJFX needs 11+) while the rest of
+            the project still compiles to Java 8. Build/run it explicitly with:
+                mvn -Pfx-client -pl Mage.Client.FX -am compile
+                mvn -Pfx-client -pl Mage.Client.FX -am javafx:run
+        -->
+        <profile>
+            <id>fx-client</id>
+            <modules>
+                <module>Mage.Client.FX</module>
+            </modules>
+        </profile>
+    </profiles>
+
     <repositories>
         <repository>
             <id>jboss-public-repository</id>

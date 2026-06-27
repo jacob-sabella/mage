@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.mage</groupId>
+        <artifactId>mage-root</artifactId>
+        <version>1.4.60</version>
+    </parent>
+
+    <artifactId>mage-client-fx</artifactId>
+    <packaging>jar</packaging>
+    <name>Mage Client FX</name>
+    <description>Modern JavaFX desktop client. Reuses the existing Mage.Common
+        networking/session layer and the mage.view DTOs, so the game engine and
+        protocol are shared with the legacy Swing client - only the UI is new.</description>
+
+    <properties>
+        <!-- OpenJFX needs Java 11+; this module compiles to 17 (CI runs Temurin 17). -->
+        <javafx.version>17.0.10</javafx.version>
+        <!--
+            Build host classifier for the native JavaFX jars. CI (GitHub Actions /
+            Travis) runs on Linux. For local mac/windows builds override with e.g.
+            -Djavafx.platform=mac or -Djavafx.platform=win.
+        -->
+        <javafx.platform>linux</javafx.platform>
+    </properties>
+
+    <dependencies>
+        <!-- Shared engine model + DTOs (GameView, CardView, etc.) -->
+        <dependency>
+            <groupId>org.mage</groupId>
+            <artifactId>mage</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- Shared client/server boundary: Session, MageServer, callbacks, views -->
+        <dependency>
+            <groupId>org.mage</groupId>
+            <artifactId>mage-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- JavaFX -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-base</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>${javafx.platform}</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-graphics</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>${javafx.platform}</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>${javafx.platform}</classifier>
+        </dependency>
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-fxml</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>${javafx.platform}</classifier>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>mage-client-fx</finalName>
+        <plugins>
+            <!--
+                Override the parent's Java 8 compiler settings for this module only.
+                Setting source/target (not <release>) avoids clashing with the
+                inherited <source>/<target> config from the parent pom.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>17</source>
+                    <target>17</target>
+                    <release combine.self="override"/>
+                </configuration>
+            </plugin>
+
+            <!-- Run with: mvn -Pfx-client -pl Mage.Client.FX -am javafx:run -->
+            <plugin>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-maven-plugin</artifactId>
+                <version>0.0.8</version>
+                <configuration>
+                    <mainClass>mage.client.fx.MageFxApp</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

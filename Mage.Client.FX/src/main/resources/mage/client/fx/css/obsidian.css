@@ -1,0 +1,174 @@
+/*
+ * Obsidian - design system for the modern XMage JavaFX client.
+ * A deep-slate dark theme with indigo / cyan accents. Mirrors the new
+ * "Obsidian" Swing theme so both clients feel like one product.
+ */
+
+.root {
+    /* palette */
+    -fx-bg-deep:      #16181d;   /* app background          */
+    -fx-bg:           #1c1f26;   /* surfaces / panels       */
+    -fx-bg-raised:    #222630;   /* cards, inputs           */
+    -fx-bg-hover:     #2a2f3b;
+    -fx-stroke:       #303644;   /* hairline borders        */
+    -fx-accent:       #5b8cff;   /* primary (indigo)        */
+    -fx-accent-2:     #2dd4bf;   /* secondary (cyan/teal)   */
+    -fx-accent-press: #4577ef;
+    -fx-text:         #e2e6ee;   /* primary text            */
+    -fx-text-dim:     #99a1b3;   /* muted text              */
+    -fx-danger:       #e0555f;
+    -fx-success:      #4ec98a;
+
+    -fx-background-color: -fx-bg-deep;
+    -fx-font-family: "Segoe UI", "Roboto", "Helvetica Neue", sans-serif;
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-text;
+}
+
+/* ----- typography ------------------------------------------------------- */
+.h1 { -fx-font-size: 30px; -fx-font-weight: bold; -fx-text-fill: -fx-text; }
+.h2 { -fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: -fx-text; }
+.subtitle { -fx-font-size: 13px; -fx-text-fill: -fx-text-dim; }
+.label { -fx-text-fill: -fx-text; }
+.muted { -fx-text-fill: -fx-text-dim; }
+.brand-accent { -fx-text-fill: -fx-accent-2; }
+
+/* ----- app shell -------------------------------------------------------- */
+.app-bg {
+    -fx-background-color: linear-gradient(to bottom right, #15171c, #1b2030 70%, #161a26);
+}
+
+.topbar {
+    -fx-background-color: -fx-bg;
+    -fx-border-color: transparent transparent -fx-stroke transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 12 20 12 20;
+}
+
+.brand-dot {
+    -fx-fill: -fx-accent;
+}
+
+/* ----- panel / card ----------------------------------------------------- */
+.panel {
+    -fx-background-color: -fx-bg;
+    -fx-background-radius: 14;
+    -fx-border-color: -fx-stroke;
+    -fx-border-radius: 14;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 28, 0.18, 0, 12);
+}
+
+/* ----- inputs ----------------------------------------------------------- */
+.text-field, .password-field {
+    -fx-background-color: -fx-bg-raised;
+    -fx-background-radius: 9;
+    -fx-border-color: -fx-stroke;
+    -fx-border-radius: 9;
+    -fx-border-width: 1;
+    -fx-text-fill: -fx-text;
+    -fx-prompt-text-fill: -fx-text-dim;
+    -fx-padding: 10 12 10 12;
+}
+.text-field:focused, .password-field:focused {
+    -fx-border-color: -fx-accent;
+    -fx-effect: dropshadow(gaussian, rgba(91,140,255,0.35), 10, 0.2, 0, 0);
+}
+
+.field-label {
+    -fx-text-fill: -fx-text-dim;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+/* ----- buttons ---------------------------------------------------------- */
+.button {
+    -fx-background-color: -fx-bg-raised;
+    -fx-text-fill: -fx-text;
+    -fx-background-radius: 9;
+    -fx-border-color: -fx-stroke;
+    -fx-border-radius: 9;
+    -fx-border-width: 1;
+    -fx-padding: 9 16 9 16;
+    -fx-cursor: hand;
+}
+.button:hover { -fx-background-color: -fx-bg-hover; }
+
+.button.primary {
+    -fx-background-color: -fx-accent;
+    -fx-text-fill: #0d1119;
+    -fx-font-weight: bold;
+    -fx-border-color: transparent;
+}
+.button.primary:hover { -fx-background-color: derive(#5b8cff, 8%); }
+.button.primary:pressed { -fx-background-color: -fx-accent-press; }
+
+.button.ghost {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: -fx-text-dim;
+}
+.button.ghost:hover { -fx-text-fill: -fx-text; -fx-background-color: -fx-bg-hover; }
+
+/* ----- status line ------------------------------------------------------ */
+.status-error { -fx-text-fill: -fx-danger; }
+.status-ok    { -fx-text-fill: -fx-success; }
+
+/* ----- table ------------------------------------------------------------ */
+.table-view {
+    -fx-background-color: -fx-bg;
+    -fx-background-radius: 12;
+    -fx-border-color: -fx-stroke;
+    -fx-border-radius: 12;
+    -fx-border-width: 1;
+    -fx-padding: 0;
+}
+.table-view .column-header-background {
+    -fx-background-color: -fx-bg-raised;
+    -fx-background-radius: 12 12 0 0;
+}
+.table-view .column-header, .table-view .filler {
+    -fx-background-color: transparent;
+    -fx-size: 38px;
+    -fx-border-color: transparent transparent -fx-stroke transparent;
+}
+.table-view .column-header .label {
+    -fx-text-fill: -fx-text-dim;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-alignment: center-left;
+}
+.table-view .table-cell {
+    -fx-text-fill: -fx-text;
+    -fx-border-color: transparent;
+    -fx-padding: 9 12 9 12;
+}
+.table-row-cell {
+    -fx-background-color: -fx-bg;
+    -fx-border-color: transparent transparent -fx-stroke transparent;
+    -fx-border-width: 0 0 1 0;
+}
+.table-row-cell:odd { -fx-background-color: derive(#1c1f26, 2%); }
+.table-row-cell:hover { -fx-background-color: -fx-bg-hover; }
+.table-row-cell:selected { -fx-background-color: derive(#5b8cff, -55%); }
+.table-row-cell:selected .table-cell { -fx-text-fill: -fx-text; }
+.table-view .placeholder .label { -fx-text-fill: -fx-text-dim; }
+
+/* ----- chips ------------------------------------------------------------ */
+.chip {
+    -fx-background-color: derive(#2dd4bf, -55%);
+    -fx-text-fill: -fx-accent-2;
+    -fx-background-radius: 20;
+    -fx-padding: 3 10 3 10;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+/* ----- scrollbars ------------------------------------------------------- */
+.scroll-bar { -fx-background-color: transparent; }
+.scroll-bar .thumb {
+    -fx-background-color: -fx-stroke;
+    -fx-background-radius: 8;
+}
+.scroll-bar .thumb:hover { -fx-background-color: -fx-bg-hover; }
+.scroll-bar .increment-button, .scroll-bar .decrement-button { -fx-opacity: 0; -fx-padding: 0; }
