@@ -240,7 +240,12 @@ function ActionBar({ prompt, onRespond }: { prompt: Prompt; onRespond: (kind: Re
 
       {prompt.kind === 'select' && (
         <>
-          <span className="muted hint">Click a highlighted card to play it</span>
+          <span className="muted hint">Click a card to play / declare · Done confirms · Pass skips</span>
+          {/* Done = boolean true: confirms the current selection, e.g. declared
+              attackers/blockers. Pass = boolean false: pass priority. */}
+          <button className="btn" onClick={() => onRespond('boolean', 'true')}>
+            Done
+          </button>
           <button className="btn primary" onClick={() => onRespond('boolean', 'false')}>
             Pass
           </button>
