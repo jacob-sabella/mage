@@ -582,3 +582,11 @@ input::placeholder { color: var(--text-dim); }
 .skip-bar { display: flex; flex-wrap: wrap; gap: 8px; }
 .skip-btn { padding: 7px 12px; font-size: 13px; }
 .skip-key { color: var(--text-dim); font-size: 11px; margin-left: 4px; }
+
+/* ----- combat panel ----- */
+.combat-panel { padding: 12px 14px; border-color: var(--danger); }
+.combat-group { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 13px; }
+.combat-arrow { color: var(--danger); font-weight: 700; }
+.combat-attackers { font-weight: 600; }
+.combat-defender { color: var(--accent); }
+.combat-unblocked { color: var(--danger); font-size: 12px; }

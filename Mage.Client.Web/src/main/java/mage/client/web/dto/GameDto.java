@@ -33,6 +33,7 @@ public class GameDto {
     public List<String> canPlay = new ArrayList<>();
     // the seated player's hand (empty for pure spectators)
     public List<CardDto> myHand = new ArrayList<>();
+    public List<CombatDto> combat = new ArrayList<>();
 
     public static GameDto from(GameView game) {
         GameDto dto = new GameDto();
@@ -60,7 +61,36 @@ public class GameDto {
                 dto.myHand.add(CardDto.from(card));
             }
         }
+        if (game.getCombat() != null) {
+            for (mage.view.CombatGroupView cg : game.getCombat()) {
+                dto.combat.add(CombatDto.from(cg));
+            }
+        }
         return dto;
+    }
+
+    public static class CombatDto {
+        public List<String> attackers = new ArrayList<>();
+        public List<String> blockers = new ArrayList<>();
+        public String defender;
+        public boolean blocked;
+
+        static CombatDto from(mage.view.CombatGroupView cg) {
+            CombatDto dto = new CombatDto();
+            if (cg.getAttackers() != null) {
+                for (CardView c : cg.getAttackers().values()) {
+                    dto.attackers.add(c.getName());
+                }
+            }
+            if (cg.getBlockers() != null) {
+                for (CardView c : cg.getBlockers().values()) {
+                    dto.blockers.add(c.getName());
+                }
+            }
+            dto.defender = cg.getDefenderName();
+            dto.blocked = cg.isBlocked();
+            return dto;
+        }
     }
 
     public static class PlayerDto {

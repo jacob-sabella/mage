@@ -84,6 +84,14 @@ export interface GameState {
   stack: GameCard[]
   canPlay: string[]
   myHand: GameCard[]
+  combat: CombatGroup[]
+}
+
+export interface CombatGroup {
+  attackers: string[]
+  blockers: string[]
+  defender?: string | null
+  blocked: boolean
 }
 
 export interface ChatLine {

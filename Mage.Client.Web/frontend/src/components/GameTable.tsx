@@ -162,6 +162,24 @@ export function GameTable({ game, prompt, interactive, log = [], onRespond, onLe
         </motion.div>
       )}
 
+      {game.combat.length > 0 && (
+        <div className="combat-panel panel">
+          <div className="stack-title">Combat</div>
+          {game.combat.map((cg, i) => (
+            <div className="combat-group" key={i}>
+              <span className="combat-attackers">{cg.attackers.join(', ') || '—'}</span>
+              <span className="combat-arrow">→</span>
+              <span className="combat-defender">{cg.defender}</span>
+              {cg.blockers.length > 0 ? (
+                <span className="combat-blockers muted">blocked by {cg.blockers.join(', ')}</span>
+              ) : (
+                <span className="combat-unblocked">unblocked</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       {game.myHand.length > 0 && (
         <div className="hand-zone panel">
           <div className="stack-title">Your hand ({game.myHand.length})</div>
