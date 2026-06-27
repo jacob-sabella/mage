@@ -111,6 +111,7 @@ export type Scenario =
   | 'ptUpdate'
   | 'draft'
   | 'construct'
+  | 'gameOver'
 
 const DRAFT = {
   booster: [
@@ -174,7 +175,7 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
     colors: 'R',
   }))
   await page.addInitScript(
-    ([game, prompt, isGame, secondGame, draftOn, draftData, constructOn, constructPool]) => {
+    ([game, prompt, isGame, secondGame, draftOn, draftData, constructOn, constructPool, overOn]) => {
       class MockWS {
         onopen: ((e: unknown) => void) | null = null
         onclose: ((e: unknown) => void) | null = null
@@ -192,6 +193,9 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
                 this.emit({ type: 'game', gameId: 'g-1', game, prompt })
                 if (secondGame) {
                   setTimeout(() => this.emit({ type: 'game', gameId: 'g-1', game: secondGame, prompt }), 500)
+                }
+                if (overOn) {
+                  setTimeout(() => this.emit({ type: 'gameOver', gameId: 'g-1', text: 'You have won the game.', game }), 400)
                 }
               }, 150)
             }
@@ -228,7 +232,8 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
       DRAFT,
       isConstruct,
       CONSTRUCT_POOL,
-    ] as [unknown, unknown, boolean, unknown, boolean, unknown, boolean, unknown],
+      scenario === 'gameOver',
+    ] as [unknown, unknown, boolean, unknown, boolean, unknown, boolean, unknown, boolean],
   )
 
   const json = (body: unknown) => async (route: import('@playwright/test').Route) =>

@@ -10,6 +10,7 @@ interface Props {
   prompt: Prompt | null
   interactive: boolean
   log?: string[]
+  result?: string | null
   onRespond: (kind: RespondKind, value?: string) => void
   onLeave: () => void
 }
@@ -30,7 +31,7 @@ const SKIP_BUTTONS = [
   { label: 'Cancel skips', key: 'F6', action: 'PASS_PRIORITY_CANCEL_ALL_ACTIONS' },
 ]
 
-export function GameTable({ game, prompt, interactive, log = [], onRespond, onLeave }: Props) {
+export function GameTable({ game, prompt, interactive, log = [], result, onRespond, onLeave }: Props) {
   const [preview, setPreview] = useState<CardType | null>(null)
   useEffect(() => {
     if (!interactive) return
@@ -140,6 +141,18 @@ export function GameTable({ game, prompt, interactive, log = [], onRespond, onLe
 
       <Board3D game={game} cardProps={cardProps} onHoverCard={setPreview} />
       <CardPreview card={preview} />
+
+      {result && (
+        <div className="game-over-overlay">
+          <div className="game-over-card panel">
+            <div className="game-over-title">{/won|win/i.test(result) ? '🏆 ' : ''}Game over</div>
+            <div className="game-over-msg">{plain(result)}</div>
+            <button className="btn primary" onClick={onLeave}>
+              Back to lobby
+            </button>
+          </div>
+        </div>
+      )}
 
       {game.combat.length > 0 && (
         <div className="combat-panel panel">

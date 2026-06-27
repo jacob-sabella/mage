@@ -169,3 +169,15 @@ test.describe('Game board (3D)', () => {
     await expect(overview).toHaveClass(/active/)
   })
 })
+
+test.describe('Game over', () => {
+  test('shows a result overlay and returns to the lobby', async ({ page }) => {
+    await gotoScreen(page, 'gameOver')
+    const overlay = page.locator('.game-over-overlay')
+    await expect(overlay).toBeVisible()
+    await expect(overlay).toContainText('You have won the game')
+    await overlay.getByRole('button', { name: 'Back to lobby' }).click()
+    // back to the lobby
+    await expect(page.getByRole('heading', { name: 'Open tables' })).toBeVisible()
+  })
+})

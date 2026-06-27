@@ -788,6 +788,17 @@ public class WebClientApp {
             pushMap(ctx, msg);
             return;
         }
+        // the game ended: surface the result (who won) + the final board
+        if (method == ClientCallbackMethod.GAME_OVER && cb.getData() instanceof GameClientMessage) {
+            GameClientMessage m = (GameClientMessage) cb.getData();
+            Map<String, Object> msg = new LinkedHashMap<>();
+            msg.put("type", "gameOver");
+            msg.put("gameId", cb.getObjectId() == null ? null : cb.getObjectId().toString());
+            msg.put("text", m.getMessage());
+            msg.put("game", m.getGameView() == null ? null : GameDto.from(m.getGameView()));
+            pushMap(ctx, msg);
+            return;
+        }
         // a GameClientMessage is either a real decision (DIALOG) or just an
         // informational board update ("Waiting for X"). Only DIALOG callbacks
         // become an actionable prompt.

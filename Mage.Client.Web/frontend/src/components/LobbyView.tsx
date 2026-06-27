@@ -52,6 +52,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   // we initiated a play (create/join); adopt the next game frame as ours
   const [pendingPlay, setPendingPlay] = useState(false)
   const [playStatus, setPlayStatus] = useState<string | null>(null)
+  const [gameOver, setGameOver] = useState<string | null>(null)
   // synchronous mirror of activeGameId so back-to-back gameStart+game frames in
   // one event-loop tick don't read a stale value (which clobbered interactive)
   const activeRef = useRef<string | null>(null)
@@ -90,6 +91,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
       setPendingPlay(false)
       setPlayStatus(null)
       setConstruct(null)
+      setGameOver(null)
       setGame(null)
       setPrompt(null)
     } else if (e.type === 'game') {
@@ -103,6 +105,10 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
       }
       if (e.game) setGame(e.game)
       setPrompt(e.prompt ?? null)
+    } else if (e.type === 'gameOver') {
+      if (e.game) setGame(e.game)
+      setPrompt(null)
+      setGameOver(e.text && e.text.trim() ? e.text : 'Game over')
     } else if (e.type === 'log' && e.text) {
       setGameLog((prev) => [...prev.slice(-299), e.text as string])
     } else if (e.type === 'draftStart' && e.draftId) {
@@ -204,6 +210,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
     setGameLog([])
     setPendingPlay(false)
     setPlayStatus(null)
+    setGameOver(null)
   }, [])
 
   const handleSendChat = useCallback(
@@ -289,6 +296,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
               prompt={prompt}
               interactive={interactive}
               log={gameLog}
+              result={gameOver}
               onRespond={handleRespond}
               onLeave={handleLeaveGame}
             />

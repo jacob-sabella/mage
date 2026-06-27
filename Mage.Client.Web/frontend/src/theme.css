@@ -180,7 +180,7 @@ input::placeholder { color: var(--text-dim); }
 .row-actions { display: flex; gap: 6px; justify-content: flex-end; }
 
 /* ----- game table ----- */
-.game-table { display: flex; flex-direction: column; gap: 14px; height: 100%; }
+.game-table { display: flex; flex-direction: column; gap: 14px; height: 100%; position: relative; }
 .game-toolbar { display: flex; align-items: center; gap: 12px; }
 .phase-pill {
   background: rgba(91, 140, 255, 0.16);
@@ -798,3 +798,13 @@ input::placeholder { color: var(--text-dim); }
 .btn.xs { padding: 2px 9px; font-size: 14px; line-height: 1; }
 .chip.under { background: rgba(224, 85, 95, 0.16); color: var(--danger); }
 .draft-card.selected { border-color: var(--accent-2); box-shadow: 0 0 0 2px var(--accent-2); }
+
+/* ----- game over overlay ----- */
+.game-over-overlay {
+  position: absolute; inset: 0; z-index: 40;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(8, 10, 14, 0.66); backdrop-filter: blur(3px);
+}
+.game-over-card { padding: 28px 34px; text-align: center; display: flex; flex-direction: column; gap: 14px; min-width: 320px; }
+.game-over-title { font-size: 24px; font-weight: 800; }
+.game-over-msg { font-size: 16px; color: var(--text-dim); }
