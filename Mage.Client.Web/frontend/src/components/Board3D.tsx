@@ -16,6 +16,57 @@ function imgUrl(c: GameCard) {
   return `/api/cardimg?set=${encodeURIComponent(c.set ?? '')}&num=${encodeURIComponent(c.num ?? '')}&name=${encodeURIComponent(c.name)}`
 }
 
+/** Draw a readable card face on a canvas (name / type / P-T) so a card is never
+ *  blank, even when its real art is missing. Real art replaces this once loaded. */
+function makeCardTexture(card: GameCard): THREE.Texture {
+  const w = 256
+  const h = 358
+  const cv = document.createElement('canvas')
+  cv.width = w
+  cv.height = h
+  const g = cv.getContext('2d')!
+  const base = bg(card.colors)
+  g.fillStyle = base
+  g.fillRect(0, 0, w, h)
+  // darker art box + inset frame
+  g.fillStyle = 'rgba(0,0,0,0.22)'
+  g.fillRect(12, 54, w - 24, h - 120)
+  g.strokeStyle = 'rgba(0,0,0,0.5)'
+  g.lineWidth = 4
+  g.strokeRect(8, 8, w - 16, h - 16)
+  // name plate
+  g.fillStyle = 'rgba(0,0,0,0.55)'
+  g.fillRect(14, 14, w - 28, 36)
+  const fit = (text: string, max: number) => {
+    let s = text
+    while (s.length > 4 && g.measureText(s).width > max) s = s.slice(0, -1)
+    return s === text ? text : s.slice(0, -1) + '…'
+  }
+  g.fillStyle = '#f4f1e8'
+  g.textBaseline = 'middle'
+  g.font = 'bold 20px "Segoe UI", system-ui, sans-serif'
+  g.fillText(fit(card.name, w - 44), 22, 33)
+  // type line
+  g.fillStyle = 'rgba(0,0,0,0.45)'
+  g.fillRect(14, h - 64, w - 28, 28)
+  g.fillStyle = '#e8e8ee'
+  g.font = '15px "Segoe UI", system-ui, sans-serif'
+  g.fillText(fit((card.types ?? []).join(' '), w - 70), 22, h - 49)
+  // power/toughness or loyalty badge
+  const badge = card.loyalty != null ? String(card.loyalty) : card.power != null && card.toughness != null ? `${card.power}/${card.toughness}` : ''
+  if (badge) {
+    g.fillStyle = 'rgba(0,0,0,0.75)'
+    g.fillRect(w - 70, h - 66, 56, 32)
+    g.fillStyle = '#fff'
+    g.font = 'bold 19px "Segoe UI", system-ui, sans-serif'
+    g.fillText(badge, w - 62, h - 49)
+  }
+  const t = new THREE.CanvasTexture(cv)
+  t.colorSpace = THREE.SRGBColorSpace
+  t.anisotropy = 4
+  return t
+}
+
 type CardProps = (c: GameCard) => { highlight?: 'play' | 'target'; onClick?: (c: GameCard) => void }
 
 /** A single card as a textured plane; lies flat (battlefield) or stands (hand/stack). */
@@ -30,26 +81,33 @@ function Card3D({
   standing?: boolean
   cardProps: CardProps
 }) {
-  const [tex, setTex] = useState<THREE.Texture | null>(null)
+  const [art, setArt] = useState<THREE.Texture | null>(null)
   const [hover, setHover] = useState(false)
   const { highlight, onClick } = cardProps(card)
 
+  // always-present readable face; disposed on unmount
+  const fallback = useMemo(() => makeCardTexture(card), [card.id, card.name, card.power, card.toughness, card.loyalty])
+  useEffect(() => () => fallback.dispose(), [fallback])
+
+  // try to upgrade to real card art
   useEffect(() => {
     let alive = true
     new THREE.TextureLoader().load(
       imgUrl(card),
       (t) => {
         t.colorSpace = THREE.SRGBColorSpace
-        if (alive) setTex(t)
+        if (alive) setArt(t)
         else t.dispose()
       },
       undefined,
-      () => alive && setTex(null),
+      () => alive && setArt(null),
     )
     return () => {
       alive = false
     }
   }, [card.id, card.name])
+
+  const tex = art ?? fallback
 
   // flat on table, rotated 90° when tapped; or standing toward camera
   const rot: [number, number, number] = standing
@@ -80,8 +138,8 @@ function Card3D({
       >
         <planeGeometry args={[CARD_W, CARD_H]} />
         <meshStandardMaterial
-          map={tex ?? undefined}
-          color={tex ? '#ffffff' : bg(card.colors)}
+          map={tex}
+          color="#ffffff"
           side={THREE.DoubleSide}
           emissive={glow}
           emissiveIntensity={highlight ? (hover ? 0.9 : 0.55) : 0}
