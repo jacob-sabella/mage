@@ -25,21 +25,28 @@ function SettingsView() {
       <div className="panel settings-card">
         <h1 className="h1">Preferences</h1>
         <p className="subtitle">Stored in this browser.</p>
-        <div className="setting-row">
+        <div className="setting-row setting-row-col">
           <span>
             <strong>Theme</strong>
-            <span className="muted setting-hint">Neon colour palette</span>
+            <span className="muted setting-hint">Each theme sets its own colours + fonts</span>
           </span>
           <div className="theme-picker">
-            {THEMES.map((t) => (
-              <button
-                key={t.id}
-                className={`theme-swatch t-${t.id}${prefs.theme === t.id ? ' active' : ''}`}
-                onClick={() => setPref('theme', t.id)}
-                title={t.label}
-              >
-                {t.label}
-              </button>
+            {[...new Set(THEMES.map((t) => t.family))].map((fam) => (
+              <div className="theme-family" key={fam}>
+                <span className="theme-family-label muted">{fam}</span>
+                <div className="theme-swatches">
+                  {THEMES.filter((t) => t.family === fam).map((t) => (
+                    <button
+                      key={t.id}
+                      className={`theme-swatch t-${t.id}${prefs.theme === t.id ? ' active' : ''}`}
+                      onClick={() => setPref('theme', t.id)}
+                      title={t.label}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </div>
@@ -52,6 +59,17 @@ function SettingsView() {
             type="checkbox"
             checked={prefs.cardImages}
             onChange={(e) => setPref('cardImages', e.target.checked)}
+          />
+        </label>
+        <label className="setting-row">
+          <span>
+            <strong>Mana symbols</strong>
+            <span className="muted setting-hint">Show mana costs as icons instead of {'{3}{B}{B}'} text</span>
+          </span>
+          <input
+            type="checkbox"
+            checked={prefs.manaIcons}
+            onChange={(e) => setPref('manaIcons', e.target.checked)}
           />
         </label>
         <label className="setting-row">

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { loadDeck, saveDeck, searchCards } from '../api'
 import { DeckPicker } from './DeckPicker'
+import { ManaCost } from './ManaCost'
 import type { CardInfoDto, DeckCardEntry } from '../types'
 const COLOR_HEX: Record<string, string> = {
   W: '#e9e3c8',
@@ -173,7 +174,7 @@ export function DeckEditor() {
               {results.map((card, i) => (
                 <tr key={`${card.name}-${card.set}-${i}`}>
                   <td>{card.name}</td>
-                  <td className="muted">{card.manaCost || '—'}</td>
+                  <td className="cost-cell">{card.manaCost ? <ManaCost cost={card.manaCost} /> : '—'}</td>
                   <td className="muted">{card.types.join(' ')}</td>
                   <td className="muted">{card.set}</td>
                   <td className="row-actions">
@@ -216,7 +217,7 @@ export function DeckEditor() {
                 <li key={e.name} className="deck-entry">
                   <span className="deck-entry-count">{e.count}×</span>
                   <span className="deck-entry-name">{e.name}</span>
-                  {e.manaCost && <span className="muted deck-entry-cost">{e.manaCost}</span>}
+                  {e.manaCost && <ManaCost cost={e.manaCost} className="deck-entry-cost" />}
                   <span className="deck-entry-actions">
                     <button className="btn ghost deck-mini-btn" onClick={() => decName(e.name)}>
                       −

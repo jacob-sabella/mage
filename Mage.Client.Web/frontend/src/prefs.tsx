@@ -1,11 +1,14 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 
-export type ThemeName = 'synthwave' | 'outrun' | 'cyber' | 'vapor'
-export const THEMES: { id: ThemeName; label: string }[] = [
-  { id: 'synthwave', label: 'Synthwave' },
-  { id: 'outrun', label: 'Outrun' },
-  { id: 'cyber', label: 'Cyber' },
-  { id: 'vapor', label: 'Vapor' },
+export type ThemeName = 'synthwave' | 'outrun' | 'cyber' | 'vapor' | 'mythic' | 'noir' | 'cutesy'
+export const THEMES: { id: ThemeName; label: string; family: string }[] = [
+  { id: 'synthwave', label: 'Synthwave', family: 'Vaporwave' },
+  { id: 'outrun', label: 'Outrun', family: 'Vaporwave' },
+  { id: 'cyber', label: 'Cyber', family: 'Vaporwave' },
+  { id: 'vapor', label: 'Vapor', family: 'Vaporwave' },
+  { id: 'mythic', label: 'Mythic', family: 'Worlds' },
+  { id: 'noir', label: 'Noir', family: 'Worlds' },
+  { id: 'cutesy', label: 'Cutesy', family: 'Worlds' },
 ]
 
 export interface Prefs {
@@ -13,9 +16,10 @@ export interface Prefs {
   avatarId: number // profile avatar sent to the server (UserData)
   flagName: string // profile flag/country (UserData)
   theme: ThemeName // colour palette
+  manaIcons: boolean // render mana costs as symbols instead of {3}{B}{B} text
 }
 
-const DEFAULTS: Prefs = { cardImages: true, avatarId: 0, flagName: '', theme: 'synthwave' }
+const DEFAULTS: Prefs = { cardImages: true, avatarId: 0, flagName: '', theme: 'synthwave', manaIcons: true }
 const KEY = 'mage.prefs'
 
 function load(): Prefs {

@@ -3,6 +3,7 @@
  * Deep-purple night, neon magenta + cyan, glow, and a perspective grid horizon.
  * Switchable palettes via [data-theme] (Settings).
  */
+/* ---- vaporwave family (neon, Orbitron) ---- */
 :root,
 [data-theme="synthwave"] {
   --bg-deep: #0a0118;
@@ -20,24 +21,67 @@
   --grad-a: #1a0938;
   --grad-b: #4a1170;
   --grad-c: #ff2e97;
+  --font-display: "Orbitron", sans-serif;
+  --font-body: "Segoe UI", Roboto, system-ui, sans-serif;
+  --glow-strength: 1;
 }
 [data-theme="outrun"] {
   --bg-deep: #120516; --bg: #1c0a22DD; --bg-raised: #2a0f33; --bg-hover: #3a1646; --stroke: #4a1f55;
   --accent: #ff7a18; --accent-2: #af4bff; --accent-press: #e86200;
   --text: #ffeede; --text-dim: #d6a98f; --danger: #ff476f; --success: #ffb84d;
   --grad-a: #2a0a2e; --grad-b: #7a1f4a; --grad-c: #ff7a18;
+  --font-display: "Orbitron", sans-serif; --font-body: "Segoe UI", Roboto, system-ui, sans-serif; --glow-strength: 1;
 }
 [data-theme="cyber"] {
   --bg-deep: #03120f; --bg: #061f1aDD; --bg-raised: #082a22; --bg-hover: #0c3a2f; --stroke: #114a3a;
   --accent: #39ff9e; --accent-2: #00e5ff; --accent-press: #21d683;
   --text: #e3fff4; --text-dim: #8fd6bf; --danger: #ff5b6b; --success: #39ff9e;
   --grad-a: #04221a; --grad-b: #0a4a3a; --grad-c: #00e5ff;
+  --font-display: "Orbitron", sans-serif; --font-body: "Segoe UI", Roboto, system-ui, sans-serif; --glow-strength: 1;
 }
 [data-theme="vapor"] {
   --bg-deep: #0e0820; --bg: #190f33DD; --bg-raised: #221546; --bg-hover: #2f2060; --stroke: #3a2a66;
   --accent: #ff6ad5; --accent-2: #26d9c3; --accent-press: #e85bbf;
   --text: #f6ecff; --text-dim: #c2a9e0; --danger: #ff6a8a; --success: #26d9c3;
   --grad-a: #1a1242; --grad-b: #5a2a8a; --grad-c: #ff6ad5;
+  --font-display: "Orbitron", sans-serif; --font-body: "Segoe UI", Roboto, system-ui, sans-serif; --glow-strength: 1;
+}
+
+/* ---- mythic / medieval: cand-lit parchment, gold + emerald, blackletter ---- */
+[data-theme="mythic"] {
+  --bg-deep: #0c0a06; --bg: #17120ade; --bg-raised: #211a0f; --bg-hover: #2e2415; --stroke: #4a3a1e;
+  --accent: #e8c35a;        /* gold */
+  --accent-2: #4fbf86;      /* emerald */
+  --accent-press: #c9a23f;
+  --text: #f3e8cf; --text-dim: #b8a378; --danger: #d2562f; --success: #4fbf86;
+  --grad-a: #14110a; --grad-b: #2c2410; --grad-c: #6b4e1a;
+  --font-display: "Cinzel Decorative", "Cinzel", serif;
+  --font-body: "Cinzel", Georgia, serif;
+  --glow-strength: 0.45;
+}
+/* ---- noir: high-contrast black & white, one red, typewriter ---- */
+[data-theme="noir"] {
+  --bg-deep: #050506; --bg: #0e0f12e6; --bg-raised: #16181c; --bg-hover: #20242a; --stroke: #33383f;
+  --accent: #e23c3c;        /* the one red */
+  --accent-2: #c9ccd2;      /* cold white */
+  --accent-press: #b62f2f;
+  --text: #ecedf0; --text-dim: #8b9099; --danger: #e23c3c; --success: #c9ccd2;
+  --grad-a: #0a0b0d; --grad-b: #15171b; --grad-c: #2a2d33;
+  --font-display: "Special Elite", "Courier New", monospace;
+  --font-body: "Special Elite", "Courier New", monospace;
+  --glow-strength: 0.2;
+}
+/* ---- cutesy: soft pastel pink + mint, rounded bubbly ---- */
+[data-theme="cutesy"] {
+  --bg-deep: #2a1430; --bg: #3a1c45e6; --bg-raised: #4a2658; --bg-hover: #5c3170; --stroke: #6b4080;
+  --accent: #ff9ed2;        /* bubblegum */
+  --accent-2: #9be8d8;      /* mint */
+  --accent-press: #ff84c6;
+  --text: #fff0fa; --text-dim: #e0b8d6; --danger: #ff7aa8; --success: #9be8d8;
+  --grad-a: #3a1c45; --grad-b: #7a3a8a; --grad-c: #ff9ed2;
+  --font-display: "Baloo 2", "Segoe UI", sans-serif;
+  --font-body: "Baloo 2", "Segoe UI", sans-serif;
+  --glow-strength: 0.7;
 }
 
 :root {
@@ -66,7 +110,7 @@ body {
     linear-gradient(180deg, var(--grad-a) 0%, var(--grad-b) 58%, var(--bg-deep) 100%);
   background-attachment: fixed;
   color: var(--text);
-  font-family: "Segoe UI", Roboto, "Helvetica Neue", system-ui, sans-serif;
+  font-family: var(--font-body, "Segoe UI", Roboto, "Helvetica Neue", system-ui, sans-serif);
   font-size: 14px;
 }
 
@@ -969,8 +1013,7 @@ input:focus {
 .action-bar { display: flex; align-items: center; gap: 8px; }
 .action-message { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* ===== thematic display font (synthwave/MTG) ===== */
-:root { --font-display: "Orbitron", "Cinzel", "Segoe UI", sans-serif; }
+/* ===== thematic display font (per-theme via --font-display) ===== */
 .brand-name {
   font-family: var(--font-display); font-weight: 900; letter-spacing: 3px; font-size: 18px;
 }
@@ -993,3 +1036,30 @@ input:focus {
   align-self: flex-start; width: 44px; height: 44px; font-size: 18px; padding: 0;
   border-color: color-mix(in srgb, var(--accent) 45%, var(--stroke));
 }
+
+/* ===== keep everything inside the window (no horizontal overflow) ===== */
+html, body { overflow-x: hidden; }
+#app { min-width: 0; overflow: hidden; }
+.view, .lobby-view, .lobby-body, .lobby-main, .deck-editor, .deck-search, .deck-list,
+.game-table, .board-wrap, .chat-col { min-width: 0; max-width: 100%; }
+.lobby-view { flex: 1; }
+.lobby-main { overflow: hidden; }          /* shrink past the table's natural width */
+.lobby-main .table-wrap, .deck-search .table-wrap { min-width: 0; overflow-x: auto; }
+.data-table { min-width: 0; }
+.table-wrap { overflow: auto; }
+/* chat is a fixed, non-shrinking column; the board/tables take the rest */
+.chat-col { flex: 0 0 auto; width: clamp(200px, 19vw, 280px); min-width: 200px; }
+
+/* ----- theme picker: families + new swatches ----- */
+.setting-row-col { align-items: flex-start; }
+.theme-picker { display: flex; flex-direction: column; gap: 12px; }
+.theme-family { display: flex; flex-direction: column; gap: 6px; }
+.theme-family-label { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+.theme-swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+.theme-swatch.t-mythic { background: linear-gradient(120deg, #e8c35a, #4fbf86); color: #14110a; font-family: "Cinzel Decorative", serif; }
+.theme-swatch.t-noir { background: linear-gradient(120deg, #16181c, #e23c3c); font-family: "Special Elite", monospace; }
+.theme-swatch.t-cutesy { background: linear-gradient(120deg, #ff9ed2, #9be8d8); color: #3a1c45; font-family: "Baloo 2", sans-serif; }
+
+/* glow intensity scales per theme (noir barely glows, cutesy soft, neon strong) */
+.btn.primary { box-shadow: 0 0 calc(14px * var(--glow-strength, 1)) color-mix(in srgb, var(--accent) 65%, transparent), inset 0 1px 0 rgba(255,255,255,0.25); }
+.h1, .brand-name { text-shadow: 0 0 calc(16px * var(--glow-strength, 1)) color-mix(in srgb, var(--accent) 60%, transparent); }
