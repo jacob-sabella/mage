@@ -103,6 +103,7 @@ public class GameDto {
         public int handCount;
         public int graveyardCount;
         public boolean active;
+        public String manaPool; // compact floating mana, e.g. "2 {R}{R}{C}" (empty if none)
         public List<CardDto> battlefield = new ArrayList<>();
         public List<CardDto> graveyard = new ArrayList<>();
         public List<CardDto> exile = new ArrayList<>();
@@ -116,6 +117,7 @@ public class GameDto {
             dto.handCount = player.getHandCount();
             dto.graveyardCount = player.getGraveyard() == null ? 0 : player.getGraveyard().size();
             dto.active = player.isActive();
+            dto.manaPool = manaPoolStr(player.getManaPool());
             Map<UUID, PermanentView> battlefield = player.getBattlefield();
             if (battlefield != null) {
                 for (PermanentView permanent : battlefield.values()) {
@@ -133,6 +135,26 @@ public class GameDto {
                 }
             }
             return dto;
+        }
+
+        private static String manaPoolStr(mage.view.ManaPoolView m) {
+            if (m == null) {
+                return "";
+            }
+            StringBuilder sb = new StringBuilder();
+            appendSym(sb, "W", m.getWhite());
+            appendSym(sb, "U", m.getBlue());
+            appendSym(sb, "B", m.getBlack());
+            appendSym(sb, "R", m.getRed());
+            appendSym(sb, "G", m.getGreen());
+            appendSym(sb, "C", m.getColorless());
+            return sb.toString();
+        }
+
+        private static void appendSym(StringBuilder sb, String c, int n) {
+            for (int i = 0; i < n; i++) {
+                sb.append('{').append(c).append('}');
+            }
         }
     }
 

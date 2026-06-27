@@ -14,6 +14,9 @@ test.describe('Game board (3D)', () => {
 
     // snap-view controls
     await expect(page.getByRole('button', { name: 'Overview' })).toBeVisible()
+
+    // floating mana pool shown as pips for the viewer ({U}{U}{R} -> 3 pips)
+    await expect(page.locator('.pstat', { hasText: 'You' }).locator('.mana-pip')).toHaveCount(3)
   })
 
   test('priority prompt offers Pass and Done; skip bar + log present', async ({ page }) => {

@@ -130,6 +130,7 @@ export function GameTable({ game, prompt, interactive, log = [], onRespond, onLe
               <span className="muted pstat-counts">
                 Hand {p.handCount} · Lib {p.libraryCount} · Grave {p.graveyardCount}
               </span>
+              {p.manaPool && <ManaPool pool={p.manaPool} />}
               {p.name === game.activePlayer && <span className="chip active-chip">Active</span>}
             </button>
           )
@@ -166,6 +167,23 @@ export function GameTable({ game, prompt, interactive, log = [], onRespond, onLe
 
       {log.length > 0 && <GameLog lines={log} />}
     </div>
+  )
+}
+
+const MANA_COLOR: Record<string, string> = { W: '#e9e3c0', U: '#4a90e2', B: '#6b5b73', R: '#e0555f', G: '#3aa55f', C: '#9aa0ad' }
+
+/** Floating mana pool as colored pips (W U B R G C). */
+function ManaPool({ pool }: { pool: string }) {
+  const syms = pool.match(/\{(\w)\}/g)?.map((s) => s[1]) ?? []
+  if (syms.length === 0) return null
+  return (
+    <span className="mana-pool" title="Mana pool">
+      {syms.map((c, i) => (
+        <span key={i} className="mana-pip" style={{ background: MANA_COLOR[c] ?? '#9aa0ad' }}>
+          {c}
+        </span>
+      ))}
+    </span>
   )
 }
 

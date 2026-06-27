@@ -66,7 +66,7 @@ export const SAMPLE = {
         graveyard: [card('ag', 'Shock', ['Instant'], { colors: 'R' })], exile: [],
       },
       {
-        id: 'me', name: 'You', life: 20, libraryCount: 28, handCount: 4, graveyardCount: 0, active: true,
+        id: 'me', name: 'You', life: 20, libraryCount: 28, handCount: 4, graveyardCount: 0, active: true, manaPool: '{U}{U}{R}',
         battlefield: [card('b1', 'Island', ['Land'], { colors: 'U' }), card('b2', 'Island', ['Land'], { colors: 'U' }), card('b3', 'Serra Angel', ['Creature'], { power: '4', toughness: '4', colors: 'W' })],
         graveyard: [], exile: [],
       },

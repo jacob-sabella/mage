@@ -69,6 +69,7 @@ export interface GamePlayer {
   handCount: number
   graveyardCount: number
   active: boolean
+  manaPool?: string
   battlefield: GameCard[]
   graveyard: GameCard[]
   exile: GameCard[]
