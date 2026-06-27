@@ -328,11 +328,47 @@ function ActionBar({ prompt, onRespond }: { prompt: Prompt; onRespond: (kind: Re
         </div>
       )}
 
+      {prompt.kind === 'multiAmount' && <MultiAmountControl prompt={prompt} onRespond={onRespond} />}
+
       {prompt.kind === 'generic' && prompt.canCancel && (
         <button className="btn" onClick={() => onRespond('boolean', 'false')}>
           Cancel
         </button>
       )}
+    </div>
+  )
+}
+
+/** Distribute amounts across several entries (e.g. "X damage divided as you
+ *  choose"); answer is the per-entry amounts joined by spaces. */
+function MultiAmountControl({ prompt, onRespond }: { prompt: Prompt; onRespond: (kind: RespondKind, value?: string) => void }) {
+  const entries = prompt.multi ?? []
+  const [vals, setVals] = useState<number[]>(() => entries.map((e) => e.def))
+  const total = vals.reduce((a, b) => a + b, 0)
+  const inRange = total >= prompt.min && total <= prompt.max
+  const set = (i: number, v: number) =>
+    setVals((prev) => prev.map((x, j) => (j === i ? Math.max(entries[j].min, Math.min(entries[j].max, v || 0)) : x)))
+  return (
+    <div className="multi-amount">
+      {entries.map((e, i) => (
+        <label key={i} className="multi-row">
+          <span className="multi-label">{plain(e.label)}</span>
+          <input
+            type="number"
+            className="multi-input"
+            min={e.min}
+            max={e.max}
+            value={vals[i]}
+            onChange={(ev) => set(i, parseInt(ev.target.value, 10))}
+          />
+        </label>
+      ))}
+      <span className={`multi-total${inRange ? '' : ' bad'}`}>
+        total {total} / {prompt.min === prompt.max ? prompt.min : `${prompt.min}–${prompt.max}`}
+      </span>
+      <button className="btn primary" disabled={!inRange} onClick={() => onRespond('string', vals.join(' '))}>
+        OK
+      </button>
     </div>
   )
 }

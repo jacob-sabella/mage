@@ -713,3 +713,11 @@ input::placeholder { color: var(--text-dim); }
   background: var(--bg); border: 1px solid var(--stroke);
   border-radius: var(--radius-sm); padding: 4px 8px; font-size: 12px;
 }
+
+/* ----- multi-amount distribute ----- */
+.multi-amount { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; flex: 1; }
+.multi-row { display: inline-flex; align-items: center; gap: 6px; }
+.multi-label { font-size: 13px; }
+.multi-input { width: 64px; }
+.multi-total { font-size: 13px; font-weight: 700; color: var(--text-dim); }
+.multi-total.bad { color: var(--danger); }

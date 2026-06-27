@@ -88,10 +88,19 @@ export const SAMPLE = {
       pile1: [card('p1', 'Mulldrifter', ['Creature']), card('p2', 'Island', ['Land'])],
       pile2: [card('p3', 'Counterspell', ['Instant'])],
     },
+    multiAmount: {
+      kind: 'multiAmount',
+      message: 'Distribute 3 damage among targets',
+      canCancel: false, min: 3, max: 3, choices: [], choiceKind: 'string', targets: [],
+      multi: [
+        { label: 'Goblin Guide', min: 0, max: 3, def: 0 },
+        { label: 'Serra Angel', min: 0, max: 3, def: 0 },
+      ],
+    },
   },
 }
 
-export type Scenario = 'lobby' | 'game' | 'mulligan' | 'target' | 'combat' | 'pile'
+export type Scenario = 'lobby' | 'game' | 'mulligan' | 'target' | 'combat' | 'pile' | 'multiAmount'
 
 // a 1x1 jpeg so the 3D board's card textures resolve deterministically
 const TINY_JPEG = Buffer.from(
@@ -123,7 +132,9 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
           ? 'attackers'
           : scenario === 'pile'
             ? 'pile'
-            : 'select'
+            : scenario === 'multiAmount'
+              ? 'multiAmount'
+              : 'select'
   await page.addInitScript(
     ([game, prompt, isGame]) => {
       class MockWS {

@@ -36,7 +36,7 @@ export interface PromptChoice {
 }
 
 export interface Prompt {
-  kind: 'ask' | 'select' | 'target' | 'amount' | 'choice' | 'pile' | 'generic'
+  kind: 'ask' | 'select' | 'target' | 'amount' | 'choice' | 'pile' | 'multiAmount' | 'generic'
   message?: string | null
   canCancel: boolean
   min: number
@@ -46,6 +46,7 @@ export interface Prompt {
   targets: string[]
   pile1?: GameCard[]
   pile2?: GameCard[]
+  multi?: { label: string; min: number; max: number; def: number }[]
 }
 
 export interface GameCard {

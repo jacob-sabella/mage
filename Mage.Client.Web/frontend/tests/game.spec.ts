@@ -97,6 +97,28 @@ test.describe('Game board (3D)', () => {
     await expect.poll(() => picked).toBe('true')
   })
 
+  test('multi-amount: distribute, gated on total, sends space-joined string', async ({ page }) => {
+    await gotoScreen(page, 'multiAmount')
+    await expect(page.getByText(/Distribute 3 damage/)).toBeVisible()
+    const inputs = page.locator('.multi-input')
+    await expect(inputs).toHaveCount(2)
+    // OK disabled until the total matches (need 3)
+    const ok = page.getByRole('button', { name: 'OK' })
+    await expect(ok).toBeDisabled()
+    await inputs.nth(0).fill('2')
+    await inputs.nth(1).fill('1')
+    await expect(ok).toBeEnabled()
+
+    let sent: string | null = null
+    await page.route('**/api/game/respond', (route) => {
+      const b = JSON.parse(route.request().postData() || '{}')
+      if (b.kind === 'string') sent = b.value
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
+    })
+    await ok.click()
+    await expect.poll(() => sent).toBe('2 1')
+  })
+
   test('target prompt shows the choose-a-target hint', async ({ page }) => {
     await gotoScreen(page, 'target')
     await expect(page.getByText('Choose a target', { exact: false })).toBeVisible()

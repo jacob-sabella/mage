@@ -30,6 +30,22 @@ public class PromptDto {
     // for kind == "pile": the two piles to choose between (boolean true = pile1)
     public List<GameDto.CardDto> pile1 = new ArrayList<>();
     public List<GameDto.CardDto> pile2 = new ArrayList<>();
+    // for kind == "multiAmount": one entry per amount to set (answer = "a b c")
+    public List<MultiEntry> multi = new ArrayList<>();
+
+    public static class MultiEntry {
+        public String label;
+        public int min;
+        public int max;
+        public int def;
+
+        MultiEntry(String label, int min, int max, int def) {
+            this.label = label;
+            this.min = min;
+            this.max = max;
+            this.def = def;
+        }
+    }
 
     public static class ChoiceOption {
         public String key;
@@ -82,6 +98,19 @@ public class PromptDto {
                 dto.canCancel = false;
                 addPile(dto.pile1, message.getCardsView1());
                 addPile(dto.pile2, message.getCardsView2());
+                break;
+            case GAME_GET_MULTI_AMOUNT:
+                // distribute amounts (e.g. "deal X damage divided as you choose").
+                // answer is sent as a space-joined string of per-entry amounts.
+                dto.kind = "multiAmount";
+                dto.canCancel = false;
+                dto.min = message.getMin(); // total lower bound
+                dto.max = message.getMax(); // total upper bound
+                if (message.getMessages() != null) {
+                    for (mage.util.MultiAmountMessage m : message.getMessages()) {
+                        dto.multi.add(new MultiEntry(m.message, m.min, m.max, m.defaultValue));
+                    }
+                }
                 break;
             default:
                 // pile, multi-amount, etc. - surface the text with a cancel escape
