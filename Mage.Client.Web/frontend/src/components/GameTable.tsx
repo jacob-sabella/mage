@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Board3D } from './Board3D'
 import type { RespondKind } from '../api'
+import { plain } from '../text'
 import type { GameCard as CardType, GameState, Prompt } from '../types'
 
 interface Props {
@@ -198,7 +199,7 @@ function GameLog({ lines }: { lines: string[] }) {
       <div className="game-log-body" ref={ref}>
         {lines.map((l, i) => (
           <div className="game-log-line" key={i}>
-            {l}
+            {plain(l)}
           </div>
         ))}
       </div>
@@ -211,7 +212,7 @@ function ActionBar({ prompt, onRespond }: { prompt: Prompt; onRespond: (kind: Re
 
   return (
     <div className="action-bar panel">
-      <span className="action-message">{prompt.message || promptFallback(prompt.kind)}</span>
+      <span className="action-message">{plain(prompt.message) || promptFallback(prompt.kind)}</span>
       <span className="spacer" />
 
       {prompt.kind === 'ask' && (

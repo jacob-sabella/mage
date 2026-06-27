@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { plain } from '../text'
 import type { ChatLine } from '../types'
 
 interface Props {
@@ -44,7 +45,7 @@ export function ChatPanel({ lines, onSend }: Props) {
               </span>
             )}
             <span className="chat-text" style={!l.user && l.color ? { color: COLOR[l.color] } : undefined}>
-              {l.text}
+              {plain(l.text)}
             </span>
           </div>
         ))}

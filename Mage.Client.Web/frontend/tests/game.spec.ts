@@ -52,9 +52,11 @@ test.describe('Game board (3D)', () => {
     await expect.poll(() => playedId).toBe('h1')
   })
 
-  test('mulligan prompt offers Yes/No', async ({ page }) => {
+  test('mulligan prompt offers Yes/No and strips HTML from the message', async ({ page }) => {
     await gotoScreen(page, 'mulligan')
-    await expect(page.getByText(/Mulligan/)).toBeVisible()
+    // server sends "Mulligan <font ...>down to 6 cards</font>?" — must render clean
+    await expect(page.locator('.action-message')).toHaveText('Mulligan down to 6 cards?')
+    await expect(page.locator('.action-message')).not.toContainText('<font')
     await expect(page.getByRole('button', { name: 'Yes' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'No' })).toBeVisible()
   })
