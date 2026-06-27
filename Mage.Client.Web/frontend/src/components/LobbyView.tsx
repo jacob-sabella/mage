@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   createGameVsAi,
   disconnect,
@@ -46,6 +46,9 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   // we initiated a play (create/join); adopt the next game frame as ours
   const [pendingPlay, setPendingPlay] = useState(false)
   const [playStatus, setPlayStatus] = useState<string | null>(null)
+  // synchronous mirror of activeGameId so back-to-back gameStart+game frames in
+  // one event-loop tick don't read a stale value (which clobbered interactive)
+  const activeRef = useRef<string | null>(null)
 
   const toggleHistory = useCallback(() => {
     setShowHistory((prev) => {
@@ -75,6 +78,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
       ])
     } else if (e.type === 'gameStart' && e.gameId) {
       // a match we joined has started - switch to the interactive board
+      activeRef.current = e.gameId
       setActiveGameId(e.gameId)
       setInteractive(true)
       setPendingPlay(false)
@@ -83,7 +87,8 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
       setPrompt(null)
     } else if (e.type === 'game') {
       // adopt the game if we don't have one yet (covers a missed gameStart frame)
-      if (!activeGameId && e.gameId) {
+      if (!activeRef.current && e.gameId) {
+        activeRef.current = e.gameId
         setActiveGameId(e.gameId)
         setInteractive(pendingPlay)
         setPendingPlay(false)
@@ -100,6 +105,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
 
   const handleWatch = useCallback(
     (gameId: string) => {
+      activeRef.current = gameId
       setActiveGameId(gameId)
       setInteractive(false)
       setGame(null)
@@ -153,6 +159,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   )
 
   const handleLeaveGame = useCallback(() => {
+    activeRef.current = null
     setActiveGameId(null)
     setInteractive(false)
     setGame(null)
