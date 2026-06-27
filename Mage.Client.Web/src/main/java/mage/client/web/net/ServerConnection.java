@@ -1,4 +1,4 @@
-package mage.client.fx.net;
+package mage.client.web.net;
 
 import mage.players.net.UserData;
 import mage.remote.Connection;
@@ -12,27 +12,25 @@ import java.util.Collections;
 import java.util.UUID;
 
 /**
- * Thin façade over the shared {@link Session} (JBoss-remoting transport).
+ * One upstream XMage session, owned by the gateway on behalf of a single
+ * browser session. Reuses the shared {@link Session} (JBoss transport)
+ * unchanged - no protocol/serialization code is duplicated here.
  * <p>
- * The whole point of the new client is that it reuses this layer unchanged: the
- * networking, serialization and protocol all live in {@code Mage.Common}. This
- * class only adds convenience and keeps the JavaFX views free of remoting
- * details. All calls here are blocking and are expected to run off the JavaFX
- * Application Thread (see {@code ServerConnectionService}).
+ * Calls are blocking and run on gateway worker threads, never the browser.
  *
- * @author XMage FX client
+ * @author XMage web client
  */
 public class ServerConnection {
 
-    private final FxMageClient client;
+    private final WebMageClient client;
     private final Session session;
 
     public ServerConnection() {
-        this.client = new FxMageClient();
+        this.client = new WebMageClient();
         this.session = new SessionImpl(client);
     }
 
-    public FxMageClient getClient() {
+    public WebMageClient getClient() {
         return client;
     }
 
@@ -41,9 +39,8 @@ public class ServerConnection {
     }
 
     /**
-     * Open a session against the given server. Mirrors the {@code Connection}
-     * setup the Swing client performs, using default (guest) user data so the
-     * lobby is reachable without a saved profile.
+     * Open a session against the given server, using default (guest) user data
+     * so the lobby is reachable without a saved profile.
      *
      * @return true when the handshake succeeds
      */
@@ -65,13 +62,9 @@ public class ServerConnection {
         return session.getLastError();
     }
 
-    public UUID getMainRoomId() {
-        return session.getMainRoomId();
-    }
-
     /**
      * Tables currently open in the main room. Returns an empty list rather than
-     * throwing so the UI layer can render a clean "no tables" state.
+     * throwing so the gateway can return a clean empty result.
      */
     public Collection<TableView> getTables() {
         try {

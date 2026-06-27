@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XMage — Obsidian</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+    <span class="brand-dot"></span>
+    <span class="brand-name">XMage</span>
+    <span class="brand-accent">Obsidian</span>
+    <span class="spacer"></span>
+    <span id="conn-status" class="conn-pill offline">Offline</span>
+</header>
+
+<main id="app">
+    <!-- Login view -->
+    <section id="view-login" class="view login-view">
+        <div class="panel login-card">
+            <h1 class="h1">Connect to a server</h1>
+            <p class="subtitle">Play Magic against players and AI opponents.</p>
+
+            <div class="field-row">
+                <label class="field">
+                    <span class="field-label">SERVER</span>
+                    <input id="host" type="text" value="localhost" placeholder="Host">
+                </label>
+                <label class="field port">
+                    <span class="field-label">PORT</span>
+                    <input id="port" type="text" value="17171" placeholder="Port">
+                </label>
+            </div>
+
+            <label class="field">
+                <span class="field-label">DISPLAY NAME</span>
+                <input id="username" type="text" placeholder="Your display name">
+            </label>
+
+            <button id="connect-btn" class="btn primary block">Connect</button>
+            <p id="login-status" class="status"></p>
+        </div>
+    </section>
+
+    <!-- Lobby view -->
+    <section id="view-lobby" class="view lobby-view hidden">
+        <div class="lobby-header">
+            <h1 class="h1">Open tables</h1>
+            <span id="table-count" class="chip">0 tables</span>
+            <span class="spacer"></span>
+            <button id="refresh-btn" class="btn">Refresh</button>
+            <button id="disconnect-btn" class="btn ghost">Disconnect</button>
+        </div>
+
+        <div class="panel table-wrap">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th>Table</th>
+                    <th>Game type</th>
+                    <th>Host</th>
+                    <th>Seats</th>
+                    <th>State</th>
+                </tr>
+                </thead>
+                <tbody id="tables-body">
+                </tbody>
+            </table>
+            <p id="tables-empty" class="empty hidden">No open tables right now. Create one or refresh.</p>
+        </div>
+
+        <div id="event-log" class="event-log"></div>
+    </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

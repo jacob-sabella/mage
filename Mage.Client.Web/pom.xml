@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.mage</groupId>
+        <artifactId>mage-root</artifactId>
+        <version>1.4.60</version>
+    </parent>
+
+    <artifactId>mage-client-web</artifactId>
+    <packaging>jar</packaging>
+    <name>Mage Client Web</name>
+    <description>Browser-based XMage client. A thin JVM gateway reuses the shared
+        Mage.Common session (JBoss transport) to talk to the XMage server, and
+        exposes HTTP + WebSocket/JSON to a modern web UI. The game engine and
+        protocol stay shared with the existing clients - only the UI is new.</description>
+
+    <properties>
+        <!-- Javalin/Jetty needs Java 11+; this module compiles to 17 (CI runs Temurin 17). -->
+        <javalin.version>5.6.3</javalin.version>
+        <jackson.version>2.15.2</jackson.version>
+        <slf4j.version>1.7.36</slf4j.version>
+    </properties>
+
+    <dependencies>
+        <!-- Shared engine model + DTOs (GameView, CardView, TableView, ...) -->
+        <dependency>
+            <groupId>org.mage</groupId>
+            <artifactId>mage</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- Shared client/server boundary: Session, MageServer, callbacks, views -->
+        <dependency>
+            <groupId>org.mage</groupId>
+            <artifactId>mage-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- Embedded HTTP + WebSocket server (Jetty under the hood) -->
+        <dependency>
+            <groupId>io.javalin</groupId>
+            <artifactId>javalin</artifactId>
+            <version>${javalin.version}</version>
+        </dependency>
+        <!-- JSON for the REST/WS payloads -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <!-- Concrete SLF4J binding so Javalin/Jetty logging works standalone -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>${slf4j.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>mage-client-web</finalName>
+        <plugins>
+            <!-- Override the parent's Java 8 compiler settings for this module only. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>17</source>
+                    <target>17</target>
+                    <release combine.self="override"/>
+                </configuration>
+            </plugin>
+
+            <!-- Run with: mvn -Pweb-client -pl Mage.Client.Web -am exec:java -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <mainClass>mage.client.web.WebClientApp</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

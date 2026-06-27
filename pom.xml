@@ -246,16 +246,18 @@
 
     <profiles>
         <!--
-            New JavaFX desktop client (modern UI rewrite). Kept out of the default
-            reactor because it targets Java 17 (OpenJFX needs 11+) while the rest of
-            the project still compiles to Java 8. Build/run it explicitly with:
-                mvn -Pfx-client -pl Mage.Client.FX -am compile
-                mvn -Pfx-client -pl Mage.Client.FX -am javafx:run
+            New web client: a JVM gateway (Mage.Client.Web) that reuses the shared
+            Mage.Common session to talk to the XMage server, and serves a modern
+            browser UI over HTTP + WebSocket. Kept out of the default reactor
+            because it targets Java 17 while the rest still compiles to Java 8.
+            Build/run it explicitly with:
+                mvn -Pweb-client -pl Mage.Client.Web -am compile
+                mvn -Pweb-client -pl Mage.Client.Web -am exec:java
         -->
         <profile>
-            <id>fx-client</id>
+            <id>web-client</id>
             <modules>
-                <module>Mage.Client.FX</module>
+                <module>Mage.Client.Web</module>
             </modules>
         </profile>
     </profiles>
