@@ -27,6 +27,7 @@ public class GameDto {
     public String step;
     public String activePlayer;
     public String priorityPlayer;
+    public String me; // the seated/viewing player's name (null for spectators)
     public List<PlayerDto> players = new ArrayList<>();
     public List<CardDto> stack = new ArrayList<>();
     // ids of objects the viewing player may currently play/activate (for highlighting)
@@ -42,6 +43,7 @@ public class GameDto {
         dto.step = game.getStep() == null ? null : game.getStep().toString();
         dto.activePlayer = game.getActivePlayerName();
         dto.priorityPlayer = game.getPriorityPlayerName();
+        dto.me = game.getMyPlayer() == null ? null : game.getMyPlayer().getName();
 
         for (PlayerView player : game.getPlayers()) {
             dto.players.add(PlayerDto.from(player));

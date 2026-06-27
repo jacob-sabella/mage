@@ -80,6 +80,7 @@ export interface GameState {
   step?: string | null
   activePlayer?: string | null
   priorityPlayer?: string | null
+  me?: string | null
   players: GamePlayer[]
   stack: GameCard[]
   canPlay: string[]

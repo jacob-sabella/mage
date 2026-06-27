@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { usePrefs } from '../prefs'
+import { useCardPreview } from '../cardPreview'
 import type { GameCard as CardType } from '../types'
 
 // Tint a card by its WUBRG color string.
@@ -17,6 +18,12 @@ function background(colors?: string | null): string {
   return COLOR_BG[colors] ?? '#2b2f3a'
 }
 
+function imgUrl(card: CardType): string {
+  return `/api/cardimg?set=${encodeURIComponent(card.set ?? '')}&num=${encodeURIComponent(
+    card.num ?? '',
+  )}&name=${encodeURIComponent(card.name)}`
+}
+
 interface Props {
   card: CardType
   highlight?: 'play' | 'target'
@@ -25,6 +32,7 @@ interface Props {
 
 export function GameCard({ card, highlight, onClick }: Props) {
   const { prefs } = usePrefs()
+  const { setPreview } = useCardPreview()
   const isCreature = card.types?.includes('Creature')
   const isPlaneswalker = card.types?.includes('Planeswalker')
   const clickable = !!onClick
@@ -35,9 +43,9 @@ export function GameCard({ card, highlight, onClick }: Props) {
       layout
       layoutId={card.id}
       initial={{ opacity: 0, scale: 0.7, y: 14 }}
-      animate={{ opacity: 1, scale: 1, y: 0, rotate: card.tapped ? 9 : 0 }}
+      animate={{ opacity: 1, scale: 1, y: 0, rotate: card.tapped ? 90 : 0 }}
       exit={{ opacity: 0, scale: 0.7, y: -10 }}
-      whileHover={clickable ? { y: -8, scale: 1.06, zIndex: 5 } : { y: -3 }}
+      whileHover={clickable ? { y: -10, scale: 1.08, zIndex: 5 } : { y: -4, scale: 1.04, zIndex: 5 }}
       whileTap={clickable ? { scale: 0.97 } : undefined}
       transition={{ type: 'spring', stiffness: 320, damping: 26, mass: 0.6 }}
       className={
@@ -48,14 +56,14 @@ export function GameCard({ card, highlight, onClick }: Props) {
       style={{ background: background(card.colors) }}
       title={`${card.name}${card.manaCost ? '  ' + card.manaCost : ''}`}
       onClick={clickable ? () => onClick!(card) : undefined}
+      onMouseEnter={() => card.name && setPreview({ src: imgUrl(card), name: card.name })}
+      onMouseLeave={() => setPreview(null)}
     >
       {prefs.cardImages && card.name && (
         <img
           className="gc-art"
           loading="lazy"
-          src={`/api/cardimg?set=${encodeURIComponent(card.set ?? '')}&num=${encodeURIComponent(
-            card.num ?? '',
-          )}&name=${encodeURIComponent(card.name)}`}
+          src={imgUrl(card)}
           alt=""
           onError={(e) => {
             ;(e.currentTarget as HTMLImageElement).style.display = 'none'
@@ -63,15 +71,21 @@ export function GameCard({ card, highlight, onClick }: Props) {
         />
       )}
       <div className="gc-sheen" />
-      <div className="gc-name">{card.name}</div>
-      <div className="gc-type">{card.types?.join(' ')}</div>
-      {isCreature && (
-        <div className="gc-pt">
-          {card.power}/{card.toughness}
-          {card.damage > 0 && <span className="gc-dmg"> −{card.damage}</span>}
-        </div>
-      )}
-      {isPlaneswalker && card.loyalty != null && <div className="gc-pt">◆ {card.loyalty}</div>}
+      <div className="gc-frame">
+        <div className="gc-name">{card.name}</div>
+        {(isCreature || (isPlaneswalker && card.loyalty != null)) && (
+          <div className="gc-pt">
+            {isCreature ? (
+              <>
+                {card.power}/{card.toughness}
+                {card.damage > 0 && <span className="gc-dmg"> −{card.damage}</span>}
+              </>
+            ) : (
+              <>◆ {card.loyalty}</>
+            )}
+          </div>
+        )}
+      </div>
     </motion.div>
   )
 }

@@ -207,6 +207,9 @@ public class ServerConnection {
         options.setAttackOption(MultiplayerAttackOption.LEFT);
         options.setMatchTimeLimit(MatchTimeLimit.NONE);
         options.setMatchBufferTime(MatchBufferTime.NONE);
+        // accept any player regardless of quit ratio / rating (solo vs AI)
+        options.setQuitRatio(100);
+        options.setMinimumRating(0);
 
         TableView table = session.createTable(roomId, options);
         if (table == null) {

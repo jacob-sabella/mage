@@ -1,27 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
-import { GameCard } from './GameCard'
+import { motion } from 'framer-motion'
+import { Board3D } from './Board3D'
 import type { RespondKind } from '../api'
-import type { GameCard as CardType, GamePlayer, GameState, Prompt } from '../types'
-
-/** A flex row of cards with enter/exit/reflow animation. */
-function CardRow({
-  cards,
-  cardProps,
-}: {
-  cards: CardType[]
-  cardProps: (c: CardType) => { highlight?: 'play' | 'target'; onClick?: (c: CardType) => void }
-}) {
-  return (
-    <div className="card-row">
-      <AnimatePresence mode="popLayout">
-        {cards.map((c) => (
-          <GameCard key={c.id} card={c} {...cardProps(c)} />
-        ))}
-      </AnimatePresence>
-    </div>
-  )
-}
+import type { GameCard as CardType, GameState, Prompt } from '../types'
 
 interface Props {
   game: GameState | null
@@ -134,33 +115,27 @@ export function GameTable({ game, prompt, interactive, log = [], onRespond, onLe
         </div>
       )}
 
-      <div className="game-board">
-        {game.players.map((p) => (
-          <PlayerArea
-            key={p.id}
-            player={p}
-            active={p.name === game.activePlayer}
-            cardProps={cardProps}
-            // during a target/select decision a player can be the target
-            onTarget={
-              interactive && prompt && (prompt.kind === 'target' || prompt.kind === 'select')
-                ? () => onRespond('uuid', p.id)
-                : undefined
-            }
-          />
-        ))}
+      <div className="player-strip">
+        {game.players.map((p) => {
+          const canTarget = interactive && prompt && (prompt.kind === 'target' || prompt.kind === 'select')
+          return (
+            <button
+              key={p.id}
+              className={`pstat${p.name === game.activePlayer ? ' active' : ''}${canTarget ? ' targetable' : ''}`}
+              onClick={canTarget ? () => onRespond('uuid', p.id) : undefined}
+            >
+              <span className="pstat-name">{p.name}</span>
+              <span className="pstat-life">♥ {p.life}</span>
+              <span className="muted pstat-counts">
+                Hand {p.handCount} · Lib {p.libraryCount} · Grave {p.graveyardCount}
+              </span>
+              {p.name === game.activePlayer && <span className="chip active-chip">Active</span>}
+            </button>
+          )
+        })}
       </div>
 
-      {game.stack.length > 0 && (
-        <motion.div
-          className="game-stack panel"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <div className="stack-title">Stack ({game.stack.length})</div>
-          <CardRow cards={game.stack} cardProps={cardProps} />
-        </motion.div>
-      )}
+      <Board3D game={game} cardProps={cardProps} />
 
       {game.combat.length > 0 && (
         <div className="combat-panel panel">
@@ -177,13 +152,6 @@ export function GameTable({ game, prompt, interactive, log = [], onRespond, onLe
               )}
             </div>
           ))}
-        </div>
-      )}
-
-      {game.myHand.length > 0 && (
-        <div className="hand-zone panel">
-          <div className="stack-title">Your hand ({game.myHand.length})</div>
-          <CardRow cards={game.myHand} cardProps={cardProps} />
         </div>
       )}
 
@@ -210,73 +178,6 @@ function GameLog({ lines }: { lines: string[] }) {
           </div>
         ))}
       </div>
-    </div>
-  )
-}
-
-function PlayerArea({
-  player,
-  active,
-  cardProps,
-  onTarget,
-}: {
-  player: GamePlayer
-  active: boolean
-  cardProps: (c: CardType) => { highlight?: 'play' | 'target'; onClick?: (c: CardType) => void }
-  onTarget?: () => void
-}) {
-  return (
-    <div className={`player-area${active ? ' active' : ''}`}>
-      <div
-        className={`player-bar${onTarget ? ' targetable' : ''}`}
-        onClick={onTarget}
-        title={onTarget ? `Target ${player.name}` : undefined}
-      >
-        <span className="player-name">{player.name}</span>
-        <motion.span
-          className="life"
-          key={player.life}
-          initial={{ scale: 1.5, color: '#7df0c0' }}
-          animate={{ scale: 1, color: '#4ec98a' }}
-          transition={{ type: 'spring', stiffness: 400, damping: 18 }}
-        >
-          ♥ {player.life}
-        </motion.span>
-        <span className="zone-counts muted">
-          Hand {player.handCount} · Library {player.libraryCount} · Grave {player.graveyardCount}
-        </span>
-        {active && <span className="chip active-chip">Active</span>}
-      </div>
-      <div className="battlefield">
-        {player.battlefield.length === 0 ? (
-          <span className="muted empty-field">No permanents</span>
-        ) : (
-          <CardRow cards={player.battlefield} cardProps={cardProps} />
-        )}
-      </div>
-      {player.graveyard.length > 0 && (
-        <ZoneRow label="Graveyard" cards={player.graveyard} cardProps={cardProps} />
-      )}
-      {player.exile.length > 0 && <ZoneRow label="Exile" cards={player.exile} cardProps={cardProps} />}
-    </div>
-  )
-}
-
-function ZoneRow({
-  label,
-  cards,
-  cardProps,
-}: {
-  label: string
-  cards: CardType[]
-  cardProps: (c: CardType) => { highlight?: 'play' | 'target'; onClick?: (c: CardType) => void }
-}) {
-  return (
-    <div className="zone-row">
-      <div className="zone-row-title">
-        {label} ({cards.length})
-      </div>
-      <CardRow cards={cards} cardProps={cardProps} />
     </div>
   )
 }

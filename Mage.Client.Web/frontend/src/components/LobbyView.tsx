@@ -16,6 +16,14 @@ import { DeckPicker } from './DeckPicker'
 import { GameTable } from './GameTable'
 import type { ChatLine, GameState, Prompt, Session, TableDto } from '../types'
 
+// a table is joinable when it has an open seat and isn't already in a game
+function isJoinable(t: TableDto): boolean {
+  const m = /^(\d+)\s*\/\s*(\d+)$/.exec(t.seats || '')
+  if (!m) return false
+  const state = (t.state || '').toLowerCase()
+  return Number(m[1]) < Number(m[2]) && !/duel|finish|sideboard|draft|construct/.test(state)
+}
+
 // Default deck used when sitting down at a table (a .dck path on the server).
 
 interface Props {
@@ -253,9 +261,12 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
                             Watch
                           </button>
                         )}
-                        <button className="btn watch-btn" onClick={() => handleJoin(t.id)}>
-                          Join
-                        </button>
+                        {isJoinable(t) && (
+                          <button className="btn watch-btn" onClick={() => handleJoin(t.id)}>
+                            Join
+                          </button>
+                        )}
+                        {!isJoinable(t) && t.games.length === 0 && <span className="muted">—</span>}
                       </td>
                     </tr>
                   ))}
