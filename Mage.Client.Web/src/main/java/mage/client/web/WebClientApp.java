@@ -135,6 +135,17 @@ public class WebClientApp {
                 conn.getClient().setErrorHandler(err -> push(ctx, "error", err));
                 conn.getClient().setCallbackHandler(cb -> pushCallback(ctx, conn, cb));
                 push(ctx, "ready", "connected");
+                // if the upstream session is still in a game (e.g. the browser
+                // reloaded mid-game), re-open the board and re-subscribe so the
+                // server resends GAME_UPDATE — the player rejoins where they left off
+                UUID resumeGame = conn.getActiveGameId();
+                if (resumeGame != null) {
+                    Map<String, Object> msg = new LinkedHashMap<>();
+                    msg.put("type", "gameStart");
+                    msg.put("gameId", resumeGame.toString());
+                    pushMap(ctx, msg);
+                    runAsync("fx-rejoin", () -> conn.joinGame(resumeGame));
+                }
             });
             ws.onClose(ctx -> {
                 String token = ctx.queryParam("token");
@@ -791,6 +802,7 @@ public class WebClientApp {
         // the game ended: surface the result (who won) + the final board
         if (method == ClientCallbackMethod.GAME_OVER && cb.getData() instanceof GameClientMessage) {
             GameClientMessage m = (GameClientMessage) cb.getData();
+            conn.clearActiveGame(); // don't try to rejoin a finished game on reload
             Map<String, Object> msg = new LinkedHashMap<>();
             msg.put("type", "gameOver");
             msg.put("gameId", cb.getObjectId() == null ? null : cb.getObjectId().toString());

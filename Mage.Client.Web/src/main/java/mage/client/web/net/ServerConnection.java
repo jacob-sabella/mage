@@ -206,9 +206,25 @@ public class ServerConnection {
         return session.joinTable(roomId, tableId, playerName, PlayerType.HUMAN, 1, deck, "");
     }
 
+    private volatile UUID activeGameId; // the game this session is in (for reload-rejoin)
+
+    /** The game this session is currently playing, or null. */
+    public UUID getActiveGameId() {
+        return activeGameId;
+    }
+
+    /** Forget the active game (called when it ends). */
+    public void clearActiveGame() {
+        this.activeGameId = null;
+    }
+
     /** Subscribe to a game's callbacks as a seated player (called on START_GAME). */
     public boolean joinGame(UUID gameId) {
-        return gameId != null && session.joinGame(gameId);
+        if (gameId == null) {
+            return false;
+        }
+        this.activeGameId = gameId;
+        return session.joinGame(gameId);
     }
 
     /**
