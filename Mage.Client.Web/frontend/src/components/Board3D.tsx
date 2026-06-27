@@ -41,10 +41,12 @@ function imgUrl(c: GameCard) {
 function makeCardTexture(card: GameCard): THREE.Texture {
   const w = 256
   const h = 358
+  const k = 2 // supersample so the text-only fallback stays crisp on the table
   const cv = document.createElement('canvas')
-  cv.width = w
-  cv.height = h
+  cv.width = w * k
+  cv.height = h * k
   const g = cv.getContext('2d')!
+  g.scale(k, k)
   const base = bg(card.colors)
   g.fillStyle = base
   g.fillRect(0, 0, w, h)
@@ -513,12 +515,14 @@ export function Board3D({
         const len = Math.hypot(s.x, s.z) || 1
         const ux = s.x / len
         const uz = s.z / len
-        const out = radius + 6.4
+        // a steeper view (higher camera, closer in) keeps the flat cards much
+        // closer to face-on → far sharper textures than a grazing angle
+        const out = radius + 4.6
         return {
           name: s.isViewer ? 'You' : s.player.name,
           target: {
-            pos: new THREE.Vector3(ux * out, 6.2, uz * out),
-            look: new THREE.Vector3(-ux * 0.6, 0.2, -uz * 0.6),
+            pos: new THREE.Vector3(ux * out, 8.6, uz * out),
+            look: new THREE.Vector3(-ux * 0.5, 0, -uz * 0.5),
           },
         }
       }),
