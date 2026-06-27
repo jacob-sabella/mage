@@ -699,3 +699,17 @@ input::placeholder { color: var(--text-dim); }
   font-size: 11px; font-weight: 800; color: #11141b;
   box-shadow: inset 0 0 0 1px rgba(0,0,0,0.35);
 }
+
+/* ----- pile choice (Fact or Fiction etc.) ----- */
+.pile-choice { display: flex; gap: 16px; flex: 1; flex-wrap: wrap; }
+.pile {
+  flex: 1; min-width: 200px;
+  display: flex; flex-direction: column; gap: 8px;
+  background: var(--bg-raised); border: 1px solid var(--stroke);
+  border-radius: var(--radius); padding: 10px;
+}
+.pile-cards { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; }
+.pile-card {
+  background: var(--bg); border: 1px solid var(--stroke);
+  border-radius: var(--radius-sm); padding: 4px 8px; font-size: 12px;
+}

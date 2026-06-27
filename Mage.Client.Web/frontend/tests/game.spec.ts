@@ -81,6 +81,22 @@ test.describe('Game board (3D)', () => {
     await expect.poll(() => declaredId).toBe('b3')
   })
 
+  test('pile choice shows both piles and picks one (boolean)', async ({ page }) => {
+    await gotoScreen(page, 'pile')
+    await expect(page.getByText(/Fact or Fiction/)).toBeVisible()
+    await expect(page.locator('.pile').first().getByText('Mulldrifter')).toBeVisible()
+    await expect(page.locator('.pile').nth(1).getByText('Counterspell')).toBeVisible()
+
+    let picked: string | null = null
+    await page.route('**/api/game/respond', (route) => {
+      const b = JSON.parse(route.request().postData() || '{}')
+      if (b.kind === 'boolean') picked = b.value
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
+    })
+    await page.getByRole('button', { name: 'Take pile 1' }).click()
+    await expect.poll(() => picked).toBe('true')
+  })
+
   test('target prompt shows the choose-a-target hint', async ({ page }) => {
     await gotoScreen(page, 'target')
     await expect(page.getByText('Choose a target', { exact: false })).toBeVisible()

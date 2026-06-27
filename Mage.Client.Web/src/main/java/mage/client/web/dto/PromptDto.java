@@ -19,7 +19,7 @@ import java.util.UUID;
  */
 public class PromptDto {
 
-    public String kind;        // ask | select | target | amount | choice | generic
+    public String kind;        // ask | select | target | amount | choice | pile | generic
     public String message;
     public boolean canCancel;  // a "boolean false" answer is accepted (pass / cancel / done)
     public int min;
@@ -27,6 +27,9 @@ public class PromptDto {
     public List<ChoiceOption> choices = new ArrayList<>();
     public String choiceKind = "string"; // how a chosen option is sent: string | uuid
     public List<String> targets = new ArrayList<>(); // already-selected target ids
+    // for kind == "pile": the two piles to choose between (boolean true = pile1)
+    public List<GameDto.CardDto> pile1 = new ArrayList<>();
+    public List<GameDto.CardDto> pile2 = new ArrayList<>();
 
     public static class ChoiceOption {
         public String key;
@@ -73,6 +76,13 @@ public class PromptDto {
                 dto.kind = "target";
                 dto.canCancel = true;
                 break;
+            case GAME_CHOOSE_PILE:
+                // split-pile effects (e.g. Fact or Fiction): boolean true = pile 1
+                dto.kind = "pile";
+                dto.canCancel = false;
+                addPile(dto.pile1, message.getCardsView1());
+                addPile(dto.pile2, message.getCardsView2());
+                break;
             default:
                 // pile, multi-amount, etc. - surface the text with a cancel escape
                 dto.kind = "generic";
@@ -95,6 +105,14 @@ public class PromptDto {
             }
         }
         return dto;
+    }
+
+    private static void addPile(List<GameDto.CardDto> out, mage.view.CardsView cards) {
+        if (cards != null) {
+            for (mage.view.CardView card : cards.values()) {
+                out.add(GameDto.CardDto.from(card));
+            }
+        }
     }
 
     private static void addTargets(PromptDto dto, Set<UUID> targets) {

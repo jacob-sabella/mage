@@ -36,7 +36,7 @@ export interface PromptChoice {
 }
 
 export interface Prompt {
-  kind: 'ask' | 'select' | 'target' | 'amount' | 'choice' | 'generic'
+  kind: 'ask' | 'select' | 'target' | 'amount' | 'choice' | 'pile' | 'generic'
   message?: string | null
   canCancel: boolean
   min: number
@@ -44,6 +44,8 @@ export interface Prompt {
   choices: PromptChoice[]
   choiceKind?: 'string' | 'uuid'
   targets: string[]
+  pile1?: GameCard[]
+  pile2?: GameCard[]
 }
 
 export interface GameCard {

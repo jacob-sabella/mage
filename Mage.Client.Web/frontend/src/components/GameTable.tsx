@@ -299,6 +299,35 @@ function ActionBar({ prompt, onRespond }: { prompt: Prompt; onRespond: (kind: Re
         </div>
       )}
 
+      {prompt.kind === 'pile' && (
+        <div className="pile-choice">
+          <div className="pile">
+            <div className="pile-cards">
+              {(prompt.pile1 ?? []).map((c) => (
+                <span key={c.id} className="pile-card">
+                  {c.name}
+                </span>
+              ))}
+            </div>
+            <button className="btn primary" onClick={() => onRespond('boolean', 'true')}>
+              Take pile 1
+            </button>
+          </div>
+          <div className="pile">
+            <div className="pile-cards">
+              {(prompt.pile2 ?? []).map((c) => (
+                <span key={c.id} className="pile-card">
+                  {c.name}
+                </span>
+              ))}
+            </div>
+            <button className="btn primary" onClick={() => onRespond('boolean', 'false')}>
+              Take pile 2
+            </button>
+          </div>
+        </div>
+      )}
+
       {prompt.kind === 'generic' && prompt.canCancel && (
         <button className="btn" onClick={() => onRespond('boolean', 'false')}>
           Cancel
