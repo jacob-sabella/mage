@@ -31,6 +31,8 @@ public class GameDto {
     public List<CardDto> stack = new ArrayList<>();
     // ids of objects the viewing player may currently play/activate (for highlighting)
     public List<String> canPlay = new ArrayList<>();
+    // the seated player's hand (empty for pure spectators)
+    public List<CardDto> myHand = new ArrayList<>();
 
     public static GameDto from(GameView game) {
         GameDto dto = new GameDto();
@@ -53,6 +55,11 @@ public class GameDto {
                 dto.canPlay.add(id.toString());
             }
         }
+        if (game.getMyHand() != null) {
+            for (CardView card : game.getMyHand().values()) {
+                dto.myHand.add(CardDto.from(card));
+            }
+        }
         return dto;
     }
 
@@ -65,6 +72,8 @@ public class GameDto {
         public int graveyardCount;
         public boolean active;
         public List<CardDto> battlefield = new ArrayList<>();
+        public List<CardDto> graveyard = new ArrayList<>();
+        public List<CardDto> exile = new ArrayList<>();
 
         static PlayerDto from(PlayerView player) {
             PlayerDto dto = new PlayerDto();
@@ -79,6 +88,16 @@ public class GameDto {
             if (battlefield != null) {
                 for (PermanentView permanent : battlefield.values()) {
                     dto.battlefield.add(CardDto.from(permanent));
+                }
+            }
+            if (player.getGraveyard() != null) {
+                for (CardView card : player.getGraveyard().values()) {
+                    dto.graveyard.add(CardDto.from(card));
+                }
+            }
+            if (player.getExile() != null) {
+                for (CardView card : player.getExile().values()) {
+                    dto.exile.add(CardDto.from(card));
                 }
             }
             return dto;
