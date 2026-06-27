@@ -42,10 +42,11 @@ function SettingsView() {
                     <button
                       key={c.id}
                       className={`theme-swatch t-${c.id}${prefs.theme === c.id ? ' active' : ''}`}
+                      style={{ background: `linear-gradient(120deg, ${c.a}, ${c.b})` }}
                       onClick={() => setPref('theme', c.id)}
                       title={`${fam.label} · ${c.label}`}
                     >
-                      {c.label}
+                      <span className="theme-swatch-label">{c.label}</span>
                     </button>
                   ))}
                 </div>
@@ -73,6 +74,20 @@ function SettingsView() {
             type="checkbox"
             checked={prefs.manaIcons}
             onChange={(e) => setPref('manaIcons', e.target.checked)}
+          />
+        </label>
+        <label className="setting-row">
+          <span>
+            <strong>Menu opacity</strong>
+            <span className="muted setting-hint">How solid menus are — lower lets the backdrop show through</span>
+          </span>
+          <input
+            type="range"
+            min={0.35}
+            max={1}
+            step={0.01}
+            value={prefs.panelOpacity}
+            onChange={(e) => setPref('panelOpacity', Number(e.target.value))}
           />
         </label>
         <label className="setting-row">

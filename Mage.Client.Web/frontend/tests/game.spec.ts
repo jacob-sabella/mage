@@ -12,7 +12,8 @@ test.describe('Game board (3D)', () => {
     await expect(page.locator('.pstat', { hasText: 'Computer' })).toContainText('18')
     await expect(page.locator('.pstat', { hasText: 'You' })).toContainText('20')
 
-    // snap-view controls
+    // snap-view controls live in the radial view menu (collapsed by default)
+    await page.locator('.view-fab').click()
     await expect(page.getByRole('button', { name: 'Overview' })).toBeVisible()
 
     // floating mana pool shown as pips for the viewer ({U}{U}{R} -> 3 pips)
@@ -164,9 +165,18 @@ test.describe('Game board (3D)', () => {
 
   test('snap-view buttons switch the active view', async ({ page }) => {
     await gotoScreen(page, 'game')
+    await page.locator('.view-fab').click()
     const overview = page.getByRole('button', { name: 'Overview' })
     await overview.click()
     await expect(overview).toHaveClass(/active/)
+  })
+
+  test('view menu offers 2D / 3D / free camera modes', async ({ page }) => {
+    await gotoScreen(page, 'game')
+    await page.locator('.view-fab').click()
+    await expect(page.locator('.view-radial.mode')).toHaveCount(3)
+    await page.locator('.view-radial.mode', { hasText: '2D' }).click()
+    await expect(page.locator('.view-radial.mode.active', { hasText: '2D' })).toBeVisible()
   })
 })
 
@@ -196,15 +206,17 @@ test.describe('Multiplayer (Free For All)', () => {
     await expect(page.locator('.pstat', { hasText: 'Teferi' })).toContainText('22')
     await expect(page.locator('.pstat', { hasText: 'Vraska' })).toContainText('14')
 
-    // a snap-view per seat (Overview + 4 players)
+    // a snap-view per seat (Overview + 4 players) inside the radial menu
+    await page.locator('.view-fab').click()
     await expect(page.getByRole('button', { name: 'Overview' })).toBeVisible()
-    await expect(page.locator('.view-bar .view-btn')).toHaveCount(5)
+    await expect(page.locator('.view-menu .view-radial.focus')).toHaveCount(5)
   })
 
   test('can target any opponent in a multiplayer game', async ({ page }) => {
     await gotoScreen(page, 'multiplayer')
+    await page.locator('.view-fab').click()
     // the active player can switch the camera to each opponent's seat
-    await page.locator('.view-bar .view-btn', { hasText: 'Vraska' }).click()
-    await expect(page.locator('.view-bar .view-btn.active', { hasText: 'Vraska' })).toBeVisible()
+    await page.locator('.view-radial', { hasText: 'Vraska' }).click()
+    await expect(page.locator('.view-radial.active', { hasText: 'Vraska' })).toBeVisible()
   })
 })

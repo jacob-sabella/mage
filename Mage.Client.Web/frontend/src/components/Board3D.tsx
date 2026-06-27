@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Grid, Html } from '@react-three/drei'
+import { Grid, Html, OrbitControls } from '@react-three/drei'
 import { FamilyBackdrop } from './backdrops'
 import { usePrefs, CHROMA_FAMILY } from '../prefs'
 
@@ -10,6 +10,7 @@ const SCENE: Record<string, { bg: string; table: string; ring: string; ring2: st
   mythic: { bg: '#0c0a06', table: '#1c160c', ring: '#e8c35a', ring2: '#4fbf86', grid: false, gridA: '#4a3a1e', gridB: '#e8c35a', key: '#ffd98a', fill: '#e8c35a' },
   noir:   { bg: '#050506', table: '#14161a', ring: '#e23c3c', ring2: '#c9ccd2', grid: false, gridA: '#2a2d33', gridB: '#5a5f66', key: '#dfe2e8', fill: '#9aa0aa' },
   cutesy: { bg: '#2a1430', table: '#3a1c45', ring: '#ff9ed2', ring2: '#9be8d8', grid: false, gridA: '#6b4080', gridB: '#ff9ed2', key: '#ffc6e6', fill: '#9be8d8' },
+  space:  { bg: '#02030a', table: '#0a1024', ring: '#b14bff', ring2: '#4bd6ff', grid: false, gridA: '#1a2348', gridB: '#4bd6ff', key: '#cdd6ff', fill: '#6b8cff' },
 }
 import * as THREE from 'three'
 import type { GameCard, GamePlayer, GameState } from '../types'
@@ -86,7 +87,103 @@ function makeCardTexture(card: GameCard): THREE.Texture {
   return t
 }
 
+/** A generic face-down card back (for the library and pile depth layers). */
+function makeCardBack(): THREE.Texture {
+  const w = 256
+  const h = 358
+  const cv = document.createElement('canvas')
+  cv.width = w
+  cv.height = h
+  const g = cv.getContext('2d')!
+  g.fillStyle = '#1a1430'
+  g.fillRect(0, 0, w, h)
+  g.fillStyle = '#2c2150'
+  g.fillRect(12, 12, w - 24, h - 24)
+  g.strokeStyle = '#b9933f'
+  g.lineWidth = 6
+  g.strokeRect(18, 18, w - 36, h - 36)
+  g.save()
+  g.translate(w / 2, h / 2)
+  g.fillStyle = '#140e26'
+  g.beginPath()
+  g.ellipse(0, 0, w * 0.3, h * 0.27, 0, 0, Math.PI * 2)
+  g.fill()
+  g.strokeStyle = '#b9933f'
+  g.lineWidth = 4
+  g.stroke()
+  g.restore()
+  const t = new THREE.CanvasTexture(cv)
+  t.colorSpace = THREE.SRGBColorSpace
+  t.anisotropy = 4
+  return t
+}
+
 type CardProps = (c: GameCard) => { highlight?: 'play' | 'target'; onClick?: (c: GameCard) => void }
+
+/** A stacked zone pile (library / graveyard / exile). Depth layers fake the
+ *  stack height; the top card shows real art when the zone is public (face-up),
+ *  or the card back when it's hidden (the library). A floating badge labels it. */
+function CardPile({
+  position,
+  count,
+  top,
+  faceUp,
+  label,
+  cardProps,
+  onHoverCard,
+}: {
+  position: [number, number] // local x, z
+  count: number
+  top?: GameCard | null
+  faceUp: boolean
+  label: string
+  cardProps: CardProps
+  onHoverCard?: (c: GameCard | null) => void
+}) {
+  const back = useMemo(makeCardBack, [])
+  const { gl } = useThree()
+  useEffect(() => {
+    back.anisotropy = gl.capabilities.getMaxAnisotropy?.() ?? 8
+    back.needsUpdate = true
+    return () => back.dispose()
+  }, [back, gl])
+
+  // empty zone → a faint outlined slot so its position still reads
+  const layers = Math.max(0, Math.min(count, 8))
+  const step = 0.02
+  const topY = Math.max(0, layers - 1) * step + 0.012
+
+  return (
+    <group position={[position[0], 0, position[1]]}>
+      {count <= 0 && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.006, 0]}>
+          <planeGeometry args={[CARD_W, CARD_H]} />
+          <meshBasicMaterial color="#ffffff" transparent opacity={0.05} />
+        </mesh>
+      )}
+      {/* depth layers (face-down backs) under the top card */}
+      {Array.from({ length: Math.max(0, layers - 1) }).map((_, i) => (
+        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[0.012 * i, 0.012 + i * step, 0.012 * i]}>
+          <planeGeometry args={[CARD_W, CARD_H]} />
+          <meshBasicMaterial map={back} toneMapped={false} />
+        </mesh>
+      ))}
+      {/* top of the pile */}
+      {count > 0 &&
+        (faceUp && top ? (
+          <Card3D card={top} position={[0, topY, 0]} cardProps={cardProps} onHoverCard={onHoverCard} />
+        ) : (
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, topY, 0]}>
+            <planeGeometry args={[CARD_W, CARD_H]} />
+            <meshBasicMaterial map={back} toneMapped={false} />
+          </mesh>
+        ))}
+      <Html position={[0, 0.34, CARD_H * 0.62]} center distanceFactor={10} zIndexRange={[15, 0]} className="c3d-badge c3d-zone">
+        {label} {count}
+      </Html>
+    </group>
+  )
+}
 
 /** A single card as a textured plane; lies flat (battlefield) or stands (hand/stack). */
 function Card3D({
@@ -265,11 +362,19 @@ function PlayerZone({
     })
     return [...row(creatures, 0, -0.95), ...row(back, 0, 0.95)]
   }, [seat.player.battlefield])
+  const p = seat.player
+  const gy = p.graveyard.length ? p.graveyard[p.graveyard.length - 1] : null
+  const ex = p.exile.length ? p.exile[p.exile.length - 1] : null
   return (
     <group position={[seat.x, 0, seat.z]} rotation={[0, seat.yaw, 0]}>
       {placed.map(({ card, pos }) => (
         <Card3D key={card.id} card={card} position={pos} cardProps={cardProps} onHoverCard={onHoverCard} />
       ))}
+      {/* zone piles — standard playmat: library + graveyard to the player's
+          right, exile set apart on the left ("outside the game") */}
+      <CardPile position={[3.0, 1.7]} count={p.libraryCount} faceUp={false} label="Lib" cardProps={cardProps} onHoverCard={onHoverCard} />
+      <CardPile position={[3.0, 0.0]} count={p.graveyardCount} top={gy} faceUp label="GY" cardProps={cardProps} onHoverCard={onHoverCard} />
+      <CardPile position={[-3.0, 1.7]} count={p.exile.length} top={ex} faceUp label="Exile" cardProps={cardProps} onHoverCard={onHoverCard} />
     </group>
   )
 }
@@ -277,22 +382,25 @@ function PlayerZone({
 /** Seat N players radially around the table: the viewer at the front (+z) and
  *  the rest spread evenly around the circle, each facing the centre. Scales the
  *  radius up with the player count so seats don't crowd. */
-function seatPlayers(players: GamePlayer[], me?: string | null): { seats: Seat[]; radius: number } {
-  const viewerIdx = Math.max(0, players.findIndex((p) => p.name === me))
-  const ordered = [players[viewerIdx], ...players.filter((_, i) => i !== viewerIdx)]
+function seatPlayers(players: GamePlayer[], me?: string | null): { seats: Seat[]; radius: number; spectating: boolean } {
+  const found = players.findIndex((p) => p.name === me)
+  const spectating = found < 0 // me isn't a player → watching, so nobody is "You"
+  const viewerIdx = spectating ? 0 : found
+  // when spectating, keep natural seat order; otherwise pull the viewer to the front
+  const ordered = spectating ? players : [players[viewerIdx], ...players.filter((_, i) => i !== viewerIdx)]
   const n = ordered.length
   const radius = Math.max(2.9, 2.2 + n * 0.42)
   const seats = ordered.map((player, i) => {
-    const theta = Math.PI / 2 + (i * 2 * Math.PI) / n // viewer at +z (front)
+    const theta = Math.PI / 2 + (i * 2 * Math.PI) / n // front seat at +z
     return {
       player,
       x: radius * Math.cos(theta),
       z: radius * Math.sin(theta),
       yaw: Math.PI / 2 - theta, // rotate local -z to point at the centre
-      isViewer: i === 0,
+      isViewer: !spectating && i === 0,
     }
   })
-  return { seats, radius }
+  return { seats, radius, spectating }
 }
 
 type ViewTarget = { pos: THREE.Vector3; look: THREE.Vector3 }
@@ -306,6 +414,75 @@ function CameraRig({ target }: { target: ViewTarget }) {
     camera.lookAt(look.current)
   })
   return null
+}
+
+type ViewMode = '3d' | '2d' | 'free'
+
+/** Radial fan menu for camera control: a mode ring (2D/3D/Free) plus, in 3D, a
+ *  focus ring (Overview + each seat). Collapsed to a single button by default. */
+function ViewMenu({
+  mode,
+  setMode,
+  views,
+  view,
+  setView,
+}: {
+  mode: ViewMode
+  setMode: (m: ViewMode) => void
+  views: { name: string }[]
+  view: number
+  setView: (i: number) => void
+}) {
+  const [open, setOpen] = useState(false)
+  type Item = { key: string; label: string; active: boolean; cat: string; onClick: () => void }
+  const modeItems: Item[] = (['3d', '2d', 'free'] as ViewMode[]).map((m) => ({
+    key: 'm-' + m,
+    label: m === '3d' ? '3D' : m === '2d' ? '2D' : 'Free',
+    active: mode === m,
+    cat: 'mode',
+    onClick: () => setMode(m),
+  }))
+  const focusItems: Item[] =
+    mode === '3d'
+      ? views.map((v, i) => ({ key: 'f-' + i, label: v.name, active: view === i, cat: 'focus', onClick: () => setView(i) }))
+      : []
+  // fan into the board's down-right quadrant only (keeps items on-screen). Modes
+  // sit on an inner ring, focus targets on an outer ring, so neither crowds.
+  const a0 = 8
+  const a1 = 90
+  const rings = [
+    { items: modeItems, R: 74 },
+    { items: focusItems, R: 124 + focusItems.length * 14 },
+  ].filter((g) => g.items.length)
+  const placed = rings.flatMap((g) =>
+    g.items.map((it, i) => {
+      const t = g.items.length > 1 ? i / (g.items.length - 1) : 0.5
+      const ang = ((a0 + (a1 - a0) * t) * Math.PI) / 180
+      return { it, x: Math.cos(ang) * g.R, y: Math.sin(ang) * g.R }
+    }),
+  )
+
+  return (
+    <div className={`view-menu${open ? ' open' : ''}`}>
+      <button className="view-fab" onClick={() => setOpen((o) => !o)} title="View options" aria-label="View options">
+        {open ? '✕' : '⊙'}
+      </button>
+      {placed.map(({ it, x, y }) => (
+        <button
+          key={it.key}
+          className={`btn view-btn view-radial ${it.cat}${it.active ? ' active' : ''}`}
+          style={{
+            transform: open ? `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)` : 'translate(0,0) scale(0.4)',
+            opacity: open ? 1 : 0,
+            pointerEvents: open ? 'auto' : 'none',
+          }}
+          onClick={it.onClick}
+        >
+          {it.label}
+        </button>
+      ))}
+    </div>
+  )
 }
 
 export function Board3D({
@@ -322,7 +499,7 @@ export function Board3D({
   const scene = SCENE[backdrop] ?? SCENE.vapor
 
   // seat all players radially around the table (supports 2..N)
-  const { seats, radius } = useMemo(() => seatPlayers(game.players, game.me), [game.players, game.me])
+  const { seats, radius, spectating } = useMemo(() => seatPlayers(game.players, game.me), [game.players, game.me])
 
   // camera viewpoints: an overview + a 3/4 view behind each seat that frames
   // that player's battlefield and (for the viewer) the hand laid in front.
@@ -336,41 +513,39 @@ export function Board3D({
         const len = Math.hypot(s.x, s.z) || 1
         const ux = s.x / len
         const uz = s.z / len
-        const out = radius + 4.8
+        const out = radius + 6.4
         return {
           name: s.isViewer ? 'You' : s.player.name,
           target: {
-            pos: new THREE.Vector3(ux * out, 5.4, uz * out),
-            look: new THREE.Vector3(ux * 1.2, 0, uz * 1.2),
+            pos: new THREE.Vector3(ux * out, 6.2, uz * out),
+            look: new THREE.Vector3(-ux * 0.6, 0.2, -uz * 0.6),
           },
         }
       }),
     ],
     [seats, radius],
   )
-  const [view, setView] = useState(1) // default: behind the viewer
-  // keep the selected view valid if the player count changes
+  // 2D = a fixed top-down lock on the table; 3D = the angled seat views; free =
+  // user-orbited camera. The whole canvas is the world either way.
+  const [mode, setMode] = useState<ViewMode>('3d')
+  const TOP_DOWN: ViewTarget = useMemo(
+    () => ({ pos: new THREE.Vector3(0, 15 + seats.length * 0.8, 2.2), look: new THREE.Vector3(0, 0, 0) }),
+    [seats.length],
+  )
+  // spectators start on the overview; players start behind their own seat
+  const [view, setView] = useState(spectating ? 0 : 1)
   useEffect(() => {
-    if (view >= views.length) setView(1)
-  }, [views.length, view])
+    if (view >= views.length) setView(spectating ? 0 : 1)
+  }, [views.length, view, spectating])
+
+  const target = mode === '2d' ? TOP_DOWN : views[view].target
 
   const hand = useMemo(() => row(game.myHand, 0, 5.9, 1.42), [game.myHand])
   const stack = useMemo(() => row(game.stack, 0, 0.6, 1.4), [game.stack])
 
   return (
     <div className="board3d">
-      <div className="view-bar">
-        <span className="muted view-label">View:</span>
-        {views.map((v, i) => (
-          <button
-            key={v.name}
-            className={`btn view-btn${view === i ? ' active' : ''}`}
-            onClick={() => setView(i)}
-          >
-            {v.name}
-          </button>
-        ))}
-      </div>
+      <ViewMenu mode={mode} setMode={setMode} views={views} view={view} setView={setView} />
       <Canvas
         shadows
         camera={{ position: [0, 5.4, 10 ], fov: 46 }}
@@ -436,7 +611,13 @@ export function Board3D({
           <Card3D key={card.id} card={card} position={[pos[0], 0.06, pos[2]]} showCost cardProps={cardProps} onHoverCard={onHoverCard} />
         ))}
 
-        <CameraRig target={views[view].target} />
+        {/* free cam → user orbits/pans; otherwise the camera is driven to the
+            selected (2D top-down or 3D seat) viewpoint */}
+        {mode === 'free' ? (
+          <OrbitControls makeDefault enablePan enableDamping dampingFactor={0.08} minDistance={4} maxDistance={40} target={[0, 0, 0]} />
+        ) : (
+          <CameraRig target={target} />
+        )}
       </Canvas>
     </div>
   )

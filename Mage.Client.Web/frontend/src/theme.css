@@ -12,6 +12,7 @@
 [data-family="mythic"]    { --font-display: "Cinzel Decorative", "Cinzel", serif; --font-body: "Cinzel", Georgia, serif; --glow-strength: 0.45; }
 [data-family="noir"]      { --font-display: "Special Elite", "Courier New", monospace; --font-body: "Special Elite", "Courier New", monospace; --glow-strength: 0.2; }
 [data-family="cutesy"]    { --font-display: "Baloo 2", "Segoe UI", sans-serif; --font-body: "Baloo 2", "Segoe UI", sans-serif; --glow-strength: 0.7; }
+[data-family="space"]     { --font-display: "Orbitron", sans-serif; --font-body: "Segoe UI", Roboto, system-ui, sans-serif; --glow-strength: 0.9; }
 
 /* ---- Vaporwave chromas (neon) ---- */
 :root,
@@ -273,7 +274,7 @@ input::placeholder { color: var(--text-dim); }
 .row-actions { display: flex; gap: 6px; justify-content: flex-end; }
 
 /* ----- game table ----- */
-.game-table { display: flex; flex-direction: column; gap: 14px; height: 100%; position: relative; }
+.game-table { display: flex; flex-direction: column; gap: 8px; height: 100%; position: relative; }
 .game-toolbar { display: flex; align-items: center; gap: 12px; }
 .phase-pill {
   background: rgba(91, 140, 255, 0.16);
@@ -552,11 +553,12 @@ input::placeholder { color: var(--text-dim); }
 .app-nav,
 #app { position: relative; z-index: 1; }
 
-/* glassmorphism: panels/bars become frosted glass over the starfield */
+/* glassmorphism: panels/bars become frosted glass over the starfield. The alpha
+   is user-tunable (Settings → Menu opacity) so the backdrop can show through. */
 .panel {
-  background: rgba(28, 31, 38, 0.82);
-  backdrop-filter: blur(9px);
-  -webkit-backdrop-filter: blur(9px);
+  background: rgba(18, 20, 28, var(--panel-alpha, 0.78));
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
 }
 .topbar {
   background: rgba(24, 27, 33, 0.72);
@@ -764,12 +766,34 @@ input::placeholder { color: var(--text-dim); }
 .view-btn { padding: 5px 12px; font-size: 12px; border-radius: 999px; }
 .view-btn.active { background: var(--accent); color: #0d1119; border-color: transparent; font-weight: 700; }
 
+/* ----- radial view menu ----- */
+.view-menu { position: absolute; top: 16px; left: 16px; z-index: 4; width: 0; height: 0; }
+.view-fab {
+  position: absolute; top: 0; left: 0; width: 42px; height: 42px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; line-height: 1; border-radius: 50%; cursor: pointer;
+  color: var(--text); border: 1px solid var(--stroke);
+  background: rgba(14, 16, 22, 0.7); backdrop-filter: blur(6px);
+  box-shadow: 0 0 calc(12px * var(--glow-strength, 1)) color-mix(in srgb, var(--accent) 55%, transparent);
+  transition: transform 0.18s ease, background 0.18s ease; z-index: 1;
+}
+.view-fab:hover { transform: scale(1.06); }
+.view-menu.open .view-fab { background: var(--accent); color: #0d1119; }
+.view-radial {
+  position: absolute; top: 4px; left: 4px;
+  white-space: nowrap; transform-origin: center;
+  background: rgba(14, 16, 22, 0.82); backdrop-filter: blur(6px);
+  transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.2), opacity 0.16s ease;
+}
+.view-radial.mode { font-weight: 700; border-color: color-mix(in srgb, var(--accent-2) 50%, var(--stroke)); }
+.view-radial.active { background: var(--accent); color: #0d1119; border-color: transparent; font-weight: 700; }
+
 /* compact player status strip above the board */
 .player-strip { display: flex; gap: 12px; }
 .pstat {
-  flex: 1; display: flex; align-items: center; gap: 14px;
+  flex: 1; display: flex; align-items: center; gap: 12px;
   background: var(--bg); border: 1px solid var(--stroke); border-radius: var(--radius);
-  padding: 10px 14px; color: var(--text); font: inherit; text-align: left; cursor: default;
+  padding: 5px 12px; color: var(--text); font: inherit; text-align: left; cursor: default;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .pstat.active { border-color: var(--accent); }
@@ -844,6 +868,12 @@ input::placeholder { color: var(--text-dim); }
   padding: 1px 9px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.3);
   box-shadow: 0 2px 6px rgba(0,0,0,0.6);
 }
+.c3d-zone {
+  background: rgba(8, 10, 16, 0.82); color: #e8ecf5; font-weight: 700; font-size: 13px;
+  letter-spacing: 0.3px; padding: 2px 8px; border-radius: 7px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, rgba(255,255,255,0.2));
+  box-shadow: 0 2px 6px rgba(0,0,0,0.55); white-space: nowrap; text-transform: uppercase;
+}
 
 /* ----- hover card preview (large, readable) ----- */
 .card-preview {
@@ -914,7 +944,7 @@ input::placeholder { color: var(--text-dim); }
 .phase-track { display: flex; align-items: center; gap: 5px; }
 .phase-seg {
   flex: 1; text-align: center; font-size: 12px; font-weight: 700; letter-spacing: 0.3px;
-  padding: 8px 6px; border-radius: 9px; color: var(--text-dim);
+  padding: 4px 6px; border-radius: 9px; color: var(--text-dim);
   background: var(--bg); border: 1px solid var(--stroke);
   transition: background 0.25s, color 0.25s, box-shadow 0.25s;
 }
@@ -1054,6 +1084,9 @@ html, body { overflow-x: hidden; }
 .theme-family { display: flex; flex-direction: column; gap: 6px; }
 .theme-family-label { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
 .theme-swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+/* labels sit on top of arbitrary gradients → a subtle dark halo keeps them legible */
+.theme-swatch-label { position: relative; color: #0c0e14; font-weight: 800; text-shadow: 0 1px 2px rgba(255, 255, 255, 0.35); }
+.theme-swatch.active .theme-swatch-label { color: #07090e; }
 .theme-swatch.t-mythic { background: linear-gradient(120deg, #e8c35a, #4fbf86); color: #14110a; font-family: "Cinzel Decorative", serif; }
 .theme-swatch.t-noir { background: linear-gradient(120deg, #16181c, #e23c3c); font-family: "Special Elite", monospace; }
 .theme-swatch.t-cutesy { background: linear-gradient(120deg, #ff9ed2, #9be8d8); color: #3a1c45; font-family: "Baloo 2", sans-serif; }

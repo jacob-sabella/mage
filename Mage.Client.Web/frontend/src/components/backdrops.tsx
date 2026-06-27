@@ -82,6 +82,45 @@ function Drift({
   )
 }
 
+/** A lit 3D planet sphere with an optional tilted ring — for the Space family. */
+function Planet({
+  position,
+  size,
+  color,
+  ring,
+  ringColor = '#cdb',
+}: {
+  position: [number, number, number]
+  size: number
+  color: string
+  ring?: boolean
+  ringColor?: string
+}) {
+  const ref = useRef<THREE.Mesh>(null)
+  useFrame((_, delta) => {
+    if (ref.current) ref.current.rotation.y += delta * 0.05
+  })
+  return (
+    <group position={position}>
+      {/* soft atmosphere halo */}
+      <mesh>
+        <sphereGeometry args={[size * 1.18, 24, 24]} />
+        <meshBasicMaterial color={color} transparent opacity={0.12} blending={THREE.AdditiveBlending} depthWrite={false} />
+      </mesh>
+      <mesh ref={ref} castShadow>
+        <sphereGeometry args={[size, 36, 36]} />
+        <meshStandardMaterial color={color} roughness={0.85} metalness={0.1} emissive={color} emissiveIntensity={0.12} />
+      </mesh>
+      {ring && (
+        <mesh rotation={[Math.PI / 2.6, 0.2, 0]}>
+          <ringGeometry args={[size * 1.45, size * 2.1, 64]} />
+          <meshBasicMaterial color={ringColor} transparent opacity={0.4} side={THREE.DoubleSide} toneMapped={false} />
+        </mesh>
+      )}
+    </group>
+  )
+}
+
 /** A simple glowing disc (moon/orb) high in the scene. */
 function Orb({ position, size, color, opacity = 0.5 }: { position: [number, number, number]; size: number; color: string; opacity?: number }) {
   return (
@@ -121,6 +160,19 @@ export function FamilyBackdrop({ kind, inGame = false }: { kind: BackdropKind; i
           <Orb position={inGame ? [11, 13, -40] : [9, 6, -22]} size={inGame ? 6 : 4} color="#ffd6ee" opacity={0.4} />
           <Drift count={260} colors={['#ff9ed2', '#9be8d8', '#ffc6e6']} size={0.4} speed={0.7} dir={1} sway={0.5} opacity={0.55} additive={false} />
           <Drift count={120} colors={['#ffffff']} size={0.18} speed={0.5} dir={1} sway={0.6} opacity={0.5} />
+        </>
+      )
+    case 'space':
+      return (
+        <>
+          {/* deep starfield */}
+          <SynthStars count={inGame ? 1600 : 2200} />
+          {/* planets at varying depths */}
+          <Planet position={inGame ? [-16, 11, -44] : [-10, 6, -26]} size={inGame ? 4.6 : 3} color="#6b8cff" ring ringColor="#b9c6ff" />
+          <Planet position={inGame ? [15, 15, -52] : [10, 9, -30]} size={inGame ? 2.6 : 1.8} color="#ff6a3d" />
+          <Planet position={inGame ? [6, -4, -40] : [4, -3, -22]} size={inGame ? 1.4 : 1} color="#5affc4" />
+          {/* drifting nebula dust */}
+          <Drift count={500} colors={['#b14bff', '#4bd6ff', '#7b5bff']} size={0.6} speed={0.25} dir={1} sway={0.3} opacity={0.22} />
         </>
       )
     case 'vapor':
