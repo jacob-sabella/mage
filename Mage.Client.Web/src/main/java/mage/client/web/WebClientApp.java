@@ -112,6 +112,7 @@ public class WebClientApp {
         app.post("/api/game/respond", this::handleRespond);
         app.get("/api/cards/search", this::handleCardSearch);
         app.get("/api/cardimg", this::handleCardImage);
+        app.get("/api/decks/list", this::handleDecksList);
         app.get("/api/decks/load", this::handleDeckLoad);
         app.post("/api/decks/save", this::handleDeckSave);
         app.post("/api/disconnect", this::handleDisconnect);
@@ -518,6 +519,68 @@ public class WebClientApp {
         }
         // START_GAME will arrive on the WS; the gateway joins the game then.
         ctx.json(Map.of("ok", true, "tableId", tableId.toString()));
+    }
+
+    // browse available .dck files so the UI doesn't need file paths
+    private void handleDecksList(Context ctx) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        // repo sample decks, categorized by their subfolder
+        scanDecks(new File("Mage.Client/release/sample-decks"), null, out);
+        // user decks: any *.dck directly in the home dir, and an optional dir
+        scanDecksFlat(new File(System.getProperty("user.home")), "My decks", out);
+        String custom = System.getenv("MAGE_DECK_DIR");
+        if (custom != null && !custom.isEmpty()) {
+            scanDecks(new File(custom), "My decks", out);
+        }
+        out.sort((a, b) -> {
+            int c = String.valueOf(a.get("category")).compareToIgnoreCase(String.valueOf(b.get("category")));
+            return c != 0 ? c : String.valueOf(a.get("name")).compareToIgnoreCase(String.valueOf(b.get("name")));
+        });
+        ctx.json(out);
+    }
+
+    private static void scanDecks(File root, String forcedCategory, List<Map<String, Object>> out) {
+        if (root == null || !root.isDirectory()) {
+            return;
+        }
+        try (java.util.stream.Stream<java.nio.file.Path> walk = java.nio.file.Files.walk(root.toPath())) {
+            walk.filter(java.nio.file.Files::isRegularFile)
+                    .filter(p -> p.getFileName().toString().toLowerCase().endsWith(".dck"))
+                    .forEach(p -> {
+                        String category = forcedCategory;
+                        if (category == null) {
+                            java.nio.file.Path rel = root.toPath().relativize(p);
+                            category = rel.getNameCount() > 1 ? rel.getName(0).toString() : "Other";
+                        }
+                        addDeck(out, p.toFile(), category);
+                    });
+        } catch (Exception ignored) {
+            // skip unreadable trees
+        }
+    }
+
+    private static void scanDecksFlat(File dir, String category, List<Map<String, Object>> out) {
+        if (dir == null || !dir.isDirectory()) {
+            return;
+        }
+        File[] files = dir.listFiles((d, n) -> n.toLowerCase().endsWith(".dck"));
+        if (files != null) {
+            for (File f : files) {
+                addDeck(out, f, category);
+            }
+        }
+    }
+
+    private static void addDeck(List<Map<String, Object>> out, File f, String category) {
+        String name = f.getName();
+        if (name.toLowerCase().endsWith(".dck")) {
+            name = name.substring(0, name.length() - 4);
+        }
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("name", name);
+        m.put("path", f.getAbsolutePath());
+        m.put("category", category);
+        out.add(m);
     }
 
     private void handleDeckLoad(Context ctx) {

@@ -1,8 +1,7 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { loadDeck, saveDeck, searchCards } from '../api'
+import { DeckPicker } from './DeckPicker'
 import type { CardInfoDto, DeckCardEntry } from '../types'
-
-const DEFAULT_DECK_PATH = ''
 const COLOR_HEX: Record<string, string> = {
   W: '#e9e3c8',
   U: '#4a90d9',
@@ -51,6 +50,12 @@ export function DeckEditor() {
 
   const toggleColor = (c: string) => setFColors((p) => (p.includes(c) ? p.replace(c, '') : p + c))
 
+  // show some cards immediately instead of a blank table
+  useEffect(() => {
+    runSearch()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const addCard = useCallback((card: CardInfoDto) => {
     setDeck((prev) => {
       const ex = prev.find((e) => e.name === card.name)
@@ -69,12 +74,13 @@ export function DeckEditor() {
     setDeck((prev) => prev.map((e) => (e.name === name ? { ...e, count: e.count - 1 } : e)).filter((e) => e.count > 0))
   }, [])
 
-  const onOpen = useCallback(async () => {
-    const path = window.prompt('Open deck (.dck) path on the server:', DEFAULT_DECK_PATH)
-    if (!path) return
+  const [pickerOpen, setPickerOpen] = useState(false)
+
+  const doLoad = useCallback(async (path: string) => {
+    setPickerOpen(false)
     setSaveStatus(null)
     try {
-      const res = await loadDeck(path.trim())
+      const res = await loadDeck(path)
       setDeck(res.cards)
       setSideboard(res.sideboard ?? [])
       setDeckName(res.name)
@@ -194,7 +200,7 @@ export function DeckEditor() {
           <h2 className="deck-title">{deckName}</h2>
           <span className="spacer" />
           <span className="chip">{total} cards</span>
-          <button className="btn watch-btn" onClick={onOpen}>
+          <button className="btn watch-btn" onClick={() => setPickerOpen(true)}>
             Open
           </button>
         </div>
@@ -248,6 +254,10 @@ export function DeckEditor() {
           {saveStatus && <p className="deck-save-status muted">{saveStatus}</p>}
         </div>
       </section>
+
+      {pickerOpen && (
+        <DeckPicker title="Open a deck" onPick={(d) => doLoad(d.path)} onClose={() => setPickerOpen(false)} />
+      )}
     </div>
   )
 }

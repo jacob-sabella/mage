@@ -12,11 +12,11 @@ import {
 import type { MatchDto, RespondKind } from '../api'
 import { useServerEvents } from '../useServerEvents'
 import { ChatPanel } from './ChatPanel'
+import { DeckPicker } from './DeckPicker'
 import { GameTable } from './GameTable'
 import type { ChatLine, GameState, Prompt, Session, TableDto } from '../types'
 
 // Default deck used when sitting down at a table (a .dck path on the server).
-const DEFAULT_DECK = 'Mage.Client/release/sample-decks/AI/FastRedHaste.dck'
 
 interface Props {
   session: Session
@@ -91,25 +91,26 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
     [session.token],
   )
 
-  const handleJoin = useCallback(
-    (tableId: string) => {
-      const deckPath = window.prompt('Deck file (.dck) path on the server:', DEFAULT_DECK)
-      if (!deckPath) return
-      joinTable(session.token, tableId, deckPath).catch(() => {
-        /* the match start (or failure) will be reported via chat/events */
-      })
+  // deck picker drives both Join and New-game-vs-AI; remember which
+  const [deckIntent, setDeckIntent] = useState<{ mode: 'join' | 'create'; tableId?: string } | null>(null)
+
+  const handleJoin = useCallback((tableId: string) => setDeckIntent({ mode: 'join', tableId }), [])
+
+  const onDeckPicked = useCallback(
+    (path: string) => {
+      const intent = deckIntent
+      setDeckIntent(null)
+      if (!intent) return
+      if (intent.mode === 'create') {
+        createGameVsAi(session.token, path).catch(() => {})
+      } else if (intent.tableId) {
+        joinTable(session.token, intent.tableId, path).catch(() => {})
+      }
     },
-    [session.token],
+    [deckIntent, session.token],
   )
 
-  const handleNewGame = useCallback(() => {
-    const deckPath = window.prompt('Your deck (.dck) path on the server — play vs AI:', DEFAULT_DECK)
-    if (!deckPath) return
-    // server starts the match; START_GAME arrives over the WS and shows the board
-    createGameVsAi(session.token, deckPath).catch(() => {
-      /* failure reported via chat/events */
-    })
-  }, [session.token])
+  const handleNewGame = useCallback(() => setDeckIntent({ mode: 'create' }), [])
 
   const handleRespond = useCallback(
     (kind: RespondKind, value?: string) => {
@@ -269,6 +270,14 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
 
         <ChatPanel lines={chat} onSend={handleSendChat} />
       </div>
+
+      {deckIntent && (
+        <DeckPicker
+          title={deckIntent.mode === 'create' ? 'Pick your deck (vs AI)' : 'Pick a deck to join with'}
+          onPick={(d) => onDeckPicked(d.path)}
+          onClose={() => setDeckIntent(null)}
+        />
+      )}
     </section>
   )
 }

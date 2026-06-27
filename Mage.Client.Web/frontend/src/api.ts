@@ -135,3 +135,13 @@ export interface MatchDto {
 export function fetchMatches(token: string): Promise<MatchDto[]> {
   return request<MatchDto[]>(`/api/matches?token=${encodeURIComponent(token)}`)
 }
+
+export interface DeckListItem {
+  name: string
+  path: string
+  category: string
+}
+
+export function listDecks(): Promise<DeckListItem[]> {
+  return request<DeckListItem[]>('/api/decks/list')
+}
