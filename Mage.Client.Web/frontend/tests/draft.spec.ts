@@ -23,6 +23,26 @@ test.describe('Booster draft', () => {
     await expect.poll(() => pickedId).toBe('d3')
   })
 
+  test('after the draft, the construct screen builds + submits a deck', async ({ page }) => {
+    await gotoScreen(page, 'construct')
+    await expect(page.getByRole('heading', { name: 'Build your deck' })).toBeVisible()
+    // Submit disabled until the deck has 40+ cards
+    const submit = page.getByRole('button', { name: /Submit/ })
+    await expect(submit).toBeDisabled()
+    // Auto-build selects the pool + a manabase to reach 40
+    await page.getByRole('button', { name: 'Auto-build' }).click()
+    await expect(page.locator('.chip', { hasText: /cards/ })).not.toHaveClass(/under/)
+    await expect(submit).toBeEnabled()
+
+    let submittedTo: string | null = null
+    await page.route('**/api/draft/submit', (route) => {
+      submittedTo = JSON.parse(route.request().postData() || '{}').tableId
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
+    })
+    await submit.click()
+    await expect.poll(() => submittedTo).toBe('t-draft')
+  })
+
   test('Draft vs AI button starts a draft', async ({ page }) => {
     await gotoScreen(page, 'lobby')
     let started = false

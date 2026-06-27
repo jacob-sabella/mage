@@ -14,9 +14,10 @@ import type { MatchDto, RespondKind } from '../api'
 import { useServerEvents } from '../useServerEvents'
 import { ChatPanel } from './ChatPanel'
 import { DeckPicker } from './DeckPicker'
+import { ConstructView } from './ConstructView'
 import { DraftView } from './DraftView'
 import { GameTable } from './GameTable'
-import type { ChatLine, DraftState, GameState, Prompt, Session, TableDto } from '../types'
+import type { ChatLine, DraftCard, DraftState, GameState, Prompt, Session, TableDto } from '../types'
 
 // a table is joinable when it has an open seat and isn't already in a game
 function isJoinable(t: TableDto): boolean {
@@ -41,6 +42,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   const [activeGameId, setActiveGameId] = useState<string | null>(null)
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null)
   const [draftState, setDraftState] = useState<DraftState | null>(null)
+  const [construct, setConstruct] = useState<{ tableId: string; pool: DraftCard[] } | null>(null)
   const [interactive, setInteractive] = useState(false)
   const [game, setGame] = useState<GameState | null>(null)
   const [prompt, setPrompt] = useState<Prompt | null>(null)
@@ -87,6 +89,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
       setInteractive(true)
       setPendingPlay(false)
       setPlayStatus(null)
+      setConstruct(null)
       setGame(null)
       setPrompt(null)
     } else if (e.type === 'game') {
@@ -112,7 +115,11 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
     } else if (e.type === 'draftOver') {
       setActiveDraftId(null)
       setDraftState(null)
-      setPlayStatus('Draft complete — deck construction from the web client is coming soon.')
+    } else if (e.type === 'construct' && e.tableId) {
+      // draft finished → build a deck from the pool
+      setActiveDraftId(null)
+      setDraftState(null)
+      setConstruct({ tableId: e.tableId, pool: e.pool ?? [] })
     } else if (e.type === 'event') {
       refresh()
     }
@@ -223,6 +230,17 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
 
   if (activeDraftId) {
     return <DraftView token={session.token} draftId={activeDraftId} draft={draftState} onLeave={leaveDraft} />
+  }
+
+  if (construct && !activeGameId) {
+    return (
+      <ConstructView
+        token={session.token}
+        tableId={construct.tableId}
+        pool={construct.pool}
+        onLeave={() => setConstruct(null)}
+      />
+    )
   }
 
   return (

@@ -28,6 +28,16 @@ public class DraftDto {
         public String name;
         public String set;
         public String num;
+        public String colors = ""; // WUBRG letters (for manabase auto-build)
+    }
+
+    /** Project a SimpleCardsView (e.g. the drafted pool from a DeckView) to cards. */
+    public static List<DraftCard> cardsFrom(mage.view.SimpleCardsView cards) {
+        List<DraftCard> out = new ArrayList<>();
+        if (cards != null) {
+            cards.forEach((id, cv) -> out.add(toCard(id, cv)));
+        }
+        return out;
     }
 
     private static DraftCard toCard(UUID id, SimpleCardView v) {
@@ -37,7 +47,22 @@ public class DraftDto {
         c.num = v.getCardNumber();
         CardInfo info = CardRepository.instance.findCard(c.set, c.num);
         c.name = info == null ? (c.set + " #" + c.num) : info.getName();
+        c.colors = info == null ? "" : colorLetters(info);
         return c;
+    }
+
+    private static String colorLetters(CardInfo info) {
+        StringBuilder sb = new StringBuilder();
+        mage.ObjectColor color = info.getColor();
+        if (color == null) {
+            return "";
+        }
+        if (color.isWhite()) sb.append('W');
+        if (color.isBlue()) sb.append('U');
+        if (color.isBlack()) sb.append('B');
+        if (color.isRed()) sb.append('R');
+        if (color.isGreen()) sb.append('G');
+        return sb.toString();
     }
 
     public static DraftDto from(DraftPickView v) {

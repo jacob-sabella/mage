@@ -110,6 +110,7 @@ export type Scenario =
   | 'multiAmount'
   | 'ptUpdate'
   | 'draft'
+  | 'construct'
 
 const DRAFT = {
   booster: [
@@ -163,8 +164,17 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
               : 'select'
   const second = scenario === 'ptUpdate' ? GAME_BUFFED : null
   const isDraft = scenario === 'draft'
+  const isConstruct = scenario === 'construct'
+  // a small drafted pool for the construct screen
+  const CONSTRUCT_POOL = Array.from({ length: 42 }, (_, i) => ({
+    id: 'c' + i,
+    name: i % 3 === 0 ? 'Goblin Instigator' : i % 3 === 1 ? 'Shock' : 'Sleep',
+    set: 'M19',
+    num: String(140 + i),
+    colors: 'R',
+  }))
   await page.addInitScript(
-    ([game, prompt, isGame, secondGame, draftOn, draftData]) => {
+    ([game, prompt, isGame, secondGame, draftOn, draftData, constructOn, constructPool]) => {
       class MockWS {
         onopen: ((e: unknown) => void) | null = null
         onclose: ((e: unknown) => void) | null = null
@@ -191,6 +201,9 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
                 this.emit({ type: 'draftPick', draftId: 'd-1', draft: draftData })
               }, 150)
             }
+            if (constructOn) {
+              setTimeout(() => this.emit({ type: 'construct', tableId: 't-draft', pool: constructPool }), 150)
+            }
           }, 30)
         }
         emit(o: unknown) {
@@ -209,11 +222,13 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
     [
       SAMPLE.game,
       (SAMPLE.prompts as Record<string, unknown>)[promptKey],
-      scenario !== 'lobby' && !isDraft,
+      scenario !== 'lobby' && !isDraft && !isConstruct,
       second,
       isDraft,
       DRAFT,
-    ] as [unknown, unknown, boolean, unknown, boolean, unknown],
+      isConstruct,
+      CONSTRUCT_POOL,
+    ] as [unknown, unknown, boolean, unknown, boolean, unknown, boolean, unknown],
   )
 
   const json = (body: unknown) => async (route: import('@playwright/test').Route) =>

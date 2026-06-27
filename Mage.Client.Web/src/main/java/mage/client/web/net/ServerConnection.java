@@ -235,7 +235,7 @@ public class ServerConnection {
         // plain LimitedOptions throws ClassCastException at draft time.
         DraftOptions limited = new DraftOptions();
         limited.setTiming(DraftOptions.TimingOption.REGULAR);
-        limited.setConstructionTime(600);
+        limited.setConstructionTime(120);
         limited.setNumberBoosters(0); // 0 = use the explicit set-code pack list below
         for (int i = 0; i < boosters; i++) {
             limited.getSetCodes().add(setCode);
@@ -302,6 +302,11 @@ public class ServerConnection {
             return null;
         }
         return session.sendCardPick(draftId, cardId, java.util.Collections.emptySet());
+    }
+
+    /** Submit a constructed deck for a (draft) tournament table - starts the matches. */
+    public boolean submitDeck(UUID tableId, DeckCardLists deck) {
+        return tableId != null && deck != null && session.submitDeck(tableId, deck);
     }
 
     public UUID createGameVsAi(String deckPath) {

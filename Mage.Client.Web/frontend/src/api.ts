@@ -168,3 +168,22 @@ export function draftPick(token: string, draftId: string, cardId: string): Promi
     body: JSON.stringify({ token, draftId, cardId }),
   })
 }
+
+export interface DraftDeckCard {
+  name: string
+  set: string
+  num: string
+  qty: number
+}
+
+export function submitDraftDeck(
+  token: string,
+  tableId: string,
+  cards: DraftDeckCard[],
+  basics: { plains: number; island: number; swamp: number; mountain: number; forest: number },
+): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>('/api/draft/submit', {
+    method: 'POST',
+    body: JSON.stringify({ token, tableId, cards, basics }),
+  })
+}

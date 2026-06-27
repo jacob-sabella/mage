@@ -32,6 +32,17 @@ export interface ServerEvent {
   draftId?: string
   tournamentId?: string
   draft?: DraftState
+  // present on the construct frame (post-draft deck building)
+  tableId?: string
+  pool?: DraftCard[]
+}
+
+export interface DraftBasics {
+  plains: number
+  island: number
+  swamp: number
+  mountain: number
+  forest: number
 }
 
 export interface DraftCard {
@@ -39,6 +50,7 @@ export interface DraftCard {
   name: string
   set: string
   num: string
+  colors?: string
 }
 
 export interface DraftState {

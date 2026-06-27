@@ -112,6 +112,7 @@ public class WebClientApp {
         app.post("/api/tables/create", this::handleCreateTable);
         app.post("/api/draft/create", this::handleCreateDraft);
         app.post("/api/draft/pick", this::handleDraftPick);
+        app.post("/api/draft/submit", this::handleDraftSubmit);
         app.post("/api/game/respond", this::handleRespond);
         app.get("/api/cards/search", this::handleCardSearch);
         app.get("/api/cardimg", this::handleCardImage);
@@ -771,6 +772,22 @@ public class WebClientApp {
             push(ctx, "draftOver", "");
             return;
         }
+        // deck construction from the drafted pool (after the draft)
+        if ((method == ClientCallbackMethod.CONSTRUCT || method == ClientCallbackMethod.SIDEBOARD)
+                && cb.getData() instanceof TableClientMessage) {
+            TableClientMessage tm = (TableClientMessage) cb.getData();
+            java.util.List<DraftDto.DraftCard> pool = new java.util.ArrayList<>();
+            if (tm.getDeck() != null) {
+                pool.addAll(DraftDto.cardsFrom(tm.getDeck().getCards()));
+                pool.addAll(DraftDto.cardsFrom(tm.getDeck().getSideboard()));
+            }
+            Map<String, Object> msg = new LinkedHashMap<>();
+            msg.put("type", "construct");
+            msg.put("tableId", tm.getCurrentTableId() == null ? null : tm.getCurrentTableId().toString());
+            msg.put("pool", pool);
+            pushMap(ctx, msg);
+            return;
+        }
         // a GameClientMessage is either a real decision (DIALOG) or just an
         // informational board update ("Waiting for X"). Only DIALOG callbacks
         // become an actionable prompt.
@@ -825,6 +842,63 @@ public class WebClientApp {
         }
         // START_DRAFT + the boosters arrive on the WS.
         ctx.json(Map.of("ok", true, "tableId", tableId.toString()));
+    }
+
+    private static final String[] BASIC_LANDS = {"Plains", "Island", "Swamp", "Mountain", "Forest"};
+
+    private void handleDraftSubmit(Context ctx) {
+        SubmitDeckRequest req = ctx.bodyAsClass(SubmitDeckRequest.class);
+        ServerConnection conn = sessions.get(req == null ? null : req.token);
+        if (conn == null) {
+            ctx.status(401).json(error("not connected"));
+            return;
+        }
+        if (req.tableId == null) {
+            ctx.status(400).json(error("tableId is required"));
+            return;
+        }
+        DeckCardLists lists = new DeckCardLists();
+        lists.setName("Draft deck");
+        List<DeckCardInfo> cards = new ArrayList<>();
+        if (req.cards != null) {
+            for (DeckCardReq c : req.cards) {
+                if (c == null || c.name == null || c.qty <= 0) {
+                    continue;
+                }
+                cards.add(new DeckCardInfo(c.name, c.num == null ? "" : c.num, c.set == null ? "" : c.set, c.qty));
+            }
+        }
+        // basic lands, resolved to a real printing from the local DB
+        int[] basics = req.basics == null ? new int[5] : new int[]{req.basics.plains, req.basics.island, req.basics.swamp, req.basics.mountain, req.basics.forest};
+        for (int i = 0; i < BASIC_LANDS.length; i++) {
+            if (basics[i] <= 0) {
+                continue;
+            }
+            String set = "";
+            String num = "";
+            try {
+                CardInfo info = CardRepository.instance.findCard(BASIC_LANDS[i]);
+                if (info != null) {
+                    set = info.getSetCode() == null ? "" : info.getSetCode();
+                    num = info.getCardNumber() == null ? "" : info.getCardNumber();
+                }
+            } catch (Exception ignored) {
+                // fall back to name-only
+            }
+            cards.add(new DeckCardInfo(BASIC_LANDS[i], num, set, basics[i]));
+        }
+        lists.setCards(cards);
+        try {
+            boolean ok = conn.submitDeck(UUID.fromString(req.tableId), lists);
+            if (!ok) {
+                ctx.status(500).json(error("deck rejected (need a legal deck, usually 40+ cards)"));
+                return;
+            }
+        } catch (Exception e) {
+            ctx.status(500).json(error("submit failed: " + e.getMessage()));
+            return;
+        }
+        ctx.json(Map.of("ok", true));
     }
 
     private void handleDraftPick(Context ctx) {
@@ -930,6 +1004,28 @@ public class WebClientApp {
         public String token;
         public String draftId;
         public String cardId;
+    }
+
+    public static class SubmitDeckRequest {
+        public String token;
+        public String tableId;
+        public List<DeckCardReq> cards;
+        public Basics basics;
+    }
+
+    public static class DeckCardReq {
+        public String name;
+        public String set;
+        public String num;
+        public int qty;
+    }
+
+    public static class Basics {
+        public int plains;
+        public int island;
+        public int swamp;
+        public int mountain;
+        public int forest;
     }
 
     public static class JoinRequest {

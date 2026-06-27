@@ -788,3 +788,13 @@ input::placeholder { color: var(--text-dim); }
   background: var(--bg-raised); border: 1px solid var(--stroke);
   border-radius: var(--radius-sm); padding: 4px 8px; font-size: 12px;
 }
+
+/* ----- draft deck construction ----- */
+.construct-view { display: flex; flex-direction: column; gap: 14px; height: 100%; }
+.construct-basics { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.basic-step { display: inline-flex; align-items: center; gap: 6px; }
+.basic-label { font-size: 13px; min-width: 60px; }
+.basic-count { min-width: 22px; text-align: center; font-weight: 700; }
+.btn.xs { padding: 2px 9px; font-size: 14px; line-height: 1; }
+.chip.under { background: rgba(224, 85, 95, 0.16); color: var(--danger); }
+.draft-card.selected { border-color: var(--accent-2); box-shadow: 0 0 0 2px var(--accent-2); }
