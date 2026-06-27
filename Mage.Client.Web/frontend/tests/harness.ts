@@ -73,7 +73,7 @@ export const SAMPLE = {
     ],
     stack: [],
     canPlay: ['h1', 'h3', 'b3'],
-    myHand: [card('h1', 'Lightning Bolt', ['Instant'], { colors: 'R' }), card('h2', 'Mountain', ['Land'], { colors: 'R' }), card('h3', 'Mulldrifter', ['Creature'], { power: '2', toughness: '2', colors: 'U' }), card('h4', 'Counterspell', ['Instant'], { colors: 'U' })],
+    myHand: [card('h1', 'Lightning Bolt', ['Instant'], { colors: 'R', manaCost: '{R}' }), card('h2', 'Mountain', ['Land'], { colors: 'R' }), card('h3', 'Mulldrifter', ['Creature'], { power: '2', toughness: '2', colors: 'U', manaCost: '{4}{U}' }), card('h4', 'Counterspell', ['Instant'], { colors: 'U', manaCost: '{U}{U}' })],
     combat: [] as unknown[],
   },
   prompts: {
@@ -100,7 +100,14 @@ export const SAMPLE = {
   },
 }
 
-export type Scenario = 'lobby' | 'game' | 'mulligan' | 'target' | 'combat' | 'pile' | 'multiAmount'
+export type Scenario = 'lobby' | 'game' | 'mulligan' | 'target' | 'combat' | 'pile' | 'multiAmount' | 'ptUpdate'
+
+// the same board, but the viewer's Serra Angel has been buffed to 6/6 — used to
+// assert that a P/T change pushed by the server updates the on-board indicator.
+const GAME_BUFFED = JSON.parse(JSON.stringify(SAMPLE.game)) as typeof SAMPLE.game
+const buffed = GAME_BUFFED.players.find((p) => p.name === 'You')!.battlefield.find((c) => c.name === 'Serra Angel')!
+buffed.power = '6'
+buffed.toughness = '6'
 
 // a 1x1 jpeg so the 3D board's card textures resolve deterministically
 const TINY_JPEG = Buffer.from(
@@ -135,8 +142,9 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
             : scenario === 'multiAmount'
               ? 'multiAmount'
               : 'select'
+  const second = scenario === 'ptUpdate' ? GAME_BUFFED : null
   await page.addInitScript(
-    ([game, prompt, isGame]) => {
+    ([game, prompt, isGame, secondGame]) => {
       class MockWS {
         onopen: ((e: unknown) => void) | null = null
         onclose: ((e: unknown) => void) | null = null
@@ -152,6 +160,9 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
                 this.emit({ type: 'gameStart', gameId: 'g-1' })
                 this.emit({ type: 'log', text: 'Precombat Main — your turn' })
                 this.emit({ type: 'game', gameId: 'g-1', game, prompt })
+                if (secondGame) {
+                  setTimeout(() => this.emit({ type: 'game', gameId: 'g-1', game: secondGame, prompt }), 500)
+                }
               }, 150)
             }
           }, 30)
@@ -169,7 +180,12 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
       }
       ;(window as unknown as { WebSocket: unknown }).WebSocket = MockWS
     },
-    [SAMPLE.game, (SAMPLE.prompts as Record<string, unknown>)[promptKey], scenario !== 'lobby'] as [unknown, unknown, boolean],
+    [SAMPLE.game, (SAMPLE.prompts as Record<string, unknown>)[promptKey], scenario !== 'lobby', second] as [
+      unknown,
+      unknown,
+      boolean,
+      unknown,
+    ],
   )
 
   const json = (body: unknown) => async (route: import('@playwright/test').Route) =>

@@ -124,6 +124,29 @@ test.describe('Game board (3D)', () => {
     await expect(page.getByText('Choose a target', { exact: false })).toBeVisible()
   })
 
+  test('creatures show a P/T badge (not lands)', async ({ page }) => {
+    await gotoScreen(page, 'game')
+    // Serra Angel 4/4 (battlefield) is uniquely identifiable
+    await expect(page.locator('.c3d-pt', { hasText: '4/4' })).toHaveCount(1)
+    await expect(page.locator('.c3d-pt').first()).toBeVisible()
+    // lands must not get a 0/0 badge
+    await expect(page.locator('.c3d-pt', { hasText: '0/0' })).toHaveCount(0)
+  })
+
+  test('a P/T change pushed by the server updates the on-board badge', async ({ page }) => {
+    await gotoScreen(page, 'ptUpdate')
+    // server pushes a buffed board ~0.5s later → the 4/4 badge becomes 6/6
+    await expect(page.locator('.c3d-pt', { hasText: '6/6' })).toHaveCount(1)
+    await expect(page.locator('.c3d-pt', { hasText: '4/4' })).toHaveCount(0)
+  })
+
+  test('hand cards show mana-cost pips', async ({ page }) => {
+    await gotoScreen(page, 'game')
+    // Counterspell {U}{U} → two pips; Lightning Bolt {R} → one
+    await expect(page.locator('.c3d-mana .c3d-pip').first()).toBeVisible()
+    await expect(page.locator('.c3d-pip', { hasText: 'U' }).first()).toBeVisible()
+  })
+
   test('snap-view buttons switch the active view', async ({ page }) => {
     await gotoScreen(page, 'game')
     const overview = page.getByRole('button', { name: 'Overview' })

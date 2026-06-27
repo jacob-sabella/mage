@@ -1,7 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import type { GameCard, GamePlayer, GameState } from '../types'
+
+/** Parse a mana-cost string like "{2}{R}{R}" into symbol tokens. */
+function manaSymbols(cost?: string | null): string[] {
+  if (!cost) return []
+  return (cost.match(/\{([^}]+)\}/g) ?? []).map((s) => s.slice(1, -1))
+}
+const MANA_PIP: Record<string, string> = { W: '#e9e3c0', U: '#4a90e2', B: '#6b5b73', R: '#e0555f', G: '#3aa55f' }
+const isType = (c: GameCard, re: RegExp) => (c.types ?? []).some((t) => re.test(t))
 
 const CARD_W = 1
 const CARD_H = 1.4
@@ -74,11 +83,13 @@ function Card3D({
   card,
   position,
   standing,
+  showCost,
   cardProps,
 }: {
   card: GameCard
   position: [number, number, number]
   standing?: boolean
+  showCost?: boolean
   cardProps: CardProps
 }) {
   const [art, setArt] = useState<THREE.Texture | null>(null)
@@ -152,6 +163,45 @@ function Card3D({
           <ringGeometry args={[CARD_W * 0.75, CARD_W * 0.92, 32]} />
           <meshBasicMaterial color={glow} transparent opacity={0.5} side={THREE.DoubleSide} />
         </mesh>
+      )}
+
+      {/* crisp DOM indicators anchored to the card — readable at any zoom/angle */}
+      {isType(card, /creature/i) && card.power != null && card.toughness != null && (
+        <Html
+          position={[CARD_W * 0.34, lift + 0.14, CARD_H * 0.3]}
+          center
+          distanceFactor={9}
+          zIndexRange={[20, 0]}
+          className="c3d-badge c3d-pt"
+        >
+          {card.power}/{card.toughness}
+        </Html>
+      )}
+      {isType(card, /planeswalker/i) && card.loyalty != null && (
+        <Html
+          position={[CARD_W * 0.34, lift + 0.14, CARD_H * 0.3]}
+          center
+          distanceFactor={9}
+          zIndexRange={[20, 0]}
+          className="c3d-badge c3d-loy"
+        >
+          {card.loyalty}
+        </Html>
+      )}
+      {showCost && manaSymbols(card.manaCost).length > 0 && (
+        <Html
+          position={[-CARD_W * 0.18, lift + 0.14, -CARD_H * 0.34]}
+          center
+          distanceFactor={9}
+          zIndexRange={[20, 0]}
+          className="c3d-badge c3d-mana"
+        >
+          {manaSymbols(card.manaCost).map((s, i) => (
+            <span key={i} className="c3d-pip" style={{ background: MANA_PIP[s] ?? '#9aa0ad' }}>
+              {s}
+            </span>
+          ))}
+        </Html>
       )}
     </group>
   )
@@ -269,12 +319,12 @@ export function Board3D({ game, cardProps }: { game: GameState; cardProps: CardP
 
         {/* stack (standing, center) */}
         {stack.map(({ card, pos }) => (
-          <Card3D key={card.id} card={card} position={[pos[0], 0, 0]} standing cardProps={cardProps} />
+          <Card3D key={card.id} card={card} position={[pos[0], 0, 0]} standing showCost cardProps={cardProps} />
         ))}
 
         {/* my hand: laid flat in front of the viewer, slightly raised */}
         {hand.map(({ card, pos }) => (
-          <Card3D key={card.id} card={card} position={[pos[0], 0.06, pos[2]]} cardProps={cardProps} />
+          <Card3D key={card.id} card={card} position={[pos[0], 0.06, pos[2]]} showCost cardProps={cardProps} />
         ))}
 
         <CameraRig target={views[view].target} />
