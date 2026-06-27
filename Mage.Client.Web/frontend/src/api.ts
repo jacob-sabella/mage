@@ -1,4 +1,4 @@
-import type { ConnectResponse, TableDto } from './types'
+import type { CardInfoDto, ConnectResponse, DeckSaveResponse, TableDto } from './types'
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(path, {
@@ -60,6 +60,19 @@ export function respond(
   return request<{ ok: boolean }>('/api/game/respond', {
     method: 'POST',
     body: JSON.stringify({ token, gameId, kind, value: value ?? '' }),
+  })
+}
+
+// Card search runs server-side against the engine's local card database; it
+// does not need a session token.
+export function searchCards(query: string): Promise<CardInfoDto[]> {
+  return request<CardInfoDto[]>(`/api/cards/search?q=${encodeURIComponent(query)}`)
+}
+
+export function saveDeck(name: string, cards: string[], path?: string): Promise<DeckSaveResponse> {
+  return request<DeckSaveResponse>('/api/decks/save', {
+    method: 'POST',
+    body: JSON.stringify({ name, cards, path: path ?? '' }),
   })
 }
 

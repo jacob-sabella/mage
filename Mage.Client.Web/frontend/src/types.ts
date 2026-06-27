@@ -91,3 +91,17 @@ export interface Session {
   token: string
   server: string
 }
+
+export interface CardInfoDto {
+  name: string
+  manaCost?: string | null
+  types: string[]
+  set?: string | null
+  rarity?: string | null
+  manaValue: number
+}
+
+export interface DeckSaveResponse {
+  ok: boolean
+  path: string
+}
