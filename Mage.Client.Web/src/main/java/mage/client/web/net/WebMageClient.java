@@ -61,6 +61,11 @@ public class WebMageClient implements MageClient {
 
     @Override
     public void onCallback(ClientCallback callback) {
+        if (callback != null) {
+            // callback payloads (GameView, etc.) are compressed on the wire;
+            // must decompress before getData(), exactly like the Swing client.
+            callback.decompressData();
+        }
         callbackHandler.accept(callback);
     }
 

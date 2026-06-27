@@ -66,8 +66,14 @@ public class PromptDto {
                 dto.canCancel = true;
                 addChoices(dto, message.getChoice());
                 break;
+            case GAME_PLAY_MANA:
+            case GAME_PLAY_XMANA:
+                // pay by clicking mana sources (permanents); cancel to abort
+                dto.kind = "target";
+                dto.canCancel = true;
+                break;
             default:
-                // mana payment, pile, etc. - surface the text with a cancel escape
+                // pile, multi-amount, etc. - surface the text with a cancel escape
                 dto.kind = "generic";
                 dto.canCancel = true;
                 break;

@@ -20,6 +20,7 @@ import mage.client.web.net.ServerConnection;
 import mage.constants.PlayerAction;
 import mage.interfaces.callback.ClientCallback;
 import mage.interfaces.callback.ClientCallbackMethod;
+import mage.interfaces.callback.ClientCallbackType;
 import mage.view.ChatMessage;
 import mage.view.GameClientMessage;
 import mage.view.GameView;
@@ -550,7 +551,11 @@ public class WebClientApp {
         if (method == ClientCallbackMethod.START_GAME && cb.getData() instanceof TableClientMessage) {
             UUID gameId = ((TableClientMessage) cb.getData()).getGameId();
             if (gameId != null) {
-                conn.joinGame(gameId);
+                // joinGame is a remote call - never run it inline on the callback
+                // thread (re-entrant remoting), do it on a worker.
+                Thread t = new Thread(() -> conn.joinGame(gameId), "fx-joingame");
+                t.setDaemon(true);
+                t.start();
                 Map<String, Object> msg = new LinkedHashMap<>();
                 msg.put("type", "gameStart");
                 msg.put("gameId", gameId.toString());
@@ -558,10 +563,14 @@ public class WebClientApp {
             }
             return;
         }
-        // a decision is being asked of us (priority, target, choice, ...)
+        // a GameClientMessage is either a real decision (DIALOG) or just an
+        // informational board update ("Waiting for X"). Only DIALOG callbacks
+        // become an actionable prompt.
         if (cb.getData() instanceof GameClientMessage) {
             GameClientMessage message = (GameClientMessage) cb.getData();
-            pushGame(ctx, cb.getObjectId(), message.getGameView(), PromptDto.from(method, message));
+            boolean isDialog = method != null && method.getType() == ClientCallbackType.DIALOG;
+            PromptDto prompt = isDialog ? PromptDto.from(method, message) : null;
+            pushGame(ctx, cb.getObjectId(), message.getGameView(), prompt);
             return;
         }
         // live game state (spectating or our own board update): GAME_INIT / GAME_UPDATE
