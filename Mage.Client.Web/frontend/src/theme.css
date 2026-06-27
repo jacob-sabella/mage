@@ -296,3 +296,16 @@ input::placeholder { color: var(--text-dim); }
 }
 .chat-input input { flex: 1; }
 .chat-input .btn { padding: 10px 16px; }
+
+/* ----- hand / graveyard / exile zones ----- */
+.hand-zone { padding: 12px 14px; border-color: var(--accent-2); }
+
+.zone-row { margin-top: 10px; }
+.zone-row-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 6px;
+}

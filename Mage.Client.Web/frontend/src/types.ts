@@ -67,6 +67,8 @@ export interface GamePlayer {
   graveyardCount: number
   active: boolean
   battlefield: GameCard[]
+  graveyard: GameCard[]
+  exile: GameCard[]
 }
 
 export interface GameState {
@@ -78,6 +80,7 @@ export interface GameState {
   players: GamePlayer[]
   stack: GameCard[]
   canPlay: string[]
+  myHand: GameCard[]
 }
 
 export interface ChatLine {

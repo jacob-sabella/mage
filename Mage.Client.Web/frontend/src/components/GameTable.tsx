@@ -80,6 +80,17 @@ export function GameTable({ game, prompt, interactive, onRespond, onLeave }: Pro
         </div>
       )}
 
+      {game.myHand.length > 0 && (
+        <div className="hand-zone panel">
+          <div className="stack-title">Your hand ({game.myHand.length})</div>
+          <div className="card-row">
+            {game.myHand.map((c) => (
+              <GameCard key={c.id} card={c} {...cardProps(c)} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {interactive && prompt && <ActionBar prompt={prompt} onRespond={onRespond} />}
     </div>
   )
@@ -114,6 +125,33 @@ function PlayerArea({
             ))}
           </div>
         )}
+      </div>
+      {player.graveyard.length > 0 && (
+        <ZoneRow label="Graveyard" cards={player.graveyard} cardProps={cardProps} />
+      )}
+      {player.exile.length > 0 && <ZoneRow label="Exile" cards={player.exile} cardProps={cardProps} />}
+    </div>
+  )
+}
+
+function ZoneRow({
+  label,
+  cards,
+  cardProps,
+}: {
+  label: string
+  cards: CardType[]
+  cardProps: (c: CardType) => { highlight?: 'play' | 'target'; onClick?: (c: CardType) => void }
+}) {
+  return (
+    <div className="zone-row">
+      <div className="zone-row-title">
+        {label} ({cards.length})
+      </div>
+      <div className="card-row">
+        {cards.map((c) => (
+          <GameCard key={c.id} card={c} {...cardProps(c)} />
+        ))}
       </div>
     </div>
   )
