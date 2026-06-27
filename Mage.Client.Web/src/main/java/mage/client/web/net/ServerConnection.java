@@ -9,7 +9,7 @@ import mage.constants.MatchBufferTime;
 import mage.constants.MatchTimeLimit;
 import mage.constants.SkillLevel;
 import mage.game.match.MatchOptions;
-import mage.game.tournament.LimitedOptions;
+import mage.game.draft.DraftOptions;
 import mage.game.tournament.TournamentOptions;
 import mage.players.PlayerType;
 import mage.view.DraftPickView;
@@ -231,7 +231,10 @@ public class ServerConnection {
         for (int i = 0; i < bots; i++) {
             options.getPlayerTypes().add(PlayerType.COMPUTER_DRAFT_BOT);
         }
-        LimitedOptions limited = new LimitedOptions();
+        // a booster draft tournament casts its options to DraftOptions, so a
+        // plain LimitedOptions throws ClassCastException at draft time.
+        DraftOptions limited = new DraftOptions();
+        limited.setTiming(DraftOptions.TimingOption.REGULAR);
         limited.setConstructionTime(600);
         limited.setNumberBoosters(0); // 0 = use the explicit set-code pack list below
         for (int i = 0; i < boosters; i++) {
@@ -273,6 +276,12 @@ public class ServerConnection {
             return null;
         }
         return tableId;
+    }
+
+    /** Enter the tournament (called on START_TOURNAMENT) - this is what kicks
+     *  off the draft, so without it START_DRAFT never arrives. */
+    public boolean joinTournament(UUID tournamentId) {
+        return tournamentId != null && session.joinTournament(tournamentId);
     }
 
     /** Subscribe to a draft's callbacks (called on START_DRAFT). */

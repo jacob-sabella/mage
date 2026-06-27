@@ -724,6 +724,18 @@ public class WebClientApp {
             }
             return;
         }
+        // tournament started: entering it is what kicks off the draft
+        if (method == ClientCallbackMethod.START_TOURNAMENT && cb.getData() instanceof TableClientMessage) {
+            UUID tournamentId = cb.getObjectId();
+            if (tournamentId != null) {
+                runAsync("fx-jointourney", () -> conn.joinTournament(tournamentId));
+                Map<String, Object> msg = new LinkedHashMap<>();
+                msg.put("type", "tournamentStart");
+                msg.put("tournamentId", tournamentId.toString());
+                pushMap(ctx, msg);
+            }
+            return;
+        }
         // booster draft started: subscribe to its DRAFT_PICK callbacks
         if (method == ClientCallbackMethod.START_DRAFT && cb.getData() instanceof TableClientMessage) {
             UUID draftId = cb.getObjectId();
