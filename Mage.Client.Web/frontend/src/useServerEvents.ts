@@ -19,22 +19,38 @@ export function useServerEvents(token: string | null, onEvent?: (e: ServerEvent)
 
   useEffect(() => {
     if (!token) return
-    const proto = location.protocol === 'https:' ? 'wss' : 'ws'
-    const ws = new WebSocket(`${proto}://${location.host}/ws?token=${encodeURIComponent(token)}`)
+    let closed = false
+    let ws: WebSocket | null = null
+    let retry: ReturnType<typeof setTimeout> | undefined
 
-    ws.onopen = () => setOnline(true)
-    ws.onclose = () => setOnline(false)
-    ws.onmessage = (ev) => {
-      try {
-        const msg = JSON.parse(ev.data) as ServerEvent
-        setEvents((prev) => [...prev.slice(-99), msg])
-        onEventRef.current?.(msg)
-      } catch {
-        /* ignore non-JSON frames */
+    const connect = () => {
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws'
+      ws = new WebSocket(`${proto}://${location.host}/ws?token=${encodeURIComponent(token)}`)
+      ws.onopen = () => setOnline(true)
+      ws.onclose = () => {
+        setOnline(false)
+        // auto-reconnect so a dropped socket doesn't strand the game/lobby
+        if (!closed) {
+          retry = setTimeout(connect, 1500)
+        }
+      }
+      ws.onmessage = (ev) => {
+        try {
+          const msg = JSON.parse(ev.data) as ServerEvent
+          setEvents((prev) => [...prev.slice(-99), msg])
+          onEventRef.current?.(msg)
+        } catch {
+          /* ignore non-JSON frames */
+        }
       }
     }
+    connect()
 
-    return () => ws.close()
+    return () => {
+      closed = true
+      if (retry) clearTimeout(retry)
+      ws?.close()
+    }
   }, [token])
 
   return { events, online }

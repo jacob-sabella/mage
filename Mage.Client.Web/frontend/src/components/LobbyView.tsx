@@ -43,6 +43,9 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   const [gameLog, setGameLog] = useState<string[]>([])
   const [showHistory, setShowHistory] = useState(false)
   const [matches, setMatches] = useState<MatchDto[]>([])
+  // we initiated a play (create/join); adopt the next game frame as ours
+  const [pendingPlay, setPendingPlay] = useState(false)
+  const [playStatus, setPlayStatus] = useState<string | null>(null)
 
   const toggleHistory = useCallback(() => {
     setShowHistory((prev) => {
@@ -74,9 +77,18 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
       // a match we joined has started - switch to the interactive board
       setActiveGameId(e.gameId)
       setInteractive(true)
+      setPendingPlay(false)
+      setPlayStatus(null)
       setGame(null)
       setPrompt(null)
     } else if (e.type === 'game') {
+      // adopt the game if we don't have one yet (covers a missed gameStart frame)
+      if (!activeGameId && e.gameId) {
+        setActiveGameId(e.gameId)
+        setInteractive(pendingPlay)
+        setPendingPlay(false)
+        setPlayStatus(null)
+      }
       if (e.game) setGame(e.game)
       setPrompt(e.prompt ?? null)
     } else if (e.type === 'log' && e.text) {
@@ -109,10 +121,19 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
       const intent = deckIntent
       setDeckIntent(null)
       if (!intent) return
+      setPendingPlay(true)
       if (intent.mode === 'create') {
-        createGameVsAi(session.token, path).catch(() => {})
+        setPlayStatus('Starting game…')
+        createGameVsAi(session.token, path)
+          .then((r) => {
+            if (!r.ok) setPlayStatus('Could not start the game (is the deck valid for the format?)')
+          })
+          .catch((err) => setPlayStatus(`Could not start: ${err instanceof Error ? err.message : 'error'}`))
       } else if (intent.tableId) {
-        joinTable(session.token, intent.tableId, path).catch(() => {})
+        setPlayStatus('Joining…')
+        joinTable(session.token, intent.tableId, path).catch((err) =>
+          setPlayStatus(`Could not join: ${err instanceof Error ? err.message : 'error'}`),
+        )
       }
     },
     [deckIntent, session.token],
@@ -137,6 +158,8 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
     setGame(null)
     setPrompt(null)
     setGameLog([])
+    setPendingPlay(false)
+    setPlayStatus(null)
   }, [])
 
   const handleSendChat = useCallback(
@@ -172,6 +195,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
             {tables.length} {tables.length === 1 ? 'table' : 'tables'}
           </span>
         )}
+        {!activeGameId && playStatus && <span className="muted play-status">{playStatus}</span>}
         <span className="spacer" />
         {!activeGameId && (
           <button className="btn primary" onClick={handleNewGame}>

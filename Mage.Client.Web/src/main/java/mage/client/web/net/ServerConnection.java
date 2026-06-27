@@ -38,10 +38,41 @@ public class ServerConnection {
     private final Session session;
     private volatile UUID mainChatId;
     private volatile String playerName;
+    private java.util.concurrent.ScheduledExecutorService pinger;
 
     public ServerConnection() {
         this.client = new WebMageClient();
         this.session = new SessionImpl(client);
+    }
+
+    /**
+     * The XMage server drops idle connections unless the client pings it
+     * periodically (the desktop client does this on a timer). Without it the
+     * upstream session expires mid-game and the browser loses the board.
+     */
+    private void startPinger() {
+        stopPinger();
+        pinger = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "fx-ping");
+            t.setDaemon(true);
+            return t;
+        });
+        pinger.scheduleAtFixedRate(() -> {
+            try {
+                if (session.isConnected()) {
+                    session.ping();
+                }
+            } catch (Exception ignored) {
+                // a failed ping is handled by the session's own reconnect logic
+            }
+        }, 5, 5, java.util.concurrent.TimeUnit.SECONDS);
+    }
+
+    private void stopPinger() {
+        if (pinger != null) {
+            pinger.shutdownNow();
+            pinger = null;
+        }
     }
 
     public WebMageClient getClient() {
@@ -78,7 +109,11 @@ public class ServerConnection {
             userData.setFlagName(flagName.trim());
         }
         connection.setUserData(userData);
-        return session.connectStart(connection);
+        boolean ok = session.connectStart(connection);
+        if (ok) {
+            startPinger();
+        }
+        return ok;
     }
 
     public boolean isConnected() {
@@ -276,6 +311,7 @@ public class ServerConnection {
     }
 
     public void disconnect() {
+        stopPinger();
         if (mainChatId != null) {
             try {
                 session.leaveChat(mainChatId);

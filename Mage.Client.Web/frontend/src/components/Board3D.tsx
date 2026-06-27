@@ -149,20 +149,24 @@ export function Board3D({ game, cardProps }: { game: GameState; cardProps: CardP
     ...far.map((p, i) => ({ player: p, z: -2.6 - i * 2 })),
   ]
 
-  // camera viewpoints: an overview + one behind each seat
+  // camera viewpoints: an overview + a 3/4 view behind each seat that frames
+  // that player's battlefield and (for the viewer) the hand laid in front.
   const views: { name: string; target: ViewTarget }[] = [
-    { name: 'Overview', target: { pos: new THREE.Vector3(0, 7.5, 7.2), look: new THREE.Vector3(0, 0, 0) } },
-    ...seats.map((s) => ({
-      name: s.player.name,
-      target: {
-        pos: new THREE.Vector3(0, 4.2, s.z + (s.z > 0 ? 4.4 : -4.4)),
-        look: new THREE.Vector3(0, 0, s.z > 0 ? 0.5 : -0.5),
-      },
-    })),
+    { name: 'Overview', target: { pos: new THREE.Vector3(0, 11, 8.5), look: new THREE.Vector3(0, 0, 0) } },
+    ...seats.map((s) => {
+      const sign = s.z > 0 ? 1 : -1
+      return {
+        name: s.player.name,
+        target: {
+          pos: new THREE.Vector3(0, 7.2, s.z + sign * 8),
+          look: new THREE.Vector3(0, 0, s.z + sign * 1.5),
+        },
+      }
+    }),
   ]
   const [view, setView] = useState(1) // default: behind the viewer
 
-  const hand = useMemo(() => row(game.myHand, 0, 5.2, 0.95), [game.myHand])
+  const hand = useMemo(() => row(game.myHand, 0, 6.2, 1.2), [game.myHand])
   const stack = useMemo(() => row(game.stack, 0, 0, 1.1), [game.stack])
 
   return (
@@ -181,7 +185,7 @@ export function Board3D({ game, cardProps }: { game: GameState; cardProps: CardP
       </div>
       <Canvas
         shadows
-        camera={{ position: [0, 4.2, 7], fov: 50 }}
+        camera={{ position: [0, 7.2, 10.6], fov: 50 }}
         dpr={[1, 1.8]}
         gl={{ antialias: true }}
       >
@@ -210,9 +214,9 @@ export function Board3D({ game, cardProps }: { game: GameState; cardProps: CardP
           <Card3D key={card.id} card={card} position={[pos[0], 0, 0]} standing cardProps={cardProps} />
         ))}
 
-        {/* my hand (standing, near camera) */}
+        {/* my hand: laid flat in front of the viewer, slightly raised */}
         {hand.map(({ card, pos }) => (
-          <Card3D key={card.id} card={card} position={pos} standing cardProps={cardProps} />
+          <Card3D key={card.id} card={card} position={[pos[0], 0.06, pos[2]]} cardProps={cardProps} />
         ))}
 
         <CameraRig target={views[view].target} />
