@@ -2,9 +2,11 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from 're
 
 export interface Prefs {
   cardImages: boolean // render real card art (vs text-only cards)
+  avatarId: number // profile avatar sent to the server (UserData)
+  flagName: string // profile flag/country (UserData)
 }
 
-const DEFAULTS: Prefs = { cardImages: true }
+const DEFAULTS: Prefs = { cardImages: true, avatarId: 0, flagName: '' }
 const KEY = 'mage.prefs'
 
 function load(): Prefs {

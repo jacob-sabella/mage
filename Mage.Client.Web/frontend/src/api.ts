@@ -17,10 +17,15 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return body as T
 }
 
-export function connect(host: string, port: number, username: string): Promise<ConnectResponse> {
+export function connect(
+  host: string,
+  port: number,
+  username: string,
+  profile?: { avatarId?: number; flagName?: string },
+): Promise<ConnectResponse> {
   return request<ConnectResponse>('/api/connect', {
     method: 'POST',
-    body: JSON.stringify({ host, port, username }),
+    body: JSON.stringify({ host, port, username, ...profile }),
   })
 }
 

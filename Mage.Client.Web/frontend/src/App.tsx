@@ -36,6 +36,33 @@ function SettingsView() {
             onChange={(e) => setPref('cardImages', e.target.checked)}
           />
         </label>
+        <label className="setting-row">
+          <span>
+            <strong>Avatar id</strong>
+            <span className="muted setting-hint">Profile avatar sent to the server</span>
+          </span>
+          <input
+            type="number"
+            min={0}
+            className="setting-input"
+            value={prefs.avatarId}
+            onChange={(e) => setPref('avatarId', Number(e.target.value) || 0)}
+          />
+        </label>
+        <label className="setting-row">
+          <span>
+            <strong>Flag</strong>
+            <span className="muted setting-hint">Country flag (e.g. United States)</span>
+          </span>
+          <input
+            type="text"
+            className="setting-input"
+            value={prefs.flagName}
+            placeholder="(none)"
+            onChange={(e) => setPref('flagName', e.target.value)}
+          />
+        </label>
+        <p className="muted setting-hint">Profile changes apply on your next connect.</p>
       </div>
     </section>
   )

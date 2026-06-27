@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { connect } from '../api'
+import { usePrefs } from '../prefs'
 import type { Session } from '../types'
 
 interface Props {
@@ -25,6 +26,7 @@ function savedLogin(): { host?: string; port?: string; username?: string } {
 }
 
 export function LoginView({ onConnected }: Props) {
+  const { prefs } = usePrefs()
   const last = savedLogin()
   const [host, setHost] = useState(last.host || 'beta.xmage.today')
   const [port, setPort] = useState(last.port || '17171')
@@ -51,7 +53,10 @@ export function LoginView({ onConnected }: Props) {
     setBusy(true)
     setStatus({ text: `Connecting to ${host.trim()}:${portNum} …`, kind: '' })
     try {
-      const res = await connect(host.trim(), portNum, username.trim())
+      const res = await connect(host.trim(), portNum, username.trim(), {
+        avatarId: prefs.avatarId,
+        flagName: prefs.flagName,
+      })
       localStorage.setItem(
         LOGIN_KEY,
         JSON.stringify({ host: host.trim(), port: String(portNum), username: username.trim() }),

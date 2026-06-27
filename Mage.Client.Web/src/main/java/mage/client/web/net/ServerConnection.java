@@ -59,13 +59,25 @@ public class ServerConnection {
      * @return true when the handshake succeeds
      */
     public boolean connect(String host, int port, String userName) {
+        return connect(host, port, userName, -1, null);
+    }
+
+    /** Connect with an optional profile (avatar id, flag) carried in UserData. */
+    public boolean connect(String host, int port, String userName, int avatarId, String flagName) {
         this.playerName = userName.trim();
         Connection connection = new Connection();
         connection.setHost(host.trim());
         connection.setPort(port);
         connection.setUsername(userName.trim());
         connection.setProxyType(Connection.ProxyType.NONE);
-        connection.setUserData(UserData.getDefaultUserDataView());
+        UserData userData = UserData.getDefaultUserDataView();
+        if (avatarId >= 0) {
+            userData.setAvatarId(avatarId);
+        }
+        if (flagName != null && !flagName.trim().isEmpty()) {
+            userData.setFlagName(flagName.trim());
+        }
+        connection.setUserData(userData);
         return session.connectStart(connection);
     }
 

@@ -166,7 +166,8 @@ public class WebClientApp {
         });
         boolean ok;
         try {
-            ok = conn.connect(req.host, port, req.username);
+            ok = conn.connect(req.host, port, req.username,
+                    req.avatarId == null ? -1 : req.avatarId, req.flagName);
             if (!ok) {
                 // give the async rejection callback a moment to arrive
                 Thread.sleep(1500);
@@ -727,6 +728,8 @@ public class WebClientApp {
         public String host;
         public int port;
         public String username;
+        public Integer avatarId;
+        public String flagName;
     }
 
     public static class DisconnectRequest {
