@@ -113,3 +113,7 @@ export function createGameVsAi(token: string, deckPath: string): Promise<{ ok: b
     body: JSON.stringify({ token, deckPath }),
   })
 }
+
+export function checkSession(token: string): Promise<{ ok: boolean; server: string }> {
+  return request<{ ok: boolean; server: string }>(`/api/session?token=${encodeURIComponent(token)}`)
+}

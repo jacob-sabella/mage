@@ -72,6 +72,10 @@ public class ServerConnection {
         return session.isConnected();
     }
 
+    public String getServerHost() {
+        return session.getServerHost();
+    }
+
     public String getLastError() {
         return session.getLastError();
     }

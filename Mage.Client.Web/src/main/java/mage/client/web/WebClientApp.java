@@ -103,6 +103,7 @@ public class WebClientApp {
 
         app.post("/api/connect", this::handleConnect);
         app.get("/api/tables", this::handleTables);
+        app.get("/api/session", this::handleSession);
         app.post("/api/chat", this::handleChat);
         app.post("/api/watch", this::handleWatch);
         app.post("/api/join", this::handleJoin);
@@ -318,6 +319,19 @@ public class WebClientApp {
             return;
         }
         ctx.json(conn.getTables().stream().map(TableDto::from).collect(Collectors.toList()));
+    }
+
+    // validate a stored token so a refreshed browser can resume its session
+    private void handleSession(Context ctx) {
+        ServerConnection conn = sessions.get(ctx.queryParam("token"));
+        if (conn == null || !conn.isConnected()) {
+            ctx.status(401).json(error("no session"));
+            return;
+        }
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("ok", true);
+        body.put("server", conn.getServerHost());
+        ctx.json(body);
     }
 
     /**
