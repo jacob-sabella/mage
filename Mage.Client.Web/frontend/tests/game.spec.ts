@@ -181,3 +181,30 @@ test.describe('Game over', () => {
     await expect(page.getByRole('heading', { name: 'Open tables' })).toBeVisible()
   })
 })
+
+test.describe('Multiplayer (Free For All)', () => {
+  test('renders 4 seats, player strip, and a view button per player', async ({ page }) => {
+    await gotoScreen(page, 'multiplayer')
+
+    // board mounts
+    await expect(page.locator('.board3d canvas')).toBeVisible()
+
+    // all four players appear in the status strip with their life totals
+    await expect(page.locator('.pstat')).toHaveCount(4)
+    await expect(page.locator('.pstat', { hasText: 'You' })).toContainText('20')
+    await expect(page.locator('.pstat', { hasText: 'Chandra' })).toContainText('17')
+    await expect(page.locator('.pstat', { hasText: 'Teferi' })).toContainText('22')
+    await expect(page.locator('.pstat', { hasText: 'Vraska' })).toContainText('14')
+
+    // a snap-view per seat (Overview + 4 players)
+    await expect(page.getByRole('button', { name: 'Overview' })).toBeVisible()
+    await expect(page.locator('.view-bar .view-btn')).toHaveCount(5)
+  })
+
+  test('can target any opponent in a multiplayer game', async ({ page }) => {
+    await gotoScreen(page, 'multiplayer')
+    // the active player can switch the camera to each opponent's seat
+    await page.locator('.view-bar .view-btn', { hasText: 'Vraska' }).click()
+    await expect(page.locator('.view-bar .view-btn.active', { hasText: 'Vraska' })).toBeVisible()
+  })
+})

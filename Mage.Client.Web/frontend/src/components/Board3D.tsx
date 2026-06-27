@@ -226,43 +226,63 @@ function row(cards: GameCard[], cx: number, cz: number, gap = 1.45) {
   return cards.map((c, i) => ({ card: c, pos: [cx - w / 2 + i * gap, 0, cz] as [number, number, number] }))
 }
 
+type Seat = { player: GamePlayer; x: number; z: number; yaw: number; isViewer: boolean }
+
 function PlayerZone({
-  player,
-  z,
+  seat,
   cardProps,
   onHoverCard,
 }: {
-  player: GamePlayer
-  z: number
+  seat: Seat
   cardProps: CardProps
   onHoverCard?: (c: GameCard | null) => void
 }) {
-  // standard MTG layout: creatures in a front row (toward the centre/opponent),
-  // lands + other non-creature permanents in a back row behind them.
-  const sign = z > 0 ? 1 : -1
+  // standard MTG layout in the seat's LOCAL space: creatures in a front row
+  // (toward the centre, local -z) and lands + other permanents in a back row
+  // (local +z). The whole group is rotated to face the table centre.
   const placed = useMemo(() => {
     const creatures: GameCard[] = []
     const back: GameCard[] = []
-    for (const c of player.battlefield) {
+    for (const c of seat.player.battlefield) {
       const t = (c.types ?? []).map((x) => x.toLowerCase())
       if (t.some((x) => x.includes('creature'))) creatures.push(c)
       else back.push(c)
     }
-    // lands grouped before other permanents within the back row
     back.sort((a, b) => {
       const al = (a.types ?? []).some((x) => /land/i.test(x)) ? 0 : 1
       const bl = (b.types ?? []).some((x) => /land/i.test(x)) ? 0 : 1
       return al - bl
     })
-    return [...row(creatures, 0, z - sign * 0.95), ...row(back, 0, z + sign * 0.95)]
-  }, [player.battlefield, z, sign])
+    return [...row(creatures, 0, -0.95), ...row(back, 0, 0.95)]
+  }, [seat.player.battlefield])
   return (
-    <group>
+    <group position={[seat.x, 0, seat.z]} rotation={[0, seat.yaw, 0]}>
       {placed.map(({ card, pos }) => (
         <Card3D key={card.id} card={card} position={pos} cardProps={cardProps} onHoverCard={onHoverCard} />
       ))}
     </group>
   )
+}
+
+/** Seat N players radially around the table: the viewer at the front (+z) and
+ *  the rest spread evenly around the circle, each facing the centre. Scales the
+ *  radius up with the player count so seats don't crowd. */
+function seatPlayers(players: GamePlayer[], me?: string | null): { seats: Seat[]; radius: number } {
+  const viewerIdx = Math.max(0, players.findIndex((p) => p.name === me))
+  const ordered = [players[viewerIdx], ...players.filter((_, i) => i !== viewerIdx)]
+  const n = ordered.length
+  const radius = Math.max(2.9, 2.2 + n * 0.42)
+  const seats = ordered.map((player, i) => {
+    const theta = Math.PI / 2 + (i * 2 * Math.PI) / n // viewer at +z (front)
+    return {
+      player,
+      x: radius * Math.cos(theta),
+      z: radius * Math.sin(theta),
+      yaw: Math.PI / 2 - theta, // rotate local -z to point at the centre
+      isViewer: i === 0,
+    }
+  })
+  return { seats, radius }
 }
 
 type ViewTarget = { pos: THREE.Vector3; look: THREE.Vector3 }
@@ -287,35 +307,38 @@ export function Board3D({
   cardProps: CardProps
   onHoverCard?: (c: GameCard | null) => void
 }) {
-  // order players so the viewer is "near" (front), others across the table
-  const players = game.players
-  const viewerIdx = Math.max(0, players.findIndex((p) => p.name === game.me))
-  const near = players[viewerIdx]
-  const far = players.filter((_, i) => i !== viewerIdx)
-
-  const seats: { player: GamePlayer; z: number }[] = [
-    { player: near, z: 2.6 },
-    ...far.map((p, i) => ({ player: p, z: -2.6 - i * 2 })),
-  ]
+  // seat all players radially around the table (supports 2..N)
+  const { seats, radius } = useMemo(() => seatPlayers(game.players, game.me), [game.players, game.me])
 
   // camera viewpoints: an overview + a 3/4 view behind each seat that frames
   // that player's battlefield and (for the viewer) the hand laid in front.
-  const views: { name: string; target: ViewTarget }[] = [
-    { name: 'Overview', target: { pos: new THREE.Vector3(0, 11, 8.5), look: new THREE.Vector3(0, 0, 0) } },
-    ...seats.map((s) => {
-      const sign = s.z > 0 ? 1 : -1
-      return {
-        name: s.player.name,
-        // lower, closer angle than a top-down view so cards face the camera and
-        // their art/text is large and readable
-        target: {
-          pos: new THREE.Vector3(0, 5.4, s.z + sign * 7.4),
-          look: new THREE.Vector3(0, 0, s.z + sign * 0.6),
-        },
-      }
-    }),
-  ]
+  const views: { name: string; target: ViewTarget }[] = useMemo(
+    () => [
+      {
+        name: 'Overview',
+        target: { pos: new THREE.Vector3(0, 11 + seats.length * 0.7, 8.5 + seats.length * 0.4), look: new THREE.Vector3(0, 0, 0) },
+      },
+      ...seats.map((s) => {
+        const len = Math.hypot(s.x, s.z) || 1
+        const ux = s.x / len
+        const uz = s.z / len
+        const out = radius + 4.8
+        return {
+          name: s.isViewer ? 'You' : s.player.name,
+          target: {
+            pos: new THREE.Vector3(ux * out, 5.4, uz * out),
+            look: new THREE.Vector3(ux * 1.2, 0, uz * 1.2),
+          },
+        }
+      }),
+    ],
+    [seats, radius],
+  )
   const [view, setView] = useState(1) // default: behind the viewer
+  // keep the selected view valid if the player count changes
+  useEffect(() => {
+    if (view >= views.length) setView(1)
+  }, [views.length, view])
 
   const hand = useMemo(() => row(game.myHand, 0, 5.9, 1.42), [game.myHand])
   const stack = useMemo(() => row(game.stack, 0, 0.6, 1.4), [game.stack])
@@ -382,7 +405,7 @@ export function Board3D({
         </mesh>
 
         {seats.map((s) => (
-          <PlayerZone key={s.player.id} player={s.player} z={s.z} cardProps={cardProps} onHoverCard={onHoverCard} />
+          <PlayerZone key={s.player.id} seat={s} cardProps={cardProps} onHoverCard={onHoverCard} />
         ))}
 
         {/* stack (standing, center) */}

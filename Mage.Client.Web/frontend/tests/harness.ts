@@ -112,6 +112,7 @@ export type Scenario =
   | 'draft'
   | 'construct'
   | 'gameOver'
+  | 'multiplayer'
 
 const DRAFT = {
   booster: [
@@ -129,6 +130,31 @@ const GAME_BUFFED = JSON.parse(JSON.stringify(SAMPLE.game)) as typeof SAMPLE.gam
 const buffed = GAME_BUFFED.players.find((p) => p.name === 'You')!.battlefield.find((c) => c.name === 'Serra Angel')!
 buffed.power = '6'
 buffed.toughness = '6'
+
+// a four-player Free For All board to exercise radial seating + multiplayer UI
+const GAME_MULTI = JSON.parse(JSON.stringify(SAMPLE.game)) as typeof SAMPLE.game
+GAME_MULTI.players = [
+  {
+    id: 'me', name: 'You', life: 20, libraryCount: 28, handCount: 4, graveyardCount: 0, active: true, manaPool: '{G}',
+    battlefield: [card('m1', 'Forest', ['Land'], { colors: 'G' }), card('m2', 'Llanowar Elves', ['Creature'], { power: '1', toughness: '1', colors: 'G' })],
+    graveyard: [], exile: [],
+  },
+  {
+    id: 'p2', name: 'Chandra', life: 17, libraryCount: 30, handCount: 6, graveyardCount: 1, active: false,
+    battlefield: [card('q1', 'Mountain', ['Land'], { colors: 'R', tapped: true }), card('q2', 'Goblin Guide', ['Creature'], { power: '2', toughness: '2', colors: 'R' })],
+    graveyard: [], exile: [],
+  },
+  {
+    id: 'p3', name: 'Teferi', life: 22, libraryCount: 33, handCount: 5, graveyardCount: 0, active: false,
+    battlefield: [card('r1', 'Island', ['Land'], { colors: 'U' }), card('r2', 'Island', ['Land'], { colors: 'U' }), card('r3', 'Serra Angel', ['Creature'], { power: '4', toughness: '4', colors: 'W' })],
+    graveyard: [], exile: [],
+  },
+  {
+    id: 'p4', name: 'Vraska', life: 14, libraryCount: 25, handCount: 3, graveyardCount: 4, active: false,
+    battlefield: [card('s1', 'Swamp', ['Land'], { colors: 'B' }), card('s2', 'Sengir Vampire', ['Creature'], { power: '4', toughness: '4', colors: 'B' })],
+    graveyard: [], exile: [],
+  },
+] as typeof SAMPLE.game.players
 
 // a 1x1 jpeg so the 3D board's card textures resolve deterministically
 const TINY_JPEG = Buffer.from(
@@ -164,6 +190,7 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
               ? 'multiAmount'
               : 'select'
   const second = scenario === 'ptUpdate' ? GAME_BUFFED : null
+  const gameState = scenario === 'multiplayer' ? GAME_MULTI : SAMPLE.game
   const isDraft = scenario === 'draft'
   const isConstruct = scenario === 'construct'
   // a small drafted pool for the construct screen
@@ -224,7 +251,7 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
       ;(window as unknown as { WebSocket: unknown }).WebSocket = MockWS
     },
     [
-      SAMPLE.game,
+      gameState,
       (SAMPLE.prompts as Record<string, unknown>)[promptKey],
       scenario !== 'lobby' && !isDraft && !isConstruct,
       second,

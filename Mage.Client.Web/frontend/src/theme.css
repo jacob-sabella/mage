@@ -1011,7 +1011,7 @@ input:focus {
 }
 .control-dock .action-bar { background: transparent; border: none; box-shadow: none; padding: 0; display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
 .action-bar { display: flex; align-items: center; gap: 8px; }
-.action-message { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.action-message { white-space: normal; overflow: visible; min-width: 120px; }
 
 /* ===== thematic display font (per-theme via --font-display) ===== */
 .brand-name {
