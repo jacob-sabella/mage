@@ -17,17 +17,25 @@ function background(colors?: string | null): string {
 
 interface Props {
   card: CardType
+  highlight?: 'play' | 'target'
+  onClick?: (card: CardType) => void
 }
 
-export function GameCard({ card }: Props) {
+export function GameCard({ card, highlight, onClick }: Props) {
   const isCreature = card.types?.includes('Creature')
   const isPlaneswalker = card.types?.includes('Planeswalker')
+  const clickable = !!onClick
 
   return (
     <div
-      className={`game-card${card.tapped ? ' tapped' : ''}`}
+      className={
+        `game-card${card.tapped ? ' tapped' : ''}` +
+        (highlight ? ` hl-${highlight}` : '') +
+        (clickable ? ' clickable' : '')
+      }
       style={{ background: background(card.colors) }}
       title={`${card.name}${card.manaCost ? '  ' + card.manaCost : ''}`}
+      onClick={clickable ? () => onClick!(card) : undefined}
     >
       <div className="gc-name">{card.name}</div>
       <div className="gc-type">{card.types?.join(' ')}</div>

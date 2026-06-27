@@ -6,12 +6,16 @@ import io.javalin.http.Context;
 import io.javalin.http.staticfiles.Location;
 import io.javalin.websocket.WsContext;
 import mage.client.web.dto.GameDto;
+import mage.client.web.dto.PromptDto;
 import mage.client.web.dto.TableDto;
 import mage.client.web.net.ServerConnection;
+import mage.constants.PlayerAction;
 import mage.interfaces.callback.ClientCallback;
 import mage.interfaces.callback.ClientCallbackMethod;
 import mage.view.ChatMessage;
+import mage.view.GameClientMessage;
 import mage.view.GameView;
+import mage.view.TableClientMessage;
 
 import java.util.UUID;
 
@@ -84,6 +88,8 @@ public class WebClientApp {
         app.get("/api/tables", this::handleTables);
         app.post("/api/chat", this::handleChat);
         app.post("/api/watch", this::handleWatch);
+        app.post("/api/join", this::handleJoin);
+        app.post("/api/game/respond", this::handleRespond);
         app.post("/api/disconnect", this::handleDisconnect);
 
         app.ws("/ws", ws -> {
@@ -98,7 +104,7 @@ public class WebClientApp {
                 // forward upstream messages/events to this browser
                 conn.getClient().setMessageHandler(msg -> push(ctx, "message", msg));
                 conn.getClient().setErrorHandler(err -> push(ctx, "error", err));
-                conn.getClient().setCallbackHandler(cb -> pushCallback(ctx, cb));
+                conn.getClient().setCallbackHandler(cb -> pushCallback(ctx, conn, cb));
                 push(ctx, "ready", "connected");
             });
             ws.onClose(ctx -> {
@@ -181,6 +187,84 @@ public class WebClientApp {
         ctx.json(Map.of("ok", ok));
     }
 
+    private void handleJoin(Context ctx) {
+        JoinRequest req = ctx.bodyAsClass(JoinRequest.class);
+        ServerConnection conn = sessions.get(req == null ? null : req.token);
+        if (conn == null) {
+            ctx.status(401).json(error("not connected"));
+            return;
+        }
+        if (req.tableId == null || req.deckPath == null) {
+            ctx.status(400).json(error("tableId and deckPath are required"));
+            return;
+        }
+        boolean ok;
+        try {
+            ok = conn.joinTable(UUID.fromString(req.tableId), req.deckPath);
+        } catch (IllegalArgumentException e) {
+            ctx.status(400).json(error("invalid tableId"));
+            return;
+        }
+        // On match start the server pushes START_GAME; the gateway then joins the game.
+        ctx.json(Map.of("ok", ok));
+    }
+
+    private void handleRespond(Context ctx) {
+        RespondRequest req = ctx.bodyAsClass(RespondRequest.class);
+        ServerConnection conn = sessions.get(req == null ? null : req.token);
+        if (conn == null) {
+            ctx.status(401).json(error("not connected"));
+            return;
+        }
+        UUID gameId;
+        try {
+            gameId = UUID.fromString(req.gameId);
+        } catch (Exception e) {
+            ctx.status(400).json(error("invalid gameId"));
+            return;
+        }
+        boolean ok;
+        switch (req.kind == null ? "" : req.kind) {
+            case "boolean":
+                ok = conn.respondBoolean(gameId, Boolean.parseBoolean(req.value));
+                break;
+            case "uuid":
+                try {
+                    ok = conn.respondUUID(gameId, UUID.fromString(req.value));
+                } catch (Exception e) {
+                    ctx.status(400).json(error("invalid uuid value"));
+                    return;
+                }
+                break;
+            case "integer":
+                try {
+                    ok = conn.respondInteger(gameId, Integer.parseInt(req.value));
+                } catch (NumberFormatException e) {
+                    ctx.status(400).json(error("invalid integer value"));
+                    return;
+                }
+                break;
+            case "string":
+                ok = conn.respondString(gameId, req.value);
+                break;
+            case "action":
+                try {
+                    ok = conn.sendAction(gameId, PlayerAction.valueOf(req.value));
+                } catch (IllegalArgumentException e) {
+                    ctx.status(400).json(error("unknown action"));
+                    return;
+                }
+                break;
+            case "concede":
+                ok = conn.concede(gameId);
+                break;
+            default:
+                ctx.status(400).json(error("unknown response kind"));
+                return;
+        }
+        ctx.json(Map.of("ok", ok));
+    }
+
     private void handleTables(Context ctx) {
         ServerConnection conn = sessions.get(ctx.queryParam("token"));
         if (conn == null) {
@@ -205,7 +289,7 @@ public class WebClientApp {
     }
 
     /** Translate an upstream callback into a browser-friendly WS frame. */
-    private void pushCallback(WsContext ctx, ClientCallback cb) {
+    private void pushCallback(WsContext ctx, ServerConnection conn, ClientCallback cb) {
         ClientCallbackMethod method = cb == null ? null : cb.getMethod();
         if ((method == ClientCallbackMethod.CHATMESSAGE || method == ClientCallbackMethod.SERVER_MESSAGE)
                 && cb.getData() instanceof ChatMessage) {
@@ -220,17 +304,40 @@ public class WebClientApp {
             pushMap(ctx, msg);
             return;
         }
-        // live game state (spectating): GAME_INIT and the various game updates
-        if (cb != null && cb.getData() instanceof GameView) {
-            Map<String, Object> msg = new LinkedHashMap<>();
-            msg.put("type", "game");
-            msg.put("gameId", cb.getObjectId() == null ? null : cb.getObjectId().toString());
-            msg.put("game", GameDto.from((GameView) cb.getData()));
-            pushMap(ctx, msg);
+        // a match we joined has started: subscribe to its game callbacks and tell the UI
+        if (method == ClientCallbackMethod.START_GAME && cb.getData() instanceof TableClientMessage) {
+            UUID gameId = ((TableClientMessage) cb.getData()).getGameId();
+            if (gameId != null) {
+                conn.joinGame(gameId);
+                Map<String, Object> msg = new LinkedHashMap<>();
+                msg.put("type", "gameStart");
+                msg.put("gameId", gameId.toString());
+                pushMap(ctx, msg);
+            }
+            return;
+        }
+        // a decision is being asked of us (priority, target, choice, ...)
+        if (cb.getData() instanceof GameClientMessage) {
+            GameClientMessage message = (GameClientMessage) cb.getData();
+            pushGame(ctx, cb.getObjectId(), message.getGameView(), PromptDto.from(method, message));
+            return;
+        }
+        // live game state (spectating or our own board update): GAME_INIT / GAME_UPDATE
+        if (cb.getData() instanceof GameView) {
+            pushGame(ctx, cb.getObjectId(), (GameView) cb.getData(), null);
             return;
         }
         // table changes etc. - a cue for the browser to refresh
         push(ctx, "event", method == null ? "" : method.toString());
+    }
+
+    private void pushGame(WsContext ctx, UUID gameId, GameView gameView, PromptDto prompt) {
+        Map<String, Object> msg = new LinkedHashMap<>();
+        msg.put("type", "game");
+        msg.put("gameId", gameId == null ? null : gameId.toString());
+        msg.put("game", gameView == null ? null : GameDto.from(gameView));
+        msg.put("prompt", prompt);
+        pushMap(ctx, msg);
     }
 
     private void push(WsContext ctx, String type, String payload) {
@@ -272,5 +379,18 @@ public class WebClientApp {
     public static class WatchRequest {
         public String token;
         public String gameId;
+    }
+
+    public static class JoinRequest {
+        public String token;
+        public String tableId;
+        public String deckPath;
+    }
+
+    public static class RespondRequest {
+        public String token;
+        public String gameId;
+        public String kind;  // boolean | uuid | integer | string | action | concede
+        public String value;
     }
 }

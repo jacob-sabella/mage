@@ -25,12 +25,20 @@ functionality remains reachable — only the presentation layer is new.
 
 ## API
 
-| Method | Path              | Body / query                | Result            |
-|--------|-------------------|-----------------------------|-------------------|
-| POST   | `/api/connect`    | `{host, port, username}`    | `{token, server}` |
-| GET    | `/api/tables`     | `?token=…`                  | `[TableDto]`      |
-| POST   | `/api/disconnect` | `{token}`                   | `{ok}`            |
-| WS     | `/ws`             | `?token=…`                  | server push events|
+| Method | Path                 | Body / query                          | Result            |
+|--------|----------------------|---------------------------------------|-------------------|
+| POST   | `/api/connect`       | `{host, port, username}`              | `{token, server}` |
+| GET    | `/api/tables`        | `?token=…`                            | `[TableDto]`      |
+| POST   | `/api/chat`          | `{token, message}`                    | `{ok}`            |
+| POST   | `/api/watch`         | `{token, gameId}`                     | `{ok}` (board via WS) |
+| POST   | `/api/join`          | `{token, tableId, deckPath}`          | `{ok}` (start via WS) |
+| POST   | `/api/game/respond`  | `{token, gameId, kind, value}`        | `{ok}`            |
+| POST   | `/api/disconnect`    | `{token}`                             | `{ok}`            |
+| WS     | `/ws`                | `?token=…`                            | server push events|
+
+WebSocket frames: `chat`, `game` (board + optional decision `prompt`),
+`gameStart` (a joined match began), `message` / `error` / `event`.
+`respond` kinds: `boolean`, `uuid`, `integer`, `string`, `action`, `concede`.
 
 ## What's implemented so far (vertical slice)
 
@@ -92,7 +100,20 @@ Then open <http://localhost:8080> and connect to a running XMage server
 ## Roadmap
 
 1. ✅ Gateway + connection + lobby vertical slice
-2. Deck editor
-3. Game table (battlefield, hand, stack) — render `mage.view.GameView` to the DOM/Canvas
-4. Draft / sealed / tournament rooms
-5. Chat, preferences, profile
+2. ✅ Live chat (shared `ChatSession`)
+3. ✅ Game table — spectate a live `GameView` (board, stack, phase)
+4. ✅ Interactive play — join a table with a deck; priority / target / choice /
+   amount decisions over the WebSocket, responses via `/api/game/respond`
+5. Richer board: hand/graveyard/exile zones, combat arrows, card images
+6. Deck editor (pairs with table creation + deck management)
+7. Draft / sealed / tournament rooms; preferences, profile
+
+### Notes on interactive play
+
+- Decisions arrive as a `prompt` on the `game` WS frame and are projected by
+  `PromptDto` (`ask` / `select` / `target` / `amount` / `choice` / `generic`).
+- `/api/join` loads a `.dck` via the engine's `DeckImporter`; `deckPath` is a
+  path on the **server** (gateway) host. The default sample deck is
+  `Mage.Client/release/sample-decks/AI/FastRedHaste.dck`.
+- Mana payment, pile, and ability-pick prompts currently render as generic
+  (cancellable) prompts; dedicated controls are a follow-up.

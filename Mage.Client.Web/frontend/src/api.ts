@@ -42,6 +42,27 @@ export function watchGame(token: string, gameId: string): Promise<{ ok: boolean 
   })
 }
 
+export function joinTable(token: string, tableId: string, deckPath: string): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>('/api/join', {
+    method: 'POST',
+    body: JSON.stringify({ token, tableId, deckPath }),
+  })
+}
+
+export type RespondKind = 'boolean' | 'uuid' | 'integer' | 'string' | 'action' | 'concede'
+
+export function respond(
+  token: string,
+  gameId: string,
+  kind: RespondKind,
+  value?: string,
+): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>('/api/game/respond', {
+    method: 'POST',
+    body: JSON.stringify({ token, gameId, kind, value: value ?? '' }),
+  })
+}
+
 export async function disconnect(token: string): Promise<void> {
   try {
     await request('/api/disconnect', {

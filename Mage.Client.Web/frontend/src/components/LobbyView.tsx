@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
-import { disconnect, fetchTables, sendChat, watchGame } from '../api'
+import { disconnect, fetchTables, joinTable, respond, sendChat, watchGame } from '../api'
+import type { RespondKind } from '../api'
 import { useServerEvents } from '../useServerEvents'
 import { ChatPanel } from './ChatPanel'
 import { GameTable } from './GameTable'
-import type { ChatLine, GameState, Session, TableDto } from '../types'
+import type { ChatLine, GameState, Prompt, Session, TableDto } from '../types'
+
+// Default deck used when sitting down at a table (a .dck path on the server).
+const DEFAULT_DECK = 'Mage.Client/release/sample-decks/AI/FastRedHaste.dck'
 
 interface Props {
   session: Session
@@ -15,8 +19,10 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   const [tables, setTables] = useState<TableDto[]>([])
   const [refreshing, setRefreshing] = useState(false)
   const [chat, setChat] = useState<ChatLine[]>([])
-  const [watchingGameId, setWatchingGameId] = useState<string | null>(null)
+  const [activeGameId, setActiveGameId] = useState<string | null>(null)
+  const [interactive, setInteractive] = useState(false)
   const [game, setGame] = useState<GameState | null>(null)
+  const [prompt, setPrompt] = useState<Prompt | null>(null)
 
   const refresh = useCallback(async () => {
     setRefreshing(true)
@@ -29,15 +35,22 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
     }
   }, [session.token])
 
-  // react to live server push: chat messages, game state, and table changes
+  // react to live server push: chat, game state/decisions, match start, table changes
   const { online } = useServerEvents(session.token, (e) => {
     if (e.type === 'chat') {
       setChat((prev) => [
         ...prev.slice(-199),
         { user: e.user, text: e.text ?? '', color: e.color, time: e.time },
       ])
-    } else if (e.type === 'game' && e.game) {
-      setGame(e.game)
+    } else if (e.type === 'gameStart' && e.gameId) {
+      // a match we joined has started - switch to the interactive board
+      setActiveGameId(e.gameId)
+      setInteractive(true)
+      setGame(null)
+      setPrompt(null)
+    } else if (e.type === 'game') {
+      if (e.game) setGame(e.game)
+      setPrompt(e.prompt ?? null)
     } else if (e.type === 'event') {
       refresh()
     }
@@ -45,8 +58,10 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
 
   const handleWatch = useCallback(
     (gameId: string) => {
-      setWatchingGameId(gameId)
+      setActiveGameId(gameId)
+      setInteractive(false)
       setGame(null)
+      setPrompt(null)
       watchGame(session.token, gameId).catch(() => {
         /* the board simply won't arrive; user can go back */
       })
@@ -54,9 +69,33 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
     [session.token],
   )
 
+  const handleJoin = useCallback(
+    (tableId: string) => {
+      const deckPath = window.prompt('Deck file (.dck) path on the server:', DEFAULT_DECK)
+      if (!deckPath) return
+      joinTable(session.token, tableId, deckPath).catch(() => {
+        /* the match start (or failure) will be reported via chat/events */
+      })
+    },
+    [session.token],
+  )
+
+  const handleRespond = useCallback(
+    (kind: RespondKind, value?: string) => {
+      if (!activeGameId) return
+      setPrompt(null) // optimistic - the next state push will refresh it
+      respond(session.token, activeGameId, kind, value).catch(() => {
+        /* ignore; server will re-prompt if needed */
+      })
+    },
+    [session.token, activeGameId],
+  )
+
   const handleLeaveGame = useCallback(() => {
-    setWatchingGameId(null)
+    setActiveGameId(null)
+    setInteractive(false)
     setGame(null)
+    setPrompt(null)
   }, [])
 
   const handleSendChat = useCallback(
@@ -84,14 +123,14 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   return (
     <section className="view lobby-view">
       <div className="lobby-header">
-        <h1 className="h1">{watchingGameId ? 'Spectating' : 'Open tables'}</h1>
-        {!watchingGameId && (
+        <h1 className="h1">{activeGameId ? (interactive ? 'Playing' : 'Spectating') : 'Open tables'}</h1>
+        {!activeGameId && (
           <span className="chip">
             {tables.length} {tables.length === 1 ? 'table' : 'tables'}
           </span>
         )}
         <span className="spacer" />
-        {!watchingGameId && (
+        {!activeGameId && (
           <button className="btn" disabled={refreshing} onClick={refresh}>
             {refreshing ? 'Refreshing…' : 'Refresh'}
           </button>
@@ -103,8 +142,14 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
 
       <div className="lobby-body">
         <div className="lobby-main">
-          {watchingGameId ? (
-            <GameTable game={game} onLeave={handleLeaveGame} />
+          {activeGameId ? (
+            <GameTable
+              game={game}
+              prompt={prompt}
+              interactive={interactive}
+              onRespond={handleRespond}
+              onLeave={handleLeaveGame}
+            />
           ) : (
             <div className="panel table-wrap">
               <table className="data-table">
@@ -126,12 +171,15 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
                       <td>{t.controller}</td>
                       <td>{t.seats}</td>
                       <td>{t.state}</td>
-                      <td>
+                      <td className="row-actions">
                         {t.games.length > 0 && (
                           <button className="btn watch-btn" onClick={() => handleWatch(t.games[0])}>
                             Watch
                           </button>
                         )}
+                        <button className="btn watch-btn" onClick={() => handleJoin(t.id)}>
+                          Join
+                        </button>
                       </td>
                     </tr>
                   ))}

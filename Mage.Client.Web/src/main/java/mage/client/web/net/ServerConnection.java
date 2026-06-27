@@ -1,5 +1,9 @@
 package mage.client.web.net;
 
+import mage.cards.decks.DeckCardLists;
+import mage.cards.decks.importer.DeckImporter;
+import mage.constants.PlayerAction;
+import mage.players.PlayerType;
 import mage.players.net.UserData;
 import mage.remote.Connection;
 import mage.remote.MageRemoteException;
@@ -26,6 +30,7 @@ public class ServerConnection {
     private final WebMageClient client;
     private final Session session;
     private volatile UUID mainChatId;
+    private volatile String playerName;
 
     public ServerConnection() {
         this.client = new WebMageClient();
@@ -47,6 +52,7 @@ public class ServerConnection {
      * @return true when the handshake succeeds
      */
     public boolean connect(String host, int port, String userName) {
+        this.playerName = userName.trim();
         Connection connection = new Connection();
         connection.setHost(host.trim());
         connection.setPort(port);
@@ -123,6 +129,51 @@ public class ServerConnection {
 
     public boolean stopWatching(UUID gameId) {
         return gameId != null && session.stopWatching(gameId);
+    }
+
+    /**
+     * Sit down at an existing open table with a deck loaded from a .dck file on
+     * the server. When the match starts the server pushes START_GAME, after
+     * which {@link #joinGame} subscribes to the live decision callbacks.
+     */
+    public boolean joinTable(UUID tableId, String deckPath) {
+        UUID roomId = session.getMainRoomId();
+        if (roomId == null || tableId == null) {
+            return false;
+        }
+        DeckCardLists deck = DeckImporter.importDeckFromFile(deckPath, false);
+        return session.joinTable(roomId, tableId, playerName, PlayerType.HUMAN, 1, deck, "");
+    }
+
+    /** Subscribe to a game's callbacks as a seated player (called on START_GAME). */
+    public boolean joinGame(UUID gameId) {
+        return gameId != null && session.joinGame(gameId);
+    }
+
+    // --- player responses (server tracks the current pending decision) -------
+
+    public boolean respondBoolean(UUID gameId, boolean value) {
+        return gameId != null && session.sendPlayerBoolean(gameId, value);
+    }
+
+    public boolean respondUUID(UUID gameId, UUID value) {
+        return gameId != null && value != null && session.sendPlayerUUID(gameId, value);
+    }
+
+    public boolean respondInteger(UUID gameId, int value) {
+        return gameId != null && session.sendPlayerInteger(gameId, value);
+    }
+
+    public boolean respondString(UUID gameId, String value) {
+        return gameId != null && session.sendPlayerString(gameId, value);
+    }
+
+    public boolean sendAction(UUID gameId, PlayerAction action) {
+        return gameId != null && action != null && session.sendPlayerAction(action, gameId, null);
+    }
+
+    public boolean concede(UUID gameId) {
+        return gameId != null && session.quitMatch(gameId);
     }
 
     public void disconnect() {

@@ -29,6 +29,8 @@ public class GameDto {
     public String priorityPlayer;
     public List<PlayerDto> players = new ArrayList<>();
     public List<CardDto> stack = new ArrayList<>();
+    // ids of objects the viewing player may currently play/activate (for highlighting)
+    public List<String> canPlay = new ArrayList<>();
 
     public static GameDto from(GameView game) {
         GameDto dto = new GameDto();
@@ -44,6 +46,11 @@ public class GameDto {
         if (game.getStack() != null) {
             for (CardView card : game.getStack().values()) {
                 dto.stack.add(CardDto.from(card));
+            }
+        }
+        if (game.getCanPlayObjects() != null) {
+            for (UUID id : game.getCanPlayObjects().getObjects().keySet()) {
+                dto.canPlay.add(id.toString());
             }
         }
         return dto;

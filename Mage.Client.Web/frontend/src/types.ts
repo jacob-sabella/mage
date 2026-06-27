@@ -24,9 +24,25 @@ export interface ServerEvent {
   color?: string | null
   time?: number | null
   messageType?: string | null
-  // present on game frames
+  // present on game / gameStart frames
   gameId?: string
   game?: GameState
+  prompt?: Prompt | null
+}
+
+export interface PromptChoice {
+  key: string
+  label: string
+}
+
+export interface Prompt {
+  kind: 'ask' | 'select' | 'target' | 'amount' | 'choice' | 'generic'
+  message?: string | null
+  canCancel: boolean
+  min: number
+  max: number
+  choices: PromptChoice[]
+  targets: string[]
 }
 
 export interface GameCard {
@@ -61,6 +77,7 @@ export interface GameState {
   priorityPlayer?: string | null
   players: GamePlayer[]
   stack: GameCard[]
+  canPlay: string[]
 }
 
 export interface ChatLine {
