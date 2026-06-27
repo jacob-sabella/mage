@@ -3,26 +3,74 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
 /**
- * Ambient 3D backdrop: a slowly drifting field of indigo/cyan motes with depth,
- * giving the app an atmospheric "game table in space" feel. Purely decorative
- * and non-interactive (pointer-events disabled), so a WebGL failure can't affect
- * gameplay — the Obsidian gradient still shows behind it.
+ * Synthwave backdrop: a glowing banded retro sun low on the horizon with a drift
+ * of neon stars. Purely decorative and non-interactive (pointer-events disabled),
+ * so a WebGL failure can't affect gameplay — the CSS gradient shows behind it.
  */
-function Motes() {
-  const ref = useRef<THREE.Points>(null)
 
+/** A canvas-drawn synthwave sun: vertical gradient disc with horizontal scan-gaps. */
+function makeSunTexture(): THREE.Texture {
+  const s = 512
+  const cv = document.createElement('canvas')
+  cv.width = cv.height = s
+  const g = cv.getContext('2d')!
+  const grad = g.createLinearGradient(0, s * 0.1, 0, s * 0.92)
+  grad.addColorStop(0, '#fff2a0')
+  grad.addColorStop(0.42, '#ff9a3d')
+  grad.addColorStop(0.72, '#ff2e97')
+  grad.addColorStop(1, '#8c1070')
+  g.save()
+  g.beginPath()
+  g.arc(s / 2, s / 2, s * 0.42, 0, Math.PI * 2)
+  g.clip()
+  g.fillStyle = grad
+  g.fillRect(0, 0, s, s)
+  // cut transparent horizontal bands across the lower half (the classic sun blinds)
+  g.globalCompositeOperation = 'destination-out'
+  for (let i = 0; i < 12; i++) {
+    const y = s * 0.55 + i * (s * 0.038)
+    const h = 1.5 + i * 1.4
+    g.fillRect(0, y, s, h)
+  }
+  g.restore()
+  const t = new THREE.CanvasTexture(cv)
+  t.colorSpace = THREE.SRGBColorSpace
+  return t
+}
+
+function Sun() {
+  const tex = useMemo(makeSunTexture, [])
+  return (
+    <group position={[0, -9, -20]}>
+      {/* soft halo */}
+      <mesh>
+        <circleGeometry args={[12, 64]} />
+        <meshBasicMaterial color="#ff2e97" transparent opacity={0.14} blending={THREE.AdditiveBlending} depthWrite={false} />
+      </mesh>
+      <mesh>
+        <planeGeometry args={[17, 17]} />
+        <meshBasicMaterial map={tex} transparent depthWrite={false} toneMapped={false} />
+      </mesh>
+    </group>
+  )
+}
+
+function Stars() {
+  const ref = useRef<THREE.Points>(null)
   const { positions, colors } = useMemo(() => {
-    const count = 1600
+    const count = 1400
     const positions = new Float32Array(count * 3)
     const colors = new Float32Array(count * 3)
-    const indigo = new THREE.Color('#5b8cff')
-    const teal = new THREE.Color('#2dd4bf')
+    const magenta = new THREE.Color('#ff2e97')
+    const cyan = new THREE.Color('#21e6ff')
+    const violet = new THREE.Color('#9d6bff')
     for (let i = 0; i < count; i++) {
-      positions[i * 3 + 0] = (Math.random() - 0.5) * 64
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 38
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 42 - 8
-      const c = Math.random() < 0.5 ? indigo : teal
-      const f = 0.35 + Math.random() * 0.65
+      positions[i * 3 + 0] = (Math.random() - 0.5) * 70
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 40 + 6 // bias upward (sky)
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 40 - 10
+      const r = Math.random()
+      const c = r < 0.45 ? magenta : r < 0.8 ? cyan : violet
+      const f = 0.4 + Math.random() * 0.6
       colors[i * 3 + 0] = c.r * f
       colors[i * 3 + 1] = c.g * f
       colors[i * 3 + 2] = c.b * f
@@ -33,8 +81,8 @@ function Motes() {
   useFrame((state, delta) => {
     const p = ref.current
     if (!p) return
-    p.rotation.y += delta * 0.018
-    p.rotation.x = Math.sin(state.clock.elapsedTime * 0.05) * 0.06
+    p.rotation.y += delta * 0.012
+    p.rotation.x = Math.sin(state.clock.elapsedTime * 0.04) * 0.05
   })
 
   return (
@@ -47,7 +95,7 @@ function Motes() {
         size={0.13}
         vertexColors
         transparent
-        opacity={0.85}
+        opacity={0.9}
         sizeAttenuation
         depthWrite={false}
         blending={THREE.AdditiveBlending}
@@ -64,8 +112,8 @@ export function SceneBackground() {
         dpr={[1, 1.5]}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
       >
-        <fog attach="fog" args={['#16181d', 22, 48]} />
-        <Motes />
+        <Sun />
+        <Stars />
       </Canvas>
     </div>
   )
