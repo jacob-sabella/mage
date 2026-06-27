@@ -176,7 +176,7 @@ export default function App() {
       <Suspense fallback={null}>
         <SceneBackground />
       </Suspense>
-      <TopBar online={session ? online : false} server={session?.server} />
+      <TopBar online={session ? online : false} server={session?.server} view={view} />
       {session && (
         <nav className="app-nav">
           <button

@@ -187,3 +187,23 @@ export function submitDraftDeck(
     body: JSON.stringify({ token, tableId, cards, basics }),
   })
 }
+
+export interface ReportContext {
+  appVersion: string
+  view: string
+  url: string
+  userAgent: string
+}
+
+/** File a bug/feature GitHub issue via the gateway (token stays server-side). */
+export function reportProblem(
+  title: string,
+  body: string,
+  kind: 'bug' | 'feature',
+  context: ReportContext,
+): Promise<{ ok: boolean; url: string; number: number }> {
+  return request<{ ok: boolean; url: string; number: number }>('/api/report', {
+    method: 'POST',
+    body: JSON.stringify({ title, body, kind, context }),
+  })
+}

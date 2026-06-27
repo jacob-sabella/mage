@@ -64,6 +64,10 @@ public class WebClientApp {
     // token -> live websocket, so upstream callbacks can be pushed to the browser
     private final ConcurrentHashMap<String, WsContext> sockets = new ConcurrentHashMap<>();
     private final ObjectMapper json = new ObjectMapper();
+    // outbound HTTP client for server-side GitHub issue creation (report-a-problem)
+    private final java.net.http.HttpClient http = java.net.http.HttpClient.newBuilder()
+            .connectTimeout(java.time.Duration.ofSeconds(10))
+            .build();
     // real card art from a desktop XMage client's downloaded image cache
     private final ImageIndex images = new ImageIndex(
             System.getenv().getOrDefault("MAGE_IMAGE_DIR",
@@ -119,6 +123,7 @@ public class WebClientApp {
         app.get("/api/decks/list", this::handleDecksList);
         app.get("/api/decks/load", this::handleDeckLoad);
         app.post("/api/decks/save", this::handleDeckSave);
+        app.post("/api/report", this::handleReport);
         app.post("/api/disconnect", this::handleDisconnect);
 
         app.ws("/ws", ws -> {
@@ -1068,5 +1073,109 @@ public class WebClientApp {
         public String name;
         public List<String> cards;
         public String path;  // optional .dck path on the gateway host
+    }
+
+    public static class ReportRequest {
+        public String title;
+        public String body;
+        public String kind; // "bug" (default) or "feature"
+        public ReportContext context;
+    }
+
+    public static class ReportContext {
+        public String appVersion;
+        public String view;
+        public String url;
+        public String userAgent;
+    }
+
+    /**
+     * Create a GitHub issue on the fork from an in-app "report a problem" form.
+     * The token comes from the GITHUB_TOKEN env var and never leaves the server;
+     * GitHub's raw error body is never echoed to the browser. Runs synchronously
+     * on the Jetty worker thread (already off the main thread).
+     */
+    private void handleReport(Context ctx) {
+        ReportRequest req = ctx.bodyAsClass(ReportRequest.class);
+        if (req == null || req.title == null || req.title.trim().isEmpty()) {
+            ctx.status(400).json(error("a title is required"));
+            return;
+        }
+        String token = System.getenv("GITHUB_TOKEN");
+        if (token == null || token.isBlank()) {
+            ctx.status(503).json(error("problem reporting is not configured on this server"));
+            return;
+        }
+        String repo = System.getenv().getOrDefault("GITHUB_REPO", "jacob-sabella/mage");
+
+        StringBuilder md = new StringBuilder();
+        String desc = req.body == null ? "" : req.body.trim();
+        if (!desc.isEmpty()) {
+            md.append(desc).append("\n\n");
+        }
+        md.append("---\n\n<details><summary>Client context</summary>\n\n");
+        if (req.context != null) {
+            appendContext(md, "App version", req.context.appVersion);
+            appendContext(md, "View", req.context.view);
+            appendContext(md, "URL", req.context.url);
+            appendContext(md, "User agent", req.context.userAgent);
+        }
+        md.append("\n</details>\n");
+
+        boolean feature = "feature".equalsIgnoreCase(req.kind);
+        Map<String, Object> issue = new LinkedHashMap<>();
+        issue.put("title", (feature ? "[Feature] " : "[Bug] ") + req.title.trim());
+        issue.put("body", md.toString());
+        issue.put("labels", List.of(feature ? "enhancement" : "web-report"));
+
+        String payload;
+        try {
+            payload = json.writeValueAsString(issue);
+        } catch (Exception e) {
+            ctx.status(500).json(error("could not build the issue"));
+            return;
+        }
+
+        java.net.http.HttpRequest ghReq = java.net.http.HttpRequest.newBuilder()
+                .uri(java.net.URI.create("https://api.github.com/repos/" + repo + "/issues"))
+                .header("Authorization", "Bearer " + token)
+                .header("Accept", "application/vnd.github+json")
+                .header("X-GitHub-Api-Version", "2022-11-28")
+                .header("Content-Type", "application/json")
+                .header("User-Agent", "xmage-web-client")
+                .timeout(java.time.Duration.ofSeconds(15))
+                .POST(java.net.http.HttpRequest.BodyPublishers.ofString(
+                        payload, java.nio.charset.StandardCharsets.UTF_8))
+                .build();
+        try {
+            java.net.http.HttpResponse<String> resp =
+                    http.send(ghReq, java.net.http.HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() == 201) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> created = json.readValue(resp.body(), Map.class);
+                Map<String, Object> out = new LinkedHashMap<>();
+                out.put("ok", true);
+                out.put("url", created.get("html_url"));
+                out.put("number", created.get("number"));
+                ctx.json(out);
+            } else {
+                System.err.println("GitHub issue create failed: HTTP " + resp.statusCode());
+                ctx.status(502).json(error("GitHub rejected the report (HTTP " + resp.statusCode() + ")"));
+            }
+        } catch (Exception e) {
+            ctx.status(502).json(error("could not reach GitHub: " + e.getClass().getSimpleName()));
+        }
+    }
+
+    /** Append one context line, collapsing newlines so values can't break the markdown block. */
+    private static void appendContext(StringBuilder md, String label, String value) {
+        if (value == null || value.isBlank()) {
+            return;
+        }
+        String clean = value.replaceAll("[\\r\\n]+", " ").trim();
+        if (clean.length() > 500) {
+            clean = clean.substring(0, 500) + "…";
+        }
+        md.append("- **").append(label).append(":** ").append(clean).append("\n");
     }
 }
