@@ -16,10 +16,24 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
+      testIgnore: '**/e2e/**',
       use: {
         ...devices['Desktop Chrome'],
         launchOptions: {
           // software WebGL so the three.js board renders headless
+          args: ['--use-gl=angle', '--use-angle=swiftshader', '--ignore-gpu-blocklist', '--enable-webgl'],
+        },
+      },
+    },
+    {
+      // real end-to-end: drives the live gateway+server on :8090
+      // (`npm run test:e2e`). Skips itself if the gateway isn't reachable.
+      name: 'e2e',
+      testMatch: '**/e2e/**/*.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: 'http://localhost:8090',
+        launchOptions: {
           args: ['--use-gl=angle', '--use-angle=swiftshader', '--ignore-gpu-blocklist', '--enable-webgl'],
         },
       },
