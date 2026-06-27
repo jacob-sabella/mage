@@ -171,17 +171,38 @@ Commander, both verified live) · **every in-game decision callback** has UI
 (priority/target incl. players/mulligan/choice/amount/ability-picker/**pile**/
 **multi-amount**/discard/concede) · mana payment · mana-pool display · skip/stops
 + F-keys · combat (attack/block/damage, verified to turn 11) · game log ·
-HTML-clean messages · card art + generated fallback faces · deck editor
+HTML-clean messages · card art + generated fallback faces · **on-card P/T &
+mana-cost indicators + hover-to-enlarge card preview** · deck editor
 (search+filters/build/stats/sideboard/open/save) · 3D board + snap-views + motion.
+
+**Booster draft**: "Draft vs AI" → pick-and-pass a pack of real cards →
+deck construction from the drafted pool (toggle cards, basic-land steppers,
+colour-weighted Auto-build) → submit. The pick + build + submit path is verified
+end-to-end (live e2e + a probe through to `submitDeck` returning ok).
 
 Resilience: a keep-alive ping holds the upstream session open, and the browser
 WebSocket auto-reconnects; the board is adopted from the first game frame so a
 missed `gameStart` still opens it.
 
-Not yet (larger / out-of-game): replay playback (the server's `GameReplay` is
-abandoned dead code — needs a modern replay pipeline) · tournaments (draft/sealed
-— needs a draft-pick UI + multi-bot) · strict variant modes with no sample decks
-(Oathbreaker/Brawl) · profile/avatar · broader preferences persistence.
+### Engine-blocked (not view-layer — would need an engine-fork workstream)
+
+These are out of scope for this module (the gateway reuses the shared engine
+unchanged), documented here from root-cause investigation:
+
+- **Draft → match handoff.** Draft pick + deck construction + `submitDeck` work,
+  and the tournament's `construct` phase completes (both human and AI bots
+  submit — traced via instrumented `TournamentImpl`). But the `COMPETE` phase
+  (`runTournament` → `playRound` → `playMatch` firing `START_MATCH`) never
+  spawns the actual match game vs the AI bots — no `START_GAME`, no error. That's
+  inside the engine's tournament internals, not the gateway.
+- **Replay playback.** The server's `GameReplay` is abandoned dead code (reads a
+  `saved/<id>.game` file the modern engine never writes); needs a new pipeline.
+- **Strict variant modes** (Oathbreaker/Brawl): the game types exist and the
+  create path can target them, but there are no sample decks to exercise them;
+  a user supplying a legal `.dck` could play them.
+
+Other follow-ups (view-layer): profile/avatar · broader preferences persistence
+· rejoin an in-progress game after a full page reload.
 
 ### Notes on interactive play
 
