@@ -59,6 +59,23 @@ test.describe('Game board (3D)', () => {
     await expect(page.getByRole('button', { name: 'No' })).toBeVisible()
   })
 
+  test('combat: declare-attackers prompt + clicking a creature declares it', async ({ page }) => {
+    await gotoScreen(page, 'combat')
+    await expect(page.getByText(/Declare attackers/)).toBeVisible()
+    // my creature (Serra Angel) is offered as a declarable; clicking sends its id
+    const bar = page.locator('.playable-bar')
+    await expect(bar.getByRole('button', { name: 'Serra Angel' })).toBeVisible()
+
+    let declaredId: string | null = null
+    await page.route('**/api/game/respond', (route) => {
+      const b = JSON.parse(route.request().postData() || '{}')
+      if (b.kind === 'uuid') declaredId = b.value
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
+    })
+    await bar.getByRole('button', { name: 'Serra Angel' }).click()
+    await expect.poll(() => declaredId).toBe('b3')
+  })
+
   test('target prompt shows the choose-a-target hint', async ({ page }) => {
     await gotoScreen(page, 'target')
     await expect(page.getByText('Choose a target', { exact: false })).toBeVisible()

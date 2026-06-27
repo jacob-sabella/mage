@@ -80,10 +80,11 @@ export const SAMPLE = {
     select: { kind: 'select', message: 'Play spells and abilities', canCancel: true, min: 0, max: 0, choices: [], choiceKind: 'string', targets: [] },
     mulligan: { kind: 'ask', message: 'Mulligan down to 6 cards?', canCancel: false, min: 0, max: 0, choices: [], choiceKind: 'string', targets: [] },
     target: { kind: 'target', message: 'Choose a target creature', canCancel: true, min: 0, max: 0, choices: [], choiceKind: 'string', targets: [] },
+    attackers: { kind: 'select', message: 'Declare attackers — click creatures, then Done', canCancel: false, min: 0, max: 0, choices: [], choiceKind: 'string', targets: [] },
   },
 }
 
-export type Scenario = 'lobby' | 'game' | 'mulligan' | 'target'
+export type Scenario = 'lobby' | 'game' | 'mulligan' | 'target' | 'combat'
 
 // a 1x1 jpeg so the 3D board's card textures resolve deterministically
 const TINY_JPEG = Buffer.from(
@@ -106,7 +107,8 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
   )
 
   // Mock WebSocket: emit ready, then for game scenarios push gameStart + game.
-  const promptKey = scenario === 'mulligan' ? 'mulligan' : scenario === 'target' ? 'target' : 'select'
+  const promptKey =
+    scenario === 'mulligan' ? 'mulligan' : scenario === 'target' ? 'target' : scenario === 'combat' ? 'attackers' : 'select'
   await page.addInitScript(
     ([game, prompt, isGame]) => {
       class MockWS {

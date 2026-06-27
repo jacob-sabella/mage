@@ -115,9 +115,14 @@ them, login fails with `Unable to make ... java.io.ObjectOutputStream.clear()
 accessible`. The provided script sets them:
 
 ```bash
-# build + run with the required --add-opens (default port 8090)
-./Mage.Client.Web/run-web.sh [port]
+# build the gateway + deps, then run with the required --add-opens (port 8090)
+mvn -Pweb-client -pl Mage.Client.Web -am package -DskipTests
+./Mage.Client.Web/scripts/run-gateway.sh [port]
 ```
+
+`scripts/run-gateway.sh` resolves the runtime classpath via Maven (cached in
+`target/gateway-classpath.txt`) and launches `WebClientApp` with the
+`--add-opens` flags JBoss needs on Java 9+.
 
 Optionally set `MAGE_IMAGE_DIR` to a desktop client's image cache
 (`.../mage-client/plugins/images`) for real card art. Then open
@@ -127,6 +132,23 @@ The card search / deck load / image features use the engine's local
 `CardRepository`; point the gateway's working dir at a populated `db/` (e.g.
 copy a server's `db/cards.h2.mv.db`) or it returns empty results.
 
+## Tests
+
+Playwright integration tests drive the built UI in a headless browser against a
+**faux backend** (stubbed REST + a mock WebSocket with sample data,
+`frontend/tests/harness.ts`) — deterministic, no gateway/server needed.
+
+```bash
+cd frontend && npm test
+```
+
+`gotoScreen(page, 'game' | 'lobby' | 'mulligan' | 'target' | 'combat')` jumps
+straight to a populated screen, so tests (and development) skip the connect/
+deck-pick setup. Coverage: login + presets, lobby (tables, Join/Watch, history),
+deck picker, 3D board + status strip + snap-views, prompts (priority/mulligan/
+target/declare-attackers), the playable-cards bar, respond round-trip, deck
+editor, settings persistence.
+
 ## Roadmap
 
 Done: connect + presets + resume · lobby + chat + match history · spectate ·
@@ -135,9 +157,13 @@ choice/amount/ability-picker/discard/concede) · skip/stops + F-keys · combat
 display · game log · card art · deck editor (search+filters/build/stats/
 sideboard/open/save) · 3D + motion.
 
+Resilience: a keep-alive ping holds the upstream session open, and the browser
+WebSocket auto-reconnects; the board is adopted from the first game frame so a
+missed `gameStart` still opens it.
+
 Not yet: replay playback (needs server history enabled) · tournaments
-(draft/sealed) · profile/avatar · preferences persistence · reconnect
-mid-game. Combat/scry/mana ergonomics want live playtesting.
+(draft/sealed) · profile/avatar · preferences persistence (beyond card-images).
+Combat/scry/mana ergonomics want more live playtesting.
 
 ### Notes on interactive play
 
