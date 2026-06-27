@@ -1,6 +1,8 @@
 import { useMemo, useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
+import { usePrefs, CHROMA_FAMILY } from '../prefs'
+import { FamilyBackdrop } from './backdrops'
 
 /**
  * Synthwave backdrop: a glowing banded retro sun low on the horizon with a drift
@@ -38,27 +40,32 @@ function makeSunTexture(): THREE.Texture {
   return t
 }
 
-function Sun() {
+export function SynthSun({
+  position = [0, -9, -20],
+  size = 17,
+}: {
+  position?: [number, number, number]
+  size?: number
+}) {
   const tex = useMemo(makeSunTexture, [])
   return (
-    <group position={[0, -9, -20]}>
+    <group position={position}>
       {/* soft halo */}
       <mesh>
-        <circleGeometry args={[12, 64]} />
+        <circleGeometry args={[size * 0.7, 64]} />
         <meshBasicMaterial color="#ff2e97" transparent opacity={0.14} blending={THREE.AdditiveBlending} depthWrite={false} />
       </mesh>
       <mesh>
-        <planeGeometry args={[17, 17]} />
+        <planeGeometry args={[size, size]} />
         <meshBasicMaterial map={tex} transparent depthWrite={false} toneMapped={false} />
       </mesh>
     </group>
   )
 }
 
-function Stars() {
+export function SynthStars({ count = 1400 }: { count?: number }) {
   const ref = useRef<THREE.Points>(null)
   const { positions, colors } = useMemo(() => {
-    const count = 1400
     const positions = new Float32Array(count * 3)
     const colors = new Float32Array(count * 3)
     const magenta = new THREE.Color('#ff2e97')
@@ -76,7 +83,7 @@ function Stars() {
       colors[i * 3 + 2] = c.b * f
     }
     return { positions, colors }
-  }, [])
+  }, [count])
 
   useFrame((state, delta) => {
     const p = ref.current
@@ -105,6 +112,8 @@ function Stars() {
 }
 
 export function SceneBackground() {
+  const { prefs } = usePrefs()
+  const kind = CHROMA_FAMILY[prefs.theme]?.backdrop ?? 'vapor'
   return (
     <div className="scene-bg" aria-hidden>
       <Canvas
@@ -112,8 +121,7 @@ export function SceneBackground() {
         dpr={[1, 1.5]}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
       >
-        <Sun />
-        <Stars />
+        <FamilyBackdrop kind={kind} />
       </Canvas>
     </div>
   )

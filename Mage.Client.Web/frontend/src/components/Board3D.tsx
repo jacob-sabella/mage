@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Grid, Html } from '@react-three/drei'
+import { FamilyBackdrop } from './backdrops'
+import { usePrefs, CHROMA_FAMILY } from '../prefs'
+
+// per-family in-game scene tint (background, fog, table, grid on/off)
+const SCENE: Record<string, { bg: string; table: string; ring: string; ring2: string; grid: boolean; gridA: string; gridB: string; key: string; fill: string }> = {
+  vapor:  { bg: '#0a0118', table: '#150a30', ring: '#ff2e97', ring2: '#21e6ff', grid: true,  gridA: '#7a2c9e', gridB: '#ff2e97', key: '#ff4fb0', fill: '#21e6ff' },
+  mythic: { bg: '#0c0a06', table: '#1c160c', ring: '#e8c35a', ring2: '#4fbf86', grid: false, gridA: '#4a3a1e', gridB: '#e8c35a', key: '#ffd98a', fill: '#e8c35a' },
+  noir:   { bg: '#050506', table: '#14161a', ring: '#e23c3c', ring2: '#c9ccd2', grid: false, gridA: '#2a2d33', gridB: '#5a5f66', key: '#dfe2e8', fill: '#9aa0aa' },
+  cutesy: { bg: '#2a1430', table: '#3a1c45', ring: '#ff9ed2', ring2: '#9be8d8', grid: false, gridA: '#6b4080', gridB: '#ff9ed2', key: '#ffc6e6', fill: '#9be8d8' },
+}
 import * as THREE from 'three'
 import type { GameCard, GamePlayer, GameState } from '../types'
 
@@ -307,6 +317,10 @@ export function Board3D({
   cardProps: CardProps
   onHoverCard?: (c: GameCard | null) => void
 }) {
+  const { prefs } = usePrefs()
+  const backdrop = CHROMA_FAMILY[prefs.theme]?.backdrop ?? 'vapor'
+  const scene = SCENE[backdrop] ?? SCENE.vapor
+
   // seat all players radially around the table (supports 2..N)
   const { seats, radius } = useMemo(() => seatPlayers(game.players, game.me), [game.players, game.me])
 
@@ -363,45 +377,49 @@ export function Board3D({
         dpr={[1, 2]}
         gl={{ antialias: true }}
       >
-        {/* synthwave night: deep purple, neon magenta key + cyan fill */}
-        <color attach="background" args={['#0a0118']} />
-        <fog attach="fog" args={['#0a0118', 26, 62]} />
+        {/* the world is the active family's environment */}
+        <color attach="background" args={[scene.bg]} />
+        <fog attach="fog" args={[scene.bg, 34, 96]} />
+        <FamilyBackdrop kind={backdrop} inGame />
+
         <ambientLight intensity={0.85} />
-        <directionalLight position={[4, 11, 6]} intensity={0.9} color="#ff4fb0" castShadow />
-        <directionalLight position={[-6, 7, -4]} intensity={0.55} color="#21e6ff" />
-        <pointLight position={[0, 6, 4]} intensity={0.5} color="#ff2e97" distance={26} />
+        <directionalLight position={[4, 11, 6]} intensity={0.9} color={scene.key} castShadow />
+        <directionalLight position={[-6, 7, -4]} intensity={0.55} color={scene.fill} />
+        <pointLight position={[0, 6, 4]} intensity={0.5} color={scene.ring} distance={26} />
 
-        {/* neon grid floor stretching to the horizon */}
-        <Grid
-          position={[0, -0.05, 0]}
-          args={[60, 60]}
-          cellSize={1.4}
-          cellThickness={1}
-          cellColor="#7a2c9e"
-          sectionSize={7}
-          sectionThickness={1.5}
-          sectionColor="#ff2e97"
-          fadeDistance={42}
-          fadeStrength={2}
-          infiniteGrid
-        />
+        {/* floor: a neon grid for Vaporwave, plain for other families */}
+        {scene.grid && (
+          <Grid
+            position={[0, -0.05, 0]}
+            args={[60, 60]}
+            cellSize={1.4}
+            cellThickness={1}
+            cellColor={scene.gridA}
+            sectionSize={7}
+            sectionThickness={1.5}
+            sectionColor={scene.gridB}
+            fadeDistance={42}
+            fadeStrength={2}
+            infiniteGrid
+          />
+        )}
 
-        {/* play surface: a dark glassy pad with a neon perimeter */}
+        {/* play surface: a dark pad with a glowing perimeter in the family colours */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]} receiveShadow>
           <planeGeometry args={[15, 11.5]} />
-          <meshStandardMaterial color="#150a30" roughness={0.6} metalness={0.2} transparent opacity={0.92} />
+          <meshStandardMaterial color={scene.table} roughness={0.6} metalness={0.2} transparent opacity={scene.grid ? 0.62 : 0.92} />
         </mesh>
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.012, 0]}>
           <circleGeometry args={[5.2, 64]} />
-          <meshBasicMaterial color="#21e6ff" transparent opacity={0.06} toneMapped={false} />
+          <meshBasicMaterial color={scene.ring2} transparent opacity={0.06} toneMapped={false} />
         </mesh>
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
           <ringGeometry args={[5.05, 5.2, 96]} />
-          <meshBasicMaterial color="#ff2e97" transparent opacity={0.7} toneMapped={false} />
+          <meshBasicMaterial color={scene.ring} transparent opacity={0.7} toneMapped={false} />
         </mesh>
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.008, 0]}>
           <ringGeometry args={[3.0, 3.08, 96]} />
-          <meshBasicMaterial color="#21e6ff" transparent opacity={0.45} toneMapped={false} />
+          <meshBasicMaterial color={scene.ring2} transparent opacity={0.45} toneMapped={false} />
         </mesh>
 
         {seats.map((s) => (

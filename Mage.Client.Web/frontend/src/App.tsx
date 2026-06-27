@@ -4,7 +4,7 @@ import { TopBar } from './components/TopBar'
 import { LoginView } from './components/LoginView'
 import { LobbyView } from './components/LobbyView'
 import { DeckEditor } from './components/DeckEditor'
-import { usePrefs, THEMES } from './prefs'
+import { usePrefs, FAMILIES } from './prefs'
 import type { Session } from './types'
 import './theme.css'
 
@@ -28,21 +28,24 @@ function SettingsView() {
         <div className="setting-row setting-row-col">
           <span>
             <strong>Theme</strong>
-            <span className="muted setting-hint">Each theme sets its own colours + fonts</span>
+            <span className="muted setting-hint">A family is a world (backdrop + fonts); chromas recolour it</span>
           </span>
           <div className="theme-picker">
-            {[...new Set(THEMES.map((t) => t.family))].map((fam) => (
-              <div className="theme-family" key={fam}>
-                <span className="theme-family-label muted">{fam}</span>
+            {FAMILIES.map((fam) => (
+              <div className="theme-family" key={fam.id}>
+                <div className="theme-family-head">
+                  <span className="theme-family-label">{fam.label}</span>
+                  <span className="muted theme-family-blurb">{fam.blurb}</span>
+                </div>
                 <div className="theme-swatches">
-                  {THEMES.filter((t) => t.family === fam).map((t) => (
+                  {fam.chromas.map((c) => (
                     <button
-                      key={t.id}
-                      className={`theme-swatch t-${t.id}${prefs.theme === t.id ? ' active' : ''}`}
-                      onClick={() => setPref('theme', t.id)}
-                      title={t.label}
+                      key={c.id}
+                      className={`theme-swatch t-${c.id}${prefs.theme === c.id ? ' active' : ''}`}
+                      onClick={() => setPref('theme', c.id)}
+                      title={`${fam.label} · ${c.label}`}
                     >
-                      {t.label}
+                      {c.label}
                     </button>
                   ))}
                 </div>
