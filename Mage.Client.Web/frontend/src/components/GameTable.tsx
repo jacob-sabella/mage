@@ -1,7 +1,27 @@
 import { useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { GameCard } from './GameCard'
 import type { RespondKind } from '../api'
 import type { GameCard as CardType, GamePlayer, GameState, Prompt } from '../types'
+
+/** A flex row of cards with enter/exit/reflow animation. */
+function CardRow({
+  cards,
+  cardProps,
+}: {
+  cards: CardType[]
+  cardProps: (c: CardType) => { highlight?: 'play' | 'target'; onClick?: (c: CardType) => void }
+}) {
+  return (
+    <div className="card-row">
+      <AnimatePresence mode="popLayout">
+        {cards.map((c) => (
+          <GameCard key={c.id} card={c} {...cardProps(c)} />
+        ))}
+      </AnimatePresence>
+    </div>
+  )
+}
 
 interface Props {
   game: GameState | null
@@ -45,10 +65,16 @@ export function GameTable({ game, prompt, interactive, onRespond, onLeave }: Pro
           ← Back to lobby
         </button>
         <span className="chip">Turn {game.turn}</span>
-        <span className="phase-pill">
+        <motion.span
+          className="phase-pill"
+          key={`${game.phase}-${game.step}`}
+          initial={{ scale: 1.18, boxShadow: '0 0 18px rgba(91,140,255,0.6)' }}
+          animate={{ scale: 1, boxShadow: '0 0 0px rgba(91,140,255,0)' }}
+          transition={{ duration: 0.5 }}
+        >
           {game.phase}
           {game.step && game.step !== game.phase ? ` · ${game.step}` : ''}
-        </span>
+        </motion.span>
         <span className="spacer" />
         {game.priorityPlayer && <span className="muted">Priority: {game.priorityPlayer}</span>}
         {interactive && (
@@ -70,24 +96,20 @@ export function GameTable({ game, prompt, interactive, onRespond, onLeave }: Pro
       </div>
 
       {game.stack.length > 0 && (
-        <div className="game-stack panel">
+        <motion.div
+          className="game-stack panel"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
           <div className="stack-title">Stack ({game.stack.length})</div>
-          <div className="card-row">
-            {game.stack.map((c) => (
-              <GameCard key={c.id} card={c} {...cardProps(c)} />
-            ))}
-          </div>
-        </div>
+          <CardRow cards={game.stack} cardProps={cardProps} />
+        </motion.div>
       )}
 
       {game.myHand.length > 0 && (
         <div className="hand-zone panel">
           <div className="stack-title">Your hand ({game.myHand.length})</div>
-          <div className="card-row">
-            {game.myHand.map((c) => (
-              <GameCard key={c.id} card={c} {...cardProps(c)} />
-            ))}
-          </div>
+          <CardRow cards={game.myHand} cardProps={cardProps} />
         </div>
       )}
 
@@ -109,7 +131,15 @@ function PlayerArea({
     <div className={`player-area${active ? ' active' : ''}`}>
       <div className="player-bar">
         <span className="player-name">{player.name}</span>
-        <span className="life">♥ {player.life}</span>
+        <motion.span
+          className="life"
+          key={player.life}
+          initial={{ scale: 1.5, color: '#7df0c0' }}
+          animate={{ scale: 1, color: '#4ec98a' }}
+          transition={{ type: 'spring', stiffness: 400, damping: 18 }}
+        >
+          ♥ {player.life}
+        </motion.span>
         <span className="zone-counts muted">
           Hand {player.handCount} · Library {player.libraryCount} · Grave {player.graveyardCount}
         </span>
@@ -119,11 +149,7 @@ function PlayerArea({
         {player.battlefield.length === 0 ? (
           <span className="muted empty-field">No permanents</span>
         ) : (
-          <div className="card-row">
-            {player.battlefield.map((c) => (
-              <GameCard key={c.id} card={c} {...cardProps(c)} />
-            ))}
-          </div>
+          <CardRow cards={player.battlefield} cardProps={cardProps} />
         )}
       </div>
       {player.graveyard.length > 0 && (
@@ -148,11 +174,7 @@ function ZoneRow({
       <div className="zone-row-title">
         {label} ({cards.length})
       </div>
-      <div className="card-row">
-        {cards.map((c) => (
-          <GameCard key={c.id} card={c} {...cardProps(c)} />
-        ))}
-      </div>
+      <CardRow cards={cards} cardProps={cardProps} />
     </div>
   )
 }

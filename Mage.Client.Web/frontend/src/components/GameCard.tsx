@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion'
 import type { GameCard as CardType } from '../types'
 
 // Tint a card by its WUBRG color string.
@@ -27,7 +28,16 @@ export function GameCard({ card, highlight, onClick }: Props) {
   const clickable = !!onClick
 
   return (
-    <div
+    <motion.div
+      // shared-element id: when this card moves between zones, it flies there
+      layout
+      layoutId={card.id}
+      initial={{ opacity: 0, scale: 0.7, y: 14 }}
+      animate={{ opacity: 1, scale: 1, y: 0, rotate: card.tapped ? 9 : 0 }}
+      exit={{ opacity: 0, scale: 0.7, y: -10 }}
+      whileHover={clickable ? { y: -8, scale: 1.06, zIndex: 5 } : { y: -3 }}
+      whileTap={clickable ? { scale: 0.97 } : undefined}
+      transition={{ type: 'spring', stiffness: 320, damping: 26, mass: 0.6 }}
       className={
         `game-card${card.tapped ? ' tapped' : ''}` +
         (highlight ? ` hl-${highlight}` : '') +
@@ -37,6 +47,7 @@ export function GameCard({ card, highlight, onClick }: Props) {
       title={`${card.name}${card.manaCost ? '  ' + card.manaCost : ''}`}
       onClick={clickable ? () => onClick!(card) : undefined}
     >
+      <div className="gc-sheen" />
       <div className="gc-name">{card.name}</div>
       <div className="gc-type">{card.types?.join(' ')}</div>
       {isCreature && (
@@ -46,6 +57,6 @@ export function GameCard({ card, highlight, onClick }: Props) {
         </div>
       )}
       {isPlaneswalker && card.loyalty != null && <div className="gc-pt">◆ {card.loyalty}</div>}
-    </div>
+    </motion.div>
   )
 }
