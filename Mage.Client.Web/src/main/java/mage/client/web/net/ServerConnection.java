@@ -15,6 +15,7 @@ import mage.remote.Connection;
 import mage.remote.MageRemoteException;
 import mage.remote.Session;
 import mage.remote.SessionImpl;
+import mage.view.MatchView;
 import mage.view.TableView;
 
 import java.util.Collection;
@@ -223,6 +224,20 @@ public class ServerConnection {
 
     public boolean concede(UUID gameId) {
         return gameId != null && session.quitMatch(gameId);
+    }
+
+    /** Finished matches in the main room (history). Empty on error. */
+    public Collection<MatchView> getFinishedMatches() {
+        try {
+            UUID roomId = session.getMainRoomId();
+            if (roomId == null) {
+                return Collections.emptyList();
+            }
+            Collection<MatchView> matches = session.getFinishedMatches(roomId);
+            return matches == null ? Collections.emptyList() : matches;
+        } catch (MageRemoteException e) {
+            return Collections.emptyList();
+        }
     }
 
     public void disconnect() {

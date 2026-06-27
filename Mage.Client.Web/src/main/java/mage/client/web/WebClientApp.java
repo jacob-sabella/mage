@@ -104,6 +104,7 @@ public class WebClientApp {
         app.post("/api/connect", this::handleConnect);
         app.get("/api/tables", this::handleTables);
         app.get("/api/session", this::handleSession);
+        app.get("/api/matches", this::handleMatches);
         app.post("/api/chat", this::handleChat);
         app.post("/api/watch", this::handleWatch);
         app.post("/api/join", this::handleJoin);
@@ -319,6 +320,16 @@ public class WebClientApp {
             return;
         }
         ctx.json(conn.getTables().stream().map(TableDto::from).collect(Collectors.toList()));
+    }
+
+    private void handleMatches(Context ctx) {
+        ServerConnection conn = sessions.get(ctx.queryParam("token"));
+        if (conn == null) {
+            ctx.status(401).json(error("not connected"));
+            return;
+        }
+        ctx.json(conn.getFinishedMatches().stream()
+                .map(mage.client.web.dto.MatchDto::from).collect(Collectors.toList()));
     }
 
     // validate a stored token so a refreshed browser can resume its session

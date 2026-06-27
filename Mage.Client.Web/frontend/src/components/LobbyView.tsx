@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
-import { createGameVsAi, disconnect, fetchTables, joinTable, respond, sendChat, watchGame } from '../api'
-import type { RespondKind } from '../api'
+import {
+  createGameVsAi,
+  disconnect,
+  fetchMatches,
+  fetchTables,
+  joinTable,
+  respond,
+  sendChat,
+  watchGame,
+} from '../api'
+import type { MatchDto, RespondKind } from '../api'
 import { useServerEvents } from '../useServerEvents'
 import { ChatPanel } from './ChatPanel'
 import { GameTable } from './GameTable'
@@ -24,6 +33,16 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   const [game, setGame] = useState<GameState | null>(null)
   const [prompt, setPrompt] = useState<Prompt | null>(null)
   const [gameLog, setGameLog] = useState<string[]>([])
+  const [showHistory, setShowHistory] = useState(false)
+  const [matches, setMatches] = useState<MatchDto[]>([])
+
+  const toggleHistory = useCallback(() => {
+    setShowHistory((prev) => {
+      const next = !prev
+      if (next) fetchMatches(session.token).then(setMatches).catch(() => setMatches([]))
+      return next
+    })
+  }, [session.token])
 
   const refresh = useCallback(async () => {
     setRefreshing(true)
@@ -136,8 +155,10 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   return (
     <section className="view lobby-view">
       <div className="lobby-header">
-        <h1 className="h1">{activeGameId ? (interactive ? 'Playing' : 'Spectating') : 'Open tables'}</h1>
-        {!activeGameId && (
+        <h1 className="h1">
+          {activeGameId ? (interactive ? 'Playing' : 'Spectating') : showHistory ? 'Match history' : 'Open tables'}
+        </h1>
+        {!activeGameId && !showHistory && (
           <span className="chip">
             {tables.length} {tables.length === 1 ? 'table' : 'tables'}
           </span>
@@ -149,6 +170,11 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
           </button>
         )}
         {!activeGameId && (
+          <button className={`btn${showHistory ? ' primary' : ''}`} onClick={toggleHistory}>
+            {showHistory ? 'Tables' : 'History'}
+          </button>
+        )}
+        {!activeGameId && !showHistory && (
           <button className="btn" disabled={refreshing} onClick={refresh}>
             {refreshing ? 'Refreshing…' : 'Refresh'}
           </button>
@@ -169,6 +195,36 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
               onRespond={handleRespond}
               onLeave={handleLeaveGame}
             />
+          ) : showHistory ? (
+            <div className="panel table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Match</th>
+                    <th>Game type</th>
+                    <th>Players</th>
+                    <th>Result</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {matches.map((m, i) => (
+                    <tr key={i}>
+                      <td>{m.name}</td>
+                      <td>{m.gameType}</td>
+                      <td>{m.players}</td>
+                      <td>{m.result}</td>
+                    </tr>
+                  ))}
+                  {matches.length === 0 && (
+                    <tr>
+                      <td className="empty" colSpan={4}>
+                        No finished matches yet.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           ) : (
             <div className="panel table-wrap">
               <table className="data-table">

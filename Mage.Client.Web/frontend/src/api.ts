@@ -117,3 +117,16 @@ export function createGameVsAi(token: string, deckPath: string): Promise<{ ok: b
 export function checkSession(token: string): Promise<{ ok: boolean; server: string }> {
   return request<{ ok: boolean; server: string }>(`/api/session?token=${encodeURIComponent(token)}`)
 }
+
+export interface MatchDto {
+  name: string
+  gameType: string
+  players: string
+  result: string
+  replayAvailable: boolean
+  endTime?: number | null
+}
+
+export function fetchMatches(token: string): Promise<MatchDto[]> {
+  return request<MatchDto[]>(`/api/matches?token=${encodeURIComponent(token)}`)
+}
