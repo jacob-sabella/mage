@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { usePrefs } from '../prefs'
 import type { GameCard as CardType } from '../types'
 
 // Tint a card by its WUBRG color string.
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export function GameCard({ card, highlight, onClick }: Props) {
+  const { prefs } = usePrefs()
   const isCreature = card.types?.includes('Creature')
   const isPlaneswalker = card.types?.includes('Planeswalker')
   const clickable = !!onClick
@@ -47,7 +49,7 @@ export function GameCard({ card, highlight, onClick }: Props) {
       title={`${card.name}${card.manaCost ? '  ' + card.manaCost : ''}`}
       onClick={clickable ? () => onClick!(card) : undefined}
     >
-      {card.name && (
+      {prefs.cardImages && card.name && (
         <img
           className="gc-art"
           loading="lazy"

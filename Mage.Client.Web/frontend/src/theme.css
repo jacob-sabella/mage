@@ -590,3 +590,14 @@ input::placeholder { color: var(--text-dim); }
 .combat-attackers { font-weight: 600; }
 .combat-defender { color: var(--accent); }
 .combat-unblocked { color: var(--danger); font-size: 12px; }
+
+/* ----- settings ----- */
+.settings-view { display: flex; justify-content: center; }
+.settings-card { width: 460px; max-width: 100%; padding: 30px; }
+.setting-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; padding: 12px 0; border-top: 1px solid var(--stroke);
+}
+.setting-row strong { display: block; }
+.setting-hint { display: block; font-size: 12px; margin-top: 2px; }
+.setting-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer; }

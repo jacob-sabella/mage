@@ -15,10 +15,20 @@ const SERVERS = [
   { label: 'Local', host: 'localhost', port: '17171', note: 'your own server' },
 ]
 
+const LOGIN_KEY = 'mage.login'
+function savedLogin(): { host?: string; port?: string; username?: string } {
+  try {
+    return JSON.parse(localStorage.getItem(LOGIN_KEY) || '{}')
+  } catch {
+    return {}
+  }
+}
+
 export function LoginView({ onConnected }: Props) {
-  const [host, setHost] = useState('beta.xmage.today')
-  const [port, setPort] = useState('17171')
-  const [username, setUsername] = useState('')
+  const last = savedLogin()
+  const [host, setHost] = useState(last.host || 'beta.xmage.today')
+  const [port, setPort] = useState(last.port || '17171')
+  const [username, setUsername] = useState(last.username || '')
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState<{ text: string; kind: 'error' | 'ok' | '' }>({ text: '', kind: '' })
 
@@ -42,6 +52,10 @@ export function LoginView({ onConnected }: Props) {
     setStatus({ text: `Connecting to ${host.trim()}:${portNum} …`, kind: '' })
     try {
       const res = await connect(host.trim(), portNum, username.trim())
+      localStorage.setItem(
+        LOGIN_KEY,
+        JSON.stringify({ host: host.trim(), port: String(portNum), username: username.trim() }),
+      )
       onConnected({ token: res.token, server: res.server })
     } catch (e) {
       setStatus({ text: `Could not connect: ${(e as Error).message}`, kind: 'error' })

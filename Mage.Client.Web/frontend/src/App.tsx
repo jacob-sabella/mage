@@ -4,6 +4,7 @@ import { TopBar } from './components/TopBar'
 import { LoginView } from './components/LoginView'
 import { LobbyView } from './components/LobbyView'
 import { DeckEditor } from './components/DeckEditor'
+import { usePrefs } from './prefs'
 import type { Session } from './types'
 import './theme.css'
 
@@ -15,7 +16,30 @@ const SceneBackground = lazy(() =>
   import('./components/SceneBackground').then((m) => ({ default: m.SceneBackground })),
 )
 
-type View = 'play' | 'decks'
+type View = 'play' | 'decks' | 'settings'
+
+function SettingsView() {
+  const { prefs, setPref } = usePrefs()
+  return (
+    <section className="view settings-view">
+      <div className="panel settings-card">
+        <h1 className="h1">Preferences</h1>
+        <p className="subtitle">Stored in this browser.</p>
+        <label className="setting-row">
+          <span>
+            <strong>Card images</strong>
+            <span className="muted setting-hint">Show real card art (off = text-only, faster)</span>
+          </span>
+          <input
+            type="checkbox"
+            checked={prefs.cardImages}
+            onChange={(e) => setPref('cardImages', e.target.checked)}
+          />
+        </label>
+      </div>
+    </section>
+  )
+}
 
 function saveSession(s: Session | null) {
   if (s) localStorage.setItem(SESSION_KEY, JSON.stringify(s))
@@ -69,6 +93,12 @@ export default function App() {
           >
             Deck Editor
           </button>
+          <button
+            className={`nav-tab ${view === 'settings' ? 'active' : ''}`}
+            onClick={() => setView('settings')}
+          >
+            Settings
+          </button>
         </nav>
       )}
       <main id="app">
@@ -86,6 +116,7 @@ export default function App() {
               />
             </div>
             {view === 'decks' && <DeckEditor />}
+            {view === 'settings' && <SettingsView />}
           </>
         ) : (
           <LoginView onConnected={setSession} />
