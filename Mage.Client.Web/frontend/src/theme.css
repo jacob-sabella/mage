@@ -176,6 +176,62 @@ input::placeholder { color: var(--text-dim); }
 }
 .lobby-main { flex: 1; min-width: 0; }
 
+.watch-btn { padding: 5px 14px; font-size: 12px; }
+
+/* ----- game table ----- */
+.game-table { display: flex; flex-direction: column; gap: 14px; height: 100%; }
+.game-toolbar { display: flex; align-items: center; gap: 12px; }
+.phase-pill {
+  background: rgba(91, 140, 255, 0.16);
+  color: var(--accent);
+  font-size: 12px; font-weight: 700;
+  padding: 4px 12px; border-radius: 20px;
+}
+.game-waiting { padding: 40px; text-align: center; color: var(--text-dim); }
+
+.game-board { display: flex; flex-direction: column; gap: 14px; flex: 1; }
+
+.player-area {
+  background: var(--bg);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+.player-area.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.player-bar { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
+.player-name { font-weight: 700; font-size: 15px; }
+.life { color: var(--success); font-weight: 700; }
+.zone-counts { font-size: 12px; }
+.active-chip { background: rgba(91, 140, 255, 0.16); color: var(--accent); }
+
+.battlefield { min-height: 96px; }
+.empty-field { font-size: 13px; }
+.card-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.game-stack { padding: 12px 14px; }
+.stack-title { font-size: 11px; font-weight: 700; color: var(--text-dim); margin-bottom: 8px; }
+
+/* ----- cards ----- */
+.game-card {
+  width: 92px;
+  height: 92px;
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+  padding: 7px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow: hidden;
+  transition: transform 0.12s;
+  cursor: default;
+}
+.game-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+.game-card.tapped { transform: rotate(8deg); opacity: 0.85; }
+.gc-name { font-size: 11px; font-weight: 700; line-height: 1.2; }
+.gc-type { font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.3px; }
+.gc-pt { margin-top: auto; font-size: 13px; font-weight: 700; align-self: flex-end; }
+.gc-dmg { color: var(--danger); }
+
 /* ----- chat ----- */
 .chat-panel {
   width: 340px;

@@ -2,6 +2,10 @@ package mage.client.web.dto;
 
 import mage.view.TableView;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
 /**
  * Lightweight, JSON-friendly projection of the server's {@link TableView}.
  * The full view carries a large object graph; the browser only needs these
@@ -19,6 +23,7 @@ public class TableDto {
     public String seats;
     public String state;
     public String skillLevel;
+    public List<String> games = new ArrayList<>();
 
     public static TableDto from(TableView table) {
         TableDto dto = new TableDto();
@@ -30,6 +35,11 @@ public class TableDto {
         dto.seats = table.getSeatsInfo();
         dto.state = table.getTableStateText();
         dto.skillLevel = table.getSkillLevel() == null ? null : table.getSkillLevel().toString();
+        if (table.getGames() != null) {
+            for (UUID gameId : table.getGames()) {
+                dto.games.add(gameId.toString());
+            }
+        }
         return dto;
     }
 }

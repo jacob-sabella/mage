@@ -5,11 +5,15 @@ import io.javalin.Javalin;
 import io.javalin.http.Context;
 import io.javalin.http.staticfiles.Location;
 import io.javalin.websocket.WsContext;
+import mage.client.web.dto.GameDto;
 import mage.client.web.dto.TableDto;
 import mage.client.web.net.ServerConnection;
 import mage.interfaces.callback.ClientCallback;
 import mage.interfaces.callback.ClientCallbackMethod;
 import mage.view.ChatMessage;
+import mage.view.GameView;
+
+import java.util.UUID;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -79,6 +83,7 @@ public class WebClientApp {
         app.post("/api/connect", this::handleConnect);
         app.get("/api/tables", this::handleTables);
         app.post("/api/chat", this::handleChat);
+        app.post("/api/watch", this::handleWatch);
         app.post("/api/disconnect", this::handleDisconnect);
 
         app.ws("/ws", ws -> {
@@ -154,6 +159,28 @@ public class WebClientApp {
         ctx.json(Map.of("ok", ok));
     }
 
+    private void handleWatch(Context ctx) {
+        WatchRequest req = ctx.bodyAsClass(WatchRequest.class);
+        ServerConnection conn = sessions.get(req == null ? null : req.token);
+        if (conn == null) {
+            ctx.status(401).json(error("not connected"));
+            return;
+        }
+        if (req.gameId == null) {
+            ctx.status(400).json(error("gameId is required"));
+            return;
+        }
+        boolean ok;
+        try {
+            ok = conn.watchGame(UUID.fromString(req.gameId));
+        } catch (IllegalArgumentException e) {
+            ctx.status(400).json(error("invalid gameId"));
+            return;
+        }
+        // The board itself arrives asynchronously via GAME_INIT/GAME_UPDATE on the WS.
+        ctx.json(Map.of("ok", ok));
+    }
+
     private void handleTables(Context ctx) {
         ServerConnection conn = sessions.get(ctx.queryParam("token"));
         if (conn == null) {
@@ -190,6 +217,15 @@ public class WebClientApp {
             msg.put("color", m.getColor() == null ? null : m.getColor().toString());
             msg.put("time", m.getTime() == null ? null : m.getTime().getTime());
             msg.put("messageType", m.getMessageType() == null ? null : m.getMessageType().toString());
+            pushMap(ctx, msg);
+            return;
+        }
+        // live game state (spectating): GAME_INIT and the various game updates
+        if (cb != null && cb.getData() instanceof GameView) {
+            Map<String, Object> msg = new LinkedHashMap<>();
+            msg.put("type", "game");
+            msg.put("gameId", cb.getObjectId() == null ? null : cb.getObjectId().toString());
+            msg.put("game", GameDto.from((GameView) cb.getData()));
             pushMap(ctx, msg);
             return;
         }
@@ -231,5 +267,10 @@ public class WebClientApp {
     public static class ChatRequest {
         public String token;
         public String message;
+    }
+
+    public static class WatchRequest {
+        public String token;
+        public String gameId;
     }
 }

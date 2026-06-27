@@ -35,6 +35,13 @@ export function sendChat(token: string, message: string): Promise<{ ok: boolean 
   })
 }
 
+export function watchGame(token: string, gameId: string): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>('/api/watch', {
+    method: 'POST',
+    body: JSON.stringify({ token, gameId }),
+  })
+}
+
 export async function disconnect(token: string): Promise<void> {
   try {
     await request('/api/disconnect', {

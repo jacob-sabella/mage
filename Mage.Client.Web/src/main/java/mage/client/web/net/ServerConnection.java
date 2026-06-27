@@ -113,6 +113,18 @@ public class ServerConnection {
         return session.sendChatMessage(mainChatId, message);
     }
 
+    /**
+     * Start spectating a game. The server then pushes GAME_INIT / GAME_UPDATE
+     * callbacks (carrying a GameView) for this game id.
+     */
+    public boolean watchGame(UUID gameId) {
+        return gameId != null && session.watchGame(gameId);
+    }
+
+    public boolean stopWatching(UUID gameId) {
+        return gameId != null && session.stopWatching(gameId);
+    }
+
     public void disconnect() {
         if (mainChatId != null) {
             try {
