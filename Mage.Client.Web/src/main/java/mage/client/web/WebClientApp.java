@@ -490,7 +490,7 @@ public class WebClientApp {
         ctx.json(body);
     }
 
-    // collapse a flat card list into [{name, count}] preserving first-seen order
+    // collapse a flat card list into [{name, count, manaValue, colors, types, manaCost}]
     private static List<Map<String, Object>> aggregate(List<DeckCardInfo> cards) {
         LinkedHashMap<String, Integer> counts = new LinkedHashMap<>();
         if (cards != null) {
@@ -504,9 +504,34 @@ public class WebClientApp {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("name", e.getKey());
             m.put("count", e.getValue());
+            CardInfo info = CardRepository.instance.findCard(e.getKey());
+            if (info != null) {
+                m.put("manaValue", info.getManaValue());
+                m.put("colors", colorLetters(info.getColor()));
+                m.put("types", info.getTypes());
+                m.put("manaCost", String.join("", info.getManaCosts(CardInfo.ManaCostSide.ALL)));
+            } else {
+                m.put("manaValue", 0);
+                m.put("colors", "");
+                m.put("types", java.util.Collections.emptyList());
+                m.put("manaCost", "");
+            }
             out.add(m);
         }
         return out;
+    }
+
+    private static String colorLetters(mage.ObjectColor color) {
+        if (color == null) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        if (color.isWhite()) sb.append('W');
+        if (color.isBlue()) sb.append('U');
+        if (color.isBlack()) sb.append('B');
+        if (color.isRed()) sb.append('R');
+        if (color.isGreen()) sb.append('G');
+        return sb.toString();
     }
 
     private void handleCardImage(Context ctx) {

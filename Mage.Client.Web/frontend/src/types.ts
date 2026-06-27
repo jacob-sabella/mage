@@ -101,10 +101,20 @@ export interface Session {
 export interface CardInfoDto {
   name: string
   manaCost?: string | null
+  colors?: string | null
   types: string[]
   set?: string | null
   rarity?: string | null
   manaValue: number
+}
+
+export interface DeckCardEntry {
+  name: string
+  count: number
+  manaValue?: number
+  colors?: string | null
+  types?: string[]
+  manaCost?: string | null
 }
 
 export interface DeckSaveResponse {

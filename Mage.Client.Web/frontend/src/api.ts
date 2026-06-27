@@ -1,4 +1,4 @@
-import type { CardInfoDto, ConnectResponse, DeckSaveResponse, TableDto } from './types'
+import type { CardInfoDto, ConnectResponse, DeckCardEntry, DeckSaveResponse, TableDto } from './types'
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(path, {
@@ -89,8 +89,8 @@ export async function disconnect(token: string): Promise<void> {
 
 export interface DeckLoadResponse {
   name: string
-  cards: { name: string; count: number }[]
-  sideboard: { name: string; count: number }[]
+  cards: DeckCardEntry[]
+  sideboard: DeckCardEntry[]
 }
 
 export function loadDeck(path: string): Promise<DeckLoadResponse> {

@@ -546,3 +546,20 @@ input::placeholder { color: var(--text-dim); }
 }
 .game-log-line { padding: 1px 0; }
 .game-log-line:last-child { color: var(--text); }
+
+/* ----- deck editor stats ----- */
+.deck-stats { padding: 10px 0 12px; border-bottom: 1px solid var(--stroke); margin-bottom: 10px; }
+.deck-stats-row { display: flex; align-items: center; font-size: 12px; margin-bottom: 10px; }
+.pips { display: flex; gap: 5px; }
+.pip {
+  min-width: 22px; height: 20px; padding: 0 5px;
+  border-radius: 11px; color: #11141b; font-weight: 700; font-size: 11px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.curve { display: flex; align-items: flex-end; gap: 6px; height: 64px; padding: 0 2px; }
+.curve-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+.curve-bar { width: 100%; max-width: 26px; background: linear-gradient(var(--accent), var(--accent-2)); border-radius: 3px 3px 0 0; }
+.curve-label { font-size: 10px; color: var(--text-dim); margin-top: 3px; }
+.type-counts { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 10px; font-size: 11px; }
+.deck-side-title { margin-top: 14px; }
+.deck-entry-cost { font-size: 11px; }

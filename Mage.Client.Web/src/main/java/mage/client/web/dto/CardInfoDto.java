@@ -16,6 +16,7 @@ public class CardInfoDto {
 
     public String name;
     public String manaCost;
+    public String colors;
     public List<String> types;
     public String set;
     public String rarity;
@@ -27,6 +28,7 @@ public class CardInfoDto {
             return dto;
         }
         dto.name = card.getName();
+        dto.colors = colorLetters(card.getColor());
         try {
             dto.manaCost = String.join("", card.getManaCosts(CardInfo.ManaCostSide.ALL));
         } catch (Exception e) {
@@ -43,5 +45,18 @@ public class CardInfoDto {
         dto.rarity = card.getRarity() == null ? null : card.getRarity().toString();
         dto.manaValue = card.getManaValue();
         return dto;
+    }
+
+    private static String colorLetters(mage.ObjectColor color) {
+        if (color == null) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        if (color.isWhite()) sb.append('W');
+        if (color.isBlue()) sb.append('U');
+        if (color.isBlack()) sb.append('B');
+        if (color.isRed()) sb.append('R');
+        if (color.isGreen()) sb.append('G');
+        return sb.toString();
     }
 }
