@@ -105,6 +105,7 @@ public class WebClientApp {
         app.post("/api/chat", this::handleChat);
         app.post("/api/watch", this::handleWatch);
         app.post("/api/join", this::handleJoin);
+        app.post("/api/tables/create", this::handleCreateTable);
         app.post("/api/game/respond", this::handleRespond);
         app.get("/api/cards/search", this::handleCardSearch);
         app.get("/api/cardimg", this::handleCardImage);
@@ -437,6 +438,32 @@ public class WebClientApp {
         ctx.json(Map.of("ok", true));
     }
 
+    private void handleCreateTable(Context ctx) {
+        CreateRequest req = ctx.bodyAsClass(CreateRequest.class);
+        ServerConnection conn = sessions.get(req == null ? null : req.token);
+        if (conn == null) {
+            ctx.status(401).json(error("not connected"));
+            return;
+        }
+        if (req.deckPath == null || req.deckPath.isEmpty()) {
+            ctx.status(400).json(error("deckPath is required"));
+            return;
+        }
+        UUID tableId;
+        try {
+            tableId = conn.createGameVsAi(req.deckPath);
+        } catch (Exception e) {
+            ctx.status(500).json(error("create failed: " + e.getMessage()));
+            return;
+        }
+        if (tableId == null) {
+            ctx.status(500).json(error("could not create/start game (is the deck valid?)"));
+            return;
+        }
+        // START_GAME will arrive on the WS; the gateway joins the game then.
+        ctx.json(Map.of("ok", true, "tableId", tableId.toString()));
+    }
+
     private void handleDeckLoad(Context ctx) {
         String path = ctx.queryParam("path");
         if (path == null || path.isEmpty()) {
@@ -594,6 +621,11 @@ public class WebClientApp {
     public static class WatchRequest {
         public String token;
         public String gameId;
+    }
+
+    public static class CreateRequest {
+        public String token;
+        public String deckPath;
     }
 
     public static class JoinRequest {

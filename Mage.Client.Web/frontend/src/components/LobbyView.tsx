@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { disconnect, fetchTables, joinTable, respond, sendChat, watchGame } from '../api'
+import { createGameVsAi, disconnect, fetchTables, joinTable, respond, sendChat, watchGame } from '../api'
 import type { RespondKind } from '../api'
 import { useServerEvents } from '../useServerEvents'
 import { ChatPanel } from './ChatPanel'
@@ -80,6 +80,15 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
     [session.token],
   )
 
+  const handleNewGame = useCallback(() => {
+    const deckPath = window.prompt('Your deck (.dck) path on the server — play vs AI:', DEFAULT_DECK)
+    if (!deckPath) return
+    // server starts the match; START_GAME arrives over the WS and shows the board
+    createGameVsAi(session.token, deckPath).catch(() => {
+      /* failure reported via chat/events */
+    })
+  }, [session.token])
+
   const handleRespond = useCallback(
     (kind: RespondKind, value?: string) => {
       if (!activeGameId) return
@@ -130,6 +139,11 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
           </span>
         )}
         <span className="spacer" />
+        {!activeGameId && (
+          <button className="btn primary" onClick={handleNewGame}>
+            New game vs AI
+          </button>
+        )}
         {!activeGameId && (
           <button className="btn" disabled={refreshing} onClick={refresh}>
             {refreshing ? 'Refreshing…' : 'Refresh'}

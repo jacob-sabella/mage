@@ -2,7 +2,13 @@ package mage.client.web.net;
 
 import mage.cards.decks.DeckCardLists;
 import mage.cards.decks.importer.DeckImporter;
+import mage.constants.MultiplayerAttackOption;
 import mage.constants.PlayerAction;
+import mage.constants.RangeOfInfluence;
+import mage.constants.MatchBufferTime;
+import mage.constants.MatchTimeLimit;
+import mage.constants.SkillLevel;
+import mage.game.match.MatchOptions;
 import mage.players.PlayerType;
 import mage.players.net.UserData;
 import mage.remote.Connection;
@@ -148,6 +154,45 @@ public class ServerConnection {
     /** Subscribe to a game's callbacks as a seated player (called on START_GAME). */
     public boolean joinGame(UUID gameId) {
         return gameId != null && session.joinGame(gameId);
+    }
+
+    /**
+     * Create a 1v1 table vs a computer opponent, seat both players with the
+     * given deck, and start the match. The server then pushes START_GAME and
+     * the live decision callbacks. Uses Freeform Commander so most decks
+     * (incl. singleton/commander) are accepted. Returns the table id, or null.
+     */
+    public UUID createGameVsAi(String deckPath) {
+        UUID roomId = session.getMainRoomId();
+        if (roomId == null) {
+            return null;
+        }
+        DeckCardLists deck = DeckImporter.importDeckFromFile(deckPath, false);
+
+        MatchOptions options = new MatchOptions(playerName + "'s game", "Freeform Commander Two Player Duel", false);
+        options.getPlayerTypes().add(PlayerType.HUMAN);
+        options.getPlayerTypes().add(PlayerType.COMPUTER_MAD);
+        options.setDeckType("Variant Magic - Freeform Commander");
+        options.setLimited(false);
+        options.setWinsNeeded(1);
+        options.setSkillLevel(SkillLevel.CASUAL);
+        options.setRange(RangeOfInfluence.ALL);
+        options.setAttackOption(MultiplayerAttackOption.LEFT);
+        options.setMatchTimeLimit(MatchTimeLimit.NONE);
+        options.setMatchBufferTime(MatchBufferTime.NONE);
+
+        TableView table = session.createTable(roomId, options);
+        if (table == null) {
+            return null;
+        }
+        UUID tableId = table.getTableId();
+        boolean aiOk = session.joinTable(roomId, tableId, "Computer", PlayerType.COMPUTER_MAD, 6, deck, "");
+        boolean meOk = session.joinTable(roomId, tableId, playerName, PlayerType.HUMAN, 1, deck, "");
+        if (!aiOk || !meOk || !session.startMatch(roomId, tableId)) {
+            session.removeTable(roomId, tableId);
+            return null;
+        }
+        return tableId;
     }
 
     // --- player responses (server tracks the current pending decision) -------

@@ -96,3 +96,10 @@ export interface DeckLoadResponse {
 export function loadDeck(path: string): Promise<DeckLoadResponse> {
   return request<DeckLoadResponse>(`/api/decks/load?path=${encodeURIComponent(path)}`)
 }
+
+export function createGameVsAi(token: string, deckPath: string): Promise<{ ok: boolean; tableId: string }> {
+  return request<{ ok: boolean; tableId: string }>('/api/tables/create', {
+    method: 'POST',
+    body: JSON.stringify({ token, deckPath }),
+  })
+}
