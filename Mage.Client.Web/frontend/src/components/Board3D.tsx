@@ -97,10 +97,16 @@ function Card3D({
   const [art, setArt] = useState<THREE.Texture | null>(null)
   const [hover, setHover] = useState(false)
   const { highlight, onClick } = cardProps(card)
+  const { gl } = useThree()
+  const maxAniso = useMemo(() => gl.capabilities.getMaxAnisotropy?.() ?? 8, [gl])
 
   // always-present readable face; disposed on unmount
   const fallback = useMemo(() => makeCardTexture(card), [card.id, card.name, card.power, card.toughness, card.loyalty])
-  useEffect(() => () => fallback.dispose(), [fallback])
+  useEffect(() => {
+    fallback.anisotropy = maxAniso // sharp at the board's viewing angle
+    fallback.needsUpdate = true
+    return () => fallback.dispose()
+  }, [fallback, maxAniso])
 
   // try to upgrade to real card art
   useEffect(() => {
@@ -109,6 +115,10 @@ function Card3D({
       imgUrl(card),
       (t) => {
         t.colorSpace = THREE.SRGBColorSpace
+        t.anisotropy = maxAniso // anisotropic filtering keeps angled cards crisp
+        t.minFilter = THREE.LinearMipmapLinearFilter
+        t.magFilter = THREE.LinearFilter
+        t.needsUpdate = true
         if (alive) setArt(t)
         else t.dispose()
       },
@@ -118,7 +128,7 @@ function Card3D({
     return () => {
       alive = false
     }
-  }, [card.id, card.name])
+  }, [card.id, card.name, maxAniso])
 
   const tex = art ?? fallback
 
@@ -227,10 +237,28 @@ function PlayerZone({
   cardProps: CardProps
   onHoverCard?: (c: GameCard | null) => void
 }) {
-  const cards = useMemo(() => row(player.battlefield, 0, z), [player.battlefield, z])
+  // standard MTG layout: creatures in a front row (toward the centre/opponent),
+  // lands + other non-creature permanents in a back row behind them.
+  const sign = z > 0 ? 1 : -1
+  const placed = useMemo(() => {
+    const creatures: GameCard[] = []
+    const back: GameCard[] = []
+    for (const c of player.battlefield) {
+      const t = (c.types ?? []).map((x) => x.toLowerCase())
+      if (t.some((x) => x.includes('creature'))) creatures.push(c)
+      else back.push(c)
+    }
+    // lands grouped before other permanents within the back row
+    back.sort((a, b) => {
+      const al = (a.types ?? []).some((x) => /land/i.test(x)) ? 0 : 1
+      const bl = (b.types ?? []).some((x) => /land/i.test(x)) ? 0 : 1
+      return al - bl
+    })
+    return [...row(creatures, 0, z - sign * 0.95), ...row(back, 0, z + sign * 0.95)]
+  }, [player.battlefield, z, sign])
   return (
     <group>
-      {cards.map(({ card, pos }) => (
+      {placed.map(({ card, pos }) => (
         <Card3D key={card.id} card={card} position={pos} cardProps={cardProps} onHoverCard={onHoverCard} />
       ))}
     </group>

@@ -102,21 +102,6 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
       <PhaseTrack phase={game.phase} step={game.step} />
 
 
-      {interactive && (
-        <div className="skip-bar">
-          {SKIP_BUTTONS.map((s) => (
-            <button
-              key={s.action}
-              className="btn skip-btn"
-              onClick={() => onRespond('action', s.action)}
-              title={`${s.label} (${s.key})`}
-            >
-              {s.label} <span className="skip-key">{s.key}</span>
-            </button>
-          ))}
-        </div>
-      )}
-
       <div className="player-strip">
         {game.players.map((p) => {
           const canTarget = interactive && prompt && (prompt.kind === 'target' || prompt.kind === 'select')
@@ -138,48 +123,63 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
         })}
       </div>
 
-      <Board3D game={game} cardProps={cardProps} onHoverCard={setPreview} />
-      <CardPreview card={preview} />
+      <div className="board-wrap">
+        <Board3D game={game} cardProps={cardProps} onHoverCard={setPreview} />
+        <CardPreview card={preview} />
 
-      {result && (
-        <div className="game-over-overlay">
-          <div className="game-over-card panel">
-            <div className="game-over-title">{/won|win/i.test(result) ? '🏆 ' : ''}Game over</div>
-            <div className="game-over-msg">{plain(result)}</div>
-            <button className="btn primary" onClick={onLeave}>
-              Back to lobby
-            </button>
+        {game.combat.length > 0 && (
+          <div className="combat-panel panel overlay-tr">
+            <div className="stack-title">Combat</div>
+            {game.combat.map((cg, i) => (
+              <div className="combat-group" key={i}>
+                <span className="combat-attackers">{cg.attackers.join(', ') || '—'}</span>
+                <span className="combat-arrow">→</span>
+                <span className="combat-defender">{cg.defender}</span>
+                {cg.blockers.length > 0 ? (
+                  <span className="combat-blockers muted">blocked by {cg.blockers.join(', ')}</span>
+                ) : (
+                  <span className="combat-unblocked">unblocked</span>
+                )}
+              </div>
+            ))}
           </div>
-        </div>
-      )}
+        )}
 
-      {game.combat.length > 0 && (
-        <div className="combat-panel panel">
-          <div className="stack-title">Combat</div>
-          {game.combat.map((cg, i) => (
-            <div className="combat-group" key={i}>
-              <span className="combat-attackers">{cg.attackers.join(', ') || '—'}</span>
-              <span className="combat-arrow">→</span>
-              <span className="combat-defender">{cg.defender}</span>
-              {cg.blockers.length > 0 ? (
-                <span className="combat-blockers muted">blocked by {cg.blockers.join(', ')}</span>
-              ) : (
-                <span className="combat-unblocked">unblocked</span>
-              )}
+        {log.length > 0 && <GameLog lines={log} />}
+
+        {result && (
+          <div className="game-over-overlay">
+            <div className="game-over-card panel">
+              <div className="game-over-title">{/won|win/i.test(result) ? '🏆 ' : ''}Game over</div>
+              <div className="game-over-msg">{plain(result)}</div>
+              <button className="btn primary" onClick={onLeave}>
+                Back to lobby
+              </button>
             </div>
-          ))}
+          </div>
+        )}
+      </div>
+
+      {/* one fixed control dock so the turn controls + actions never move around */}
+      {interactive && (
+        <div className="control-dock panel">
+          <div className="dock-skips">
+            {SKIP_BUTTONS.map((s) => (
+              <button
+                key={s.action}
+                className="btn skip-btn"
+                onClick={() => onRespond('action', s.action)}
+                title={`${s.label} (${s.key})`}
+              >
+                {s.label} <span className="skip-key">{s.key}</span>
+              </button>
+            ))}
+          </div>
+          {prompt?.kind === 'select' && <PlayableBar game={game} onRespond={onRespond} onHoverCard={setPreview} />}
+          <span className="spacer" />
+          <ActionBar prompt={prompt} onRespond={onRespond} />
         </div>
       )}
-
-      {/* DOM affordance to play/select cards by name (the 3D meshes are also
-          clickable, but this is easier and keeps the action accessible). */}
-      {interactive && prompt?.kind === 'select' && (
-        <PlayableBar game={game} onRespond={onRespond} onHoverCard={setPreview} />
-      )}
-
-      {interactive && prompt && <ActionBar prompt={prompt} onRespond={onRespond} />}
-
-      {log.length > 0 && <GameLog lines={log} />}
     </div>
   )
 }
@@ -291,11 +291,19 @@ function GameLog({ lines }: { lines: string[] }) {
   )
 }
 
-function ActionBar({ prompt, onRespond }: { prompt: Prompt; onRespond: (kind: RespondKind, value?: string) => void }) {
+function ActionBar({ prompt, onRespond }: { prompt: Prompt | null; onRespond: (kind: RespondKind, value?: string) => void }) {
   const [amount, setAmount] = useState('')
 
+  if (!prompt) {
+    return (
+      <div className="action-bar">
+        <span className="action-message muted">Waiting — use the buttons on the left to advance the turn.</span>
+      </div>
+    )
+  }
+
   return (
-    <div className="action-bar panel">
+    <div className="action-bar">
       <span className="action-message">{plain(prompt.message) || promptFallback(prompt.kind)}</span>
       <span className="spacer" />
 

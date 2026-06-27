@@ -53,6 +53,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   const [pendingPlay, setPendingPlay] = useState(false)
   const [playStatus, setPlayStatus] = useState<string | null>(null)
   const [gameOver, setGameOver] = useState<string | null>(null)
+  const [chatOpen, setChatOpen] = useState(true)
   // synchronous mirror of activeGameId so back-to-back gameStart+game frames in
   // one event-loop tick don't read a stale value (which clobbered interactive)
   const activeRef = useRef<string | null>(null)
@@ -375,7 +376,18 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
           )}
         </div>
 
-        <ChatPanel lines={chat} onSend={handleSendChat} />
+        {chatOpen ? (
+          <div className="chat-col">
+            <button className="btn ghost chat-toggle" onClick={() => setChatOpen(false)} title="Hide chat">
+              Chat ✕
+            </button>
+            <ChatPanel lines={chat} onSend={handleSendChat} />
+          </div>
+        ) : (
+          <button className="btn chat-reopen" onClick={() => setChatOpen(true)} title="Show chat">
+            💬
+          </button>
+        )}
       </div>
 
       {deckIntent && (

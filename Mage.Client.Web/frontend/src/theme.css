@@ -939,3 +939,57 @@ input:focus {
 .theme-swatch.t-outrun { background: linear-gradient(120deg, #ff7a18, #af4bff); }
 .theme-swatch.t-cyber { background: linear-gradient(120deg, #39ff9e, #00e5ff); color: #04221a; }
 .theme-swatch.t-vapor { background: linear-gradient(120deg, #ff6ad5, #26d9c3); }
+
+/* ===== stable in-game layout: board fills, controls in a fixed bottom dock ===== */
+.board-wrap { position: relative; flex: 1; min-height: 0; display: flex; }
+.board-wrap .board3d { flex: 1; min-height: 0; }
+.board3d { min-height: 0; }
+
+/* overlays float on the board instead of pushing the layout around */
+.overlay-tr { position: absolute; top: 12px; right: 12px; z-index: 6; max-width: 280px; }
+.board-wrap .game-log {
+  position: absolute; right: 12px; bottom: 12px; z-index: 6;
+  width: 300px; max-height: 190px; margin: 0;
+}
+
+/* the one control dock — always present, same place every turn */
+.control-dock {
+  display: flex; align-items: center; gap: 10px 12px; flex-wrap: wrap;
+  padding: 10px 14px; flex-shrink: 0; overflow: hidden;
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--stroke));
+  box-shadow: 0 -10px 34px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.dock-skips { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
+.dock-skips .btn { padding: 8px 11px; }
+.control-dock .playable-bar {
+  background: transparent; border: none; box-shadow: none; padding: 0;
+  flex: 1; min-width: 0; overflow-x: auto; max-width: 46%;
+}
+.control-dock .action-bar { background: transparent; border: none; box-shadow: none; padding: 0; display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.action-bar { display: flex; align-items: center; gap: 8px; }
+.action-message { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ===== thematic display font (synthwave/MTG) ===== */
+:root { --font-display: "Orbitron", "Cinzel", "Segoe UI", sans-serif; }
+.brand-name {
+  font-family: var(--font-display); font-weight: 900; letter-spacing: 3px; font-size: 18px;
+}
+.h1, .h2 { font-family: var(--font-display); letter-spacing: 1px; }
+.h1 { font-weight: 700; }
+.phase-seg { font-family: var(--font-display); font-weight: 700; letter-spacing: 0.5px; font-size: 11px; }
+.turn-label b { font-family: var(--font-display); letter-spacing: 1px; }
+.game-over-title { font-family: var(--font-display); letter-spacing: 1.5px; }
+.prio-chip, .conn-pill { font-family: var(--font-display); letter-spacing: 0.5px; }
+
+/* ===== snug layout + collapsible chat ===== */
+#app { padding: 14px 16px; }
+.lobby-view { gap: 12px; }
+.lobby-header { gap: 10px; }
+
+.chat-col { display: flex; flex-direction: column; gap: 6px; width: 300px; min-width: 300px; }
+.chat-col .chat-panel, .chat-col .panel { flex: 1; min-height: 0; }
+.chat-toggle { align-self: flex-end; padding: 3px 10px; font-size: 12px; }
+.chat-reopen {
+  align-self: flex-start; width: 44px; height: 44px; font-size: 18px; padding: 0;
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--stroke));
+}
