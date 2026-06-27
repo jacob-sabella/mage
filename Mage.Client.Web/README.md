@@ -55,14 +55,19 @@ Done=true) · `target` (cards **and** players) · `amount` · `choice`
 
 - **Connect** — official-server presets (Beta/US/EU/EU2/Local); real server
   errors surfaced (e.g. version mismatch). **Session resume** across refresh.
-- **Lobby** — live tables (Watch / Join), **New game vs AI** (Freeform
-  Commander, seats a `COMPUTER_MAD` opponent + you, starts the match), room
-  **chat**, **match history**.
-- **Game** — live board (players/life/zones, hand, stack, **combat display**),
-  real **card art** from a desktop client's image cache. Interactive play:
-  priority (play/Pass/Done), targets (cards **and** players), mulligan, choices,
-  amounts, **ability-picker**, discard, concede. **Game log**. **Skip/stops**
-  bar with F2/F4/F6/F9/F10 shortcuts (`PlayerAction` passes).
+- **Lobby** — live tables (Join shown only on joinable tables / Watch on running
+  games), **New game vs AI** with an **opponent-count selector** (1 = Two Player
+  Duel, 2–5 = multiplayer **Free For All**); the format adapts to the deck
+  (constructed or Freeform Commander). Room **chat**, **match history**.
+- **Game** — live board for **1v1 and multiplayer** (a 3D table with a seat per
+  player, snap-view camera per seat, players/life/**mana pool**/zones, hand,
+  stack, **combat display**), real **card art** with a generated name/type/P-T
+  fallback so cards are never blank. Every server decision callback has UI:
+  priority (play/Pass/Done + a clickable playable-cards bar), targets (cards
+  **and** players), mana payment, mulligan, choices, amounts, **ability-picker**,
+  **pile choice** (Fact or Fiction), **multi-amount** (distribute), discard,
+  concede. Server messages/log/chat are HTML-stripped. **Game log**, **skip/stops**
+  bar (F2/F4/F6/F9/F10). Resilient: keep-alive ping + WS auto-reconnect.
 - **Deck editor** — card **search with filters** (color/type/cmc), build with
   quantities, **stats** (mana curve, color pips, type counts), **sideboard**,
   **open** an existing `.dck`, and **save** to `.dck`.
@@ -142,12 +147,13 @@ Playwright integration tests drive the built UI in a headless browser against a
 cd frontend && npm test
 ```
 
-`gotoScreen(page, 'game' | 'lobby' | 'mulligan' | 'target' | 'combat')` jumps
-straight to a populated screen, so tests (and development) skip the connect/
-deck-pick setup. Coverage: login + presets, lobby (tables, Join/Watch, history),
-deck picker, 3D board + status strip + snap-views, prompts (priority/mulligan/
-target/declare-attackers), the playable-cards bar, respond round-trip, deck
-editor, settings persistence.
+`gotoScreen(page, 'game' | 'lobby' | 'mulligan' | 'target' | 'combat' | 'pile' |
+'multiAmount')` jumps straight to a populated screen, so tests (and development)
+skip the connect/deck-pick setup. Coverage: login + presets, lobby (tables,
+Join/Watch, history), deck picker + opponent-count selector, 3D board + status
+strip + mana-pool pips + snap-views, prompts (priority/mulligan/target/declare-
+attackers/**pile**/**multi-amount**), the playable-cards bar, HTML-stripped
+messages, respond round-trips, deck editor, settings persistence.
 
 **Live smoke test** (`npm run smoke`, needs `ws` + a running gateway/server):
 `scripts/smoke-game.mjs` creates a real game vs AI and auto-plays it through the
@@ -160,18 +166,22 @@ flushing out real-server regressions.
 ## Roadmap
 
 Done: connect + presets + resume · lobby + chat + match history · spectate ·
-create-game-vs-AI · interactive play (priority/target incl. players/mulligan/
-choice/amount/ability-picker/discard/concede) · skip/stops + F-keys · combat
-display · game log · card art · deck editor (search+filters/build/stats/
-sideboard/open/save) · 3D + motion.
+create-game-vs-AI **1v1 and multiplayer Free For All** (constructed + Freeform
+Commander, both verified live) · **every in-game decision callback** has UI
+(priority/target incl. players/mulligan/choice/amount/ability-picker/**pile**/
+**multi-amount**/discard/concede) · mana payment · mana-pool display · skip/stops
++ F-keys · combat (attack/block/damage, verified to turn 11) · game log ·
+HTML-clean messages · card art + generated fallback faces · deck editor
+(search+filters/build/stats/sideboard/open/save) · 3D board + snap-views + motion.
 
 Resilience: a keep-alive ping holds the upstream session open, and the browser
 WebSocket auto-reconnects; the board is adopted from the first game frame so a
 missed `gameStart` still opens it.
 
-Not yet: replay playback (needs server history enabled) · tournaments
-(draft/sealed) · profile/avatar · preferences persistence (beyond card-images).
-Combat/scry/mana ergonomics want more live playtesting.
+Not yet (larger / out-of-game): replay playback (the server's `GameReplay` is
+abandoned dead code — needs a modern replay pipeline) · tournaments (draft/sealed
+— needs a draft-pick UI + multi-bot) · strict variant modes with no sample decks
+(Oathbreaker/Brawl) · profile/avatar · broader preferences persistence.
 
 ### Notes on interactive play
 
@@ -180,6 +190,6 @@ Combat/scry/mana ergonomics want more live playtesting.
   to the prompt kind.
 - `/api/join` and `/api/tables/create` load a `.dck` via the engine's
   `DeckImporter`; `deckPath` is a path on the **gateway** host.
-- Mana payment maps to click-a-source (target). Pile / multi-amount prompts
-  still render as generic (cancellable) prompts; dedicated controls are a
-  follow-up.
+- Mana payment maps to click-a-source (target). Pile choice renders both piles
+  with "Take pile 1/2" (boolean); multi-amount renders one validated number
+  input per entry and posts the space-joined answer (`sendPlayerString`).
