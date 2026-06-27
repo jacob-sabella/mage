@@ -124,7 +124,12 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
       </div>
 
       <div className="board-wrap">
-        <Board3D game={game} cardProps={cardProps} onHoverCard={setPreview} />
+        <Board3D
+          game={game}
+          cardProps={cardProps}
+          onHoverCard={setPreview}
+          targets={prompt?.kind === 'target' ? prompt.targets : undefined}
+        />
         <CardPreview card={preview} />
 
         {game.combat.length > 0 && (

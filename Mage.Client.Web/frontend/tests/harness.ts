@@ -113,6 +113,7 @@ export type Scenario =
   | 'construct'
   | 'gameOver'
   | 'multiplayer'
+  | 'arrows'
 
 const DRAFT = {
   booster: [
@@ -130,6 +131,13 @@ const GAME_BUFFED = JSON.parse(JSON.stringify(SAMPLE.game)) as typeof SAMPLE.gam
 const buffed = GAME_BUFFED.players.find((p) => p.name === 'You')!.battlefield.find((c) => c.name === 'Serra Angel')!
 buffed.power = '6'
 buffed.toughness = '6'
+
+// declared combat: the viewer's Serra Angel (b3) attacks the Computer, blocked
+// by its Goblin Guide (a2) — exercises attack + block arrows. Paired with a
+// target prompt selecting a2 to also exercise the targeting arrow.
+const GAME_ARROWS = JSON.parse(JSON.stringify(SAMPLE.game)) as typeof SAMPLE.game
+GAME_ARROWS.step = 'Declare Blockers'
+GAME_ARROWS.combat = [{ attackers: ['b3'], blockers: ['a2'], defender: 'Computer', blocked: true }] as unknown[]
 
 // a four-player Free For All board to exercise radial seating + multiplayer UI
 const GAME_MULTI = JSON.parse(JSON.stringify(SAMPLE.game)) as typeof SAMPLE.game
@@ -190,7 +198,7 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
               ? 'multiAmount'
               : 'select'
   const second = scenario === 'ptUpdate' ? GAME_BUFFED : null
-  const gameState = scenario === 'multiplayer' ? GAME_MULTI : SAMPLE.game
+  const gameState = scenario === 'multiplayer' ? GAME_MULTI : scenario === 'arrows' ? GAME_ARROWS : SAMPLE.game
   const isDraft = scenario === 'draft'
   const isConstruct = scenario === 'construct'
   // a small drafted pool for the construct screen
@@ -252,7 +260,9 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
     },
     [
       gameState,
-      (SAMPLE.prompts as Record<string, unknown>)[promptKey],
+      scenario === 'arrows'
+        ? { ...SAMPLE.prompts.target, targets: ['a2'] }
+        : (SAMPLE.prompts as Record<string, unknown>)[promptKey],
       scenario !== 'lobby' && !isDraft && !isConstruct,
       second,
       isDraft,

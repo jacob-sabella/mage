@@ -338,6 +338,33 @@ function row(cards: GameCard[], cx: number, cz: number, gap = 1.45) {
 
 type Seat = { player: GamePlayer; x: number; z: number; yaw: number; isViewer: boolean }
 
+/** Standard MTG battlefield layout in a seat's LOCAL space: creatures in a front
+ *  row (toward centre, local -z), lands + other permanents in a back row (+z). */
+function battlefieldLayout(player: GamePlayer): { card: GameCard; pos: [number, number, number] }[] {
+  const creatures: GameCard[] = []
+  const back: GameCard[] = []
+  for (const c of player.battlefield) {
+    const t = (c.types ?? []).map((x) => x.toLowerCase())
+    if (t.some((x) => x.includes('creature'))) creatures.push(c)
+    else back.push(c)
+  }
+  back.sort((a, b) => {
+    const al = (a.types ?? []).some((x) => /land/i.test(x)) ? 0 : 1
+    const bl = (b.types ?? []).some((x) => /land/i.test(x)) ? 0 : 1
+    return al - bl
+  })
+  return [...row(creatures, 0, -0.95), ...row(back, 0, 0.95)]
+}
+
+/** World position of a seat-local point, applying the seat's yaw + translation. */
+function seatToWorld(seat: Seat, local: [number, number, number], y = 0.35): THREE.Vector3 {
+  const cos = Math.cos(seat.yaw)
+  const sin = Math.sin(seat.yaw)
+  const x = local[0]
+  const z = local[2]
+  return new THREE.Vector3(seat.x + (x * cos + z * sin), y, seat.z + (-x * sin + z * cos))
+}
+
 function PlayerZone({
   seat,
   cardProps,
@@ -347,23 +374,9 @@ function PlayerZone({
   cardProps: CardProps
   onHoverCard?: (c: GameCard | null) => void
 }) {
-  // standard MTG layout in the seat's LOCAL space: creatures in a front row
-  // (toward the centre, local -z) and lands + other permanents in a back row
-  // (local +z). The whole group is rotated to face the table centre.
+  // the whole group is rotated to face the table centre.
   const placed = useMemo(() => {
-    const creatures: GameCard[] = []
-    const back: GameCard[] = []
-    for (const c of seat.player.battlefield) {
-      const t = (c.types ?? []).map((x) => x.toLowerCase())
-      if (t.some((x) => x.includes('creature'))) creatures.push(c)
-      else back.push(c)
-    }
-    back.sort((a, b) => {
-      const al = (a.types ?? []).some((x) => /land/i.test(x)) ? 0 : 1
-      const bl = (b.types ?? []).some((x) => /land/i.test(x)) ? 0 : 1
-      return al - bl
-    })
-    return [...row(creatures, 0, -0.95), ...row(back, 0, 0.95)]
+    return battlefieldLayout(seat.player)
   }, [seat.player.battlefield])
   const p = seat.player
   const gy = p.graveyard.length ? p.graveyard[p.graveyard.length - 1] : null
@@ -441,6 +454,80 @@ function BoardAudioPulse({
   return null
 }
 
+const ARROW_COLOR: Record<string, string> = { attack: '#ff3b3b', block: '#ffb13b', target: '#3bd6ff' }
+
+/** A single arced 3D arrow (tube shaft + cone head) from `from` to `to`. */
+function Arrow({ from, to, kind }: { from: THREE.Vector3; to: THREE.Vector3; kind: string }) {
+  const { tube, headPos, headQuat } = useMemo(() => {
+    const mid = from.clone().lerp(to, 0.5)
+    mid.y += from.distanceTo(to) * 0.22 + 0.6 // arc up so it reads over the cards
+    const curve = new THREE.QuadraticBezierCurve3(from, mid, to)
+    const tube = new THREE.TubeGeometry(curve, 24, 0.055, 8, false)
+    const tan = curve.getTangentAt(1).normalize()
+    const headQuat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), tan)
+    const headPos = to.clone().addScaledVector(tan, -0.18)
+    return { tube, headPos, headQuat }
+  }, [from, to])
+  useEffect(() => () => tube.dispose(), [tube])
+  const color = ARROW_COLOR[kind] ?? '#ffffff'
+  return (
+    <group>
+      <mesh geometry={tube}>
+        <meshBasicMaterial color={color} transparent opacity={0.92} toneMapped={false} depthTest={false} />
+      </mesh>
+      <mesh position={headPos} quaternion={headQuat}>
+        <coneGeometry args={[0.17, 0.42, 12]} />
+        <meshBasicMaterial color={color} toneMapped={false} depthTest={false} />
+      </mesh>
+    </group>
+  )
+}
+
+/** Arena/xmage-style action arrows: attackers→defender, blockers→attacker, and
+ *  (when targeting) the stack→each selected target. Derived from combat + prompt. */
+function BoardArrows({ seats, combat, targets }: { seats: Seat[]; combat: GameState['combat']; targets?: string[] }) {
+  const arrows = useMemo(() => {
+    // id → world position: battlefield cards by id, plus each player's seat centre
+    const pos = new Map<string, THREE.Vector3>()
+    for (const s of seats) {
+      for (const { card, pos: lp } of battlefieldLayout(s.player)) pos.set(card.id, seatToWorld(s, lp))
+      const centre = new THREE.Vector3(s.x * 0.8, 0.6, s.z * 0.8)
+      pos.set('P:' + s.player.id, centre)
+      pos.set('P:' + s.player.name, centre)
+    }
+    const out: { from: THREE.Vector3; to: THREE.Vector3; kind: string }[] = []
+    for (const cg of combat) {
+      const defPos = cg.defender ? pos.get('P:' + cg.defender) ?? pos.get(cg.defender) : null
+      for (const aid of cg.attackers) {
+        const ap = pos.get(aid)
+        if (ap && defPos) out.push({ from: ap, to: defPos, kind: 'attack' })
+        if (ap) {
+          for (const bid of cg.blockers) {
+            const bp = pos.get(bid)
+            if (bp) out.push({ from: bp, to: ap, kind: 'block' })
+          }
+        }
+      }
+    }
+    if (targets && targets.length) {
+      const src = new THREE.Vector3(0, 1.0, 0) // the stack, centre of the table
+      for (const t of targets) {
+        const tp = pos.get(t) ?? pos.get('P:' + t)
+        if (tp) out.push({ from: src, to: tp, kind: 'target' })
+      }
+    }
+    return out
+  }, [seats, combat, targets])
+
+  return (
+    <>
+      {arrows.map((a, i) => (
+        <Arrow key={i} from={a.from} to={a.to} kind={a.kind} />
+      ))}
+    </>
+  )
+}
+
 type ViewMode = '3d' | '2d' | 'free'
 
 /** Radial fan menu for camera control: a mode ring (2D/3D/Free) plus, in 3D, a
@@ -514,10 +601,12 @@ export function Board3D({
   game,
   cardProps,
   onHoverCard,
+  targets,
 }: {
   game: GameState
   cardProps: CardProps
   onHoverCard?: (c: GameCard | null) => void
+  targets?: string[]
 }) {
   const { prefs } = usePrefs()
   const backdrop = CHROMA_FAMILY[prefs.theme]?.backdrop ?? 'vapor'
@@ -630,6 +719,9 @@ export function Board3D({
         {seats.map((s) => (
           <PlayerZone key={s.player.id} seat={s} cardProps={cardProps} onHoverCard={onHoverCard} />
         ))}
+
+        {/* action-direction arrows: attackers→defender, blockers→attacker, targeting */}
+        <BoardArrows seats={seats} combat={game.combat} targets={targets} />
 
         {/* stack (standing, center) */}
         {stack.map(({ card, pos }) => (

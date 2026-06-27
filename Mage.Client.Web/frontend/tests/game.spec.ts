@@ -82,6 +82,16 @@ test.describe('Game board (3D)', () => {
     await expect.poll(() => declaredId).toBe('b3')
   })
 
+  test('action arrows: declared combat renders the board + combat overlay', async ({ page }) => {
+    await gotoScreen(page, 'arrows')
+    await expect(page.locator('.board3d canvas')).toBeVisible()
+    // the combat relationship that drives the on-board arrows is also surfaced as text
+    const combat = page.locator('.combat-panel')
+    await expect(combat).toBeVisible()
+    await expect(combat).toContainText('Computer')
+    await expect(combat).toContainText(/blocked by/)
+  })
+
   test('pile choice shows both piles and picks one (boolean)', async ({ page }) => {
     await gotoScreen(page, 'pile')
     await expect(page.getByText(/Fact or Fiction/)).toBeVisible()
