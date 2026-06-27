@@ -86,3 +86,13 @@ export async function disconnect(token: string): Promise<void> {
     /* best-effort */
   }
 }
+
+export interface DeckLoadResponse {
+  name: string
+  cards: { name: string; count: number }[]
+  sideboard: { name: string; count: number }[]
+}
+
+export function loadDeck(path: string): Promise<DeckLoadResponse> {
+  return request<DeckLoadResponse>(`/api/decks/load?path=${encodeURIComponent(path)}`)
+}

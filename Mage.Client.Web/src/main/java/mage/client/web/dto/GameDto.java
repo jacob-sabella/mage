@@ -107,6 +107,8 @@ public class GameDto {
     public static class CardDto {
         public String id;
         public String name;
+        public String set;
+        public String num;
         public String power;
         public String toughness;
         public String loyalty;
@@ -120,6 +122,8 @@ public class GameDto {
             CardDto dto = new CardDto();
             dto.id = card.getId() == null ? null : card.getId().toString();
             dto.name = card.getName();
+            dto.set = card.getExpansionSetCode();
+            dto.num = card.getCardNumber();
             dto.power = card.getPower();
             dto.toughness = card.getToughness();
             dto.loyalty = card.getLoyalty();

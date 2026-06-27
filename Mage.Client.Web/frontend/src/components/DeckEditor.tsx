@@ -1,6 +1,8 @@
 import { useCallback, useState } from 'react'
-import { saveDeck, searchCards } from '../api'
+import { loadDeck, saveDeck, searchCards } from '../api'
 import type { CardInfoDto } from '../types'
+
+const DEFAULT_DECK_PATH = ''
 
 interface DeckEntry {
   name: string
@@ -53,6 +55,23 @@ export function DeckEditor() {
         .map((e) => (e.name === name ? { ...e, count: e.count - 1 } : e))
         .filter((e) => e.count > 0),
     )
+  }, [])
+
+  const onOpen = useCallback(async () => {
+    const path = window.prompt('Open deck (.dck) path on the server:', DEFAULT_DECK_PATH)
+    if (!path) {
+      return
+    }
+    setSaveStatus(null)
+    try {
+      const res = await loadDeck(path.trim())
+      setDeck(res.cards.map((c) => ({ name: c.name, count: c.count })))
+      setDeckName(res.name)
+      const side = res.sideboard?.length ? ` (+${res.sideboard.length} sideboard/commander)` : ''
+      setSaveStatus(`Loaded “${res.name}”${side}`)
+    } catch (err) {
+      setSaveStatus(err instanceof Error ? `Error: ${err.message}` : 'Error loading deck')
+    }
   }, [])
 
   const onSave = useCallback(async () => {
@@ -151,8 +170,12 @@ export function DeckEditor() {
 
       <section className="panel deck-list">
         <div className="deck-list-head">
-          <h2 className="deck-title">Deck</h2>
+          <h2 className="deck-title">{deckName}</h2>
+          <span className="spacer" />
           <span className="chip">{total} cards</span>
+          <button className="btn watch-btn" onClick={onOpen}>
+            Open
+          </button>
         </div>
         <div className="deck-list-body">
           {deck.length === 0 ? (

@@ -487,3 +487,37 @@ input::placeholder { color: var(--text-dim); }
   .action-bar,
   .game-stack { animation: none; }
 }
+
+/* ----- login server presets ----- */
+.server-presets { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 4px; }
+.server-chip {
+  background: var(--bg-raised);
+  border: 1px solid var(--stroke);
+  border-radius: 999px;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.server-chip:hover { color: var(--text); border-color: var(--accent); }
+.server-chip.active {
+  background: rgba(91, 140, 255, 0.16);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.server-note { font-size: 12px; margin: 2px 0 12px; }
+
+/* ----- real card art (from desktop image cache) ----- */
+.gc-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  z-index: 2;            /* covers the text fallback when the image loads */
+  border-radius: inherit;
+}

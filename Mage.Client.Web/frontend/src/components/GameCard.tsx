@@ -47,6 +47,19 @@ export function GameCard({ card, highlight, onClick }: Props) {
       title={`${card.name}${card.manaCost ? '  ' + card.manaCost : ''}`}
       onClick={clickable ? () => onClick!(card) : undefined}
     >
+      {card.name && (
+        <img
+          className="gc-art"
+          loading="lazy"
+          src={`/api/cardimg?set=${encodeURIComponent(card.set ?? '')}&num=${encodeURIComponent(
+            card.num ?? '',
+          )}&name=${encodeURIComponent(card.name)}`}
+          alt=""
+          onError={(e) => {
+            ;(e.currentTarget as HTMLImageElement).style.display = 'none'
+          }}
+        />
+      )}
       <div className="gc-sheen" />
       <div className="gc-name">{card.name}</div>
       <div className="gc-type">{card.types?.join(' ')}</div>

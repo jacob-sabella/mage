@@ -48,6 +48,8 @@ export interface Prompt {
 export interface GameCard {
   id: string
   name: string
+  set?: string | null
+  num?: string | null
   power?: string | null
   toughness?: string | null
   loyalty?: string | null

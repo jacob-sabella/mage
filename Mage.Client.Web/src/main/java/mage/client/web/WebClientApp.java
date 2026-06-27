@@ -7,6 +7,7 @@ import io.javalin.http.staticfiles.Location;
 import io.javalin.websocket.WsContext;
 import mage.cards.decks.DeckCardInfo;
 import mage.cards.decks.DeckCardLists;
+import mage.cards.decks.importer.DeckImporter;
 import mage.cards.decks.exporter.XmageDeckExporter;
 import mage.cards.repository.CardCriteria;
 import mage.cards.repository.CardInfo;
@@ -61,6 +62,10 @@ public class WebClientApp {
     // token -> live websocket, so upstream callbacks can be pushed to the browser
     private final ConcurrentHashMap<String, WsContext> sockets = new ConcurrentHashMap<>();
     private final ObjectMapper json = new ObjectMapper();
+    // real card art from a desktop XMage client's downloaded image cache
+    private final ImageIndex images = new ImageIndex(
+            System.getenv().getOrDefault("MAGE_IMAGE_DIR",
+                    System.getProperty("user.home") + "/xmage/xmage/mage-client/plugins/images"));
 
     public static void main(String[] args) {
         int port = resolvePort(args);
@@ -102,6 +107,8 @@ public class WebClientApp {
         app.post("/api/join", this::handleJoin);
         app.post("/api/game/respond", this::handleRespond);
         app.get("/api/cards/search", this::handleCardSearch);
+        app.get("/api/cardimg", this::handleCardImage);
+        app.get("/api/decks/load", this::handleDeckLoad);
         app.post("/api/decks/save", this::handleDeckSave);
         app.post("/api/disconnect", this::handleDisconnect);
 
@@ -141,15 +148,39 @@ public class WebClientApp {
         int port = req.port == 0 ? 17171 : req.port;
 
         ServerConnection conn = new ServerConnection();
+        // Capture any server-side reason (e.g. version mismatch) delivered via
+        // showMessage/showError/callback during the login handshake, before a WS
+        // exists. The server often sends the rejection reason asynchronously.
+        final String[] reason = { null };
+        conn.getClient().setMessageHandler(m -> { if (m != null && !m.isEmpty()) reason[0] = m; });
+        conn.getClient().setErrorHandler(m -> { if (m != null && !m.isEmpty()) reason[0] = m; });
+        conn.getClient().setCallbackHandler(cb -> {
+            if (cb != null && cb.getData() instanceof ChatMessage) {
+                String text = ((ChatMessage) cb.getData()).getMessage();
+                if (text != null && !text.isEmpty()) reason[0] = text;
+            }
+        });
         boolean ok;
         try {
             ok = conn.connect(req.host, port, req.username);
+            if (!ok) {
+                // give the async rejection callback a moment to arrive
+                Thread.sleep(1500);
+            }
         } catch (Exception e) {
             ctx.status(502).json(error("connection error: " + e.getMessage()));
             return;
+        } finally {
+            // reset to no-ops; the WS handler installs the real ones on connect
+            conn.getClient().setMessageHandler(null);
+            conn.getClient().setErrorHandler(null);
+            conn.getClient().setCallbackHandler(null);
         }
         if (!ok) {
             String err = conn.getLastError();
+            if (err == null || err.isEmpty()) {
+                err = reason[0];
+            }
             ctx.status(502).json(error(err == null || err.isEmpty() ? "could not connect" : err));
             return;
         }
@@ -404,6 +435,72 @@ public class WebClientApp {
         }
         sockets.remove(token);
         ctx.json(Map.of("ok", true));
+    }
+
+    private void handleDeckLoad(Context ctx) {
+        String path = ctx.queryParam("path");
+        if (path == null || path.isEmpty()) {
+            ctx.status(400).json(error("path is required"));
+            return;
+        }
+        File f = new File(path);
+        if (!f.isFile()) {
+            ctx.status(404).json(error("deck file not found: " + path));
+            return;
+        }
+        DeckCardLists deck;
+        try {
+            deck = DeckImporter.importDeckFromFile(path, false);
+        } catch (Exception e) {
+            ctx.status(400).json(error("could not read deck: " + e.getMessage()));
+            return;
+        }
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("name", deck.getName() == null ? f.getName() : deck.getName());
+        body.put("cards", aggregate(deck.getCards()));
+        body.put("sideboard", aggregate(deck.getSideboard()));
+        ctx.json(body);
+    }
+
+    // collapse a flat card list into [{name, count}] preserving first-seen order
+    private static List<Map<String, Object>> aggregate(List<DeckCardInfo> cards) {
+        LinkedHashMap<String, Integer> counts = new LinkedHashMap<>();
+        if (cards != null) {
+            for (DeckCardInfo c : cards) {
+                int amt = c.getAmount() > 0 ? c.getAmount() : 1;
+                counts.merge(c.getCardName(), amt, Integer::sum);
+            }
+        }
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map.Entry<String, Integer> e : counts.entrySet()) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("name", e.getKey());
+            m.put("count", e.getValue());
+            out.add(m);
+        }
+        return out;
+    }
+
+    private void handleCardImage(Context ctx) {
+        String name = ctx.queryParam("name");
+        if (name == null || name.isEmpty()) {
+            ctx.status(400);
+            return;
+        }
+        String set = ctx.queryParam("set");
+        String num = ctx.queryParam("num");
+        File f = images.lookup(set == null ? "" : set, name, num == null ? "" : num);
+        if (f == null || !f.isFile()) {
+            ctx.status(404);
+            return;
+        }
+        try {
+            ctx.contentType("image/jpeg");
+            ctx.header("Cache-Control", "public, max-age=604800");
+            ctx.result(java.nio.file.Files.readAllBytes(f.toPath()));
+        } catch (Exception e) {
+            ctx.status(404);
+        }
     }
 
     /** Translate an upstream callback into a browser-friendly WS frame. */
