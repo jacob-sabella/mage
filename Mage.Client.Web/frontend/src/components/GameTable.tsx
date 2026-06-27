@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { GameCard } from './GameCard'
 import type { RespondKind } from '../api'
@@ -27,11 +27,12 @@ interface Props {
   game: GameState | null
   prompt: Prompt | null
   interactive: boolean
+  log?: string[]
   onRespond: (kind: RespondKind, value?: string) => void
   onLeave: () => void
 }
 
-export function GameTable({ game, prompt, interactive, onRespond, onLeave }: Props) {
+export function GameTable({ game, prompt, interactive, log = [], onRespond, onLeave }: Props) {
   if (!game) {
     return (
       <div className="game-table">
@@ -125,6 +126,28 @@ export function GameTable({ game, prompt, interactive, onRespond, onLeave }: Pro
       )}
 
       {interactive && prompt && <ActionBar prompt={prompt} onRespond={onRespond} />}
+
+      {log.length > 0 && <GameLog lines={log} />}
+    </div>
+  )
+}
+
+function GameLog({ lines }: { lines: string[] }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [lines])
+  return (
+    <div className="game-log panel">
+      <div className="stack-title">Game log</div>
+      <div className="game-log-body" ref={ref}>
+        {lines.map((l, i) => (
+          <div className="game-log-line" key={i}>
+            {l}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

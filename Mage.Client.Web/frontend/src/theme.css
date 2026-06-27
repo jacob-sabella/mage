@@ -531,3 +531,18 @@ input::placeholder { color: var(--text-dim); }
   box-shadow: 0 0 0 2px var(--accent);
   animation: pulse-target 1.1s ease-in-out infinite;
 }
+
+/* ----- game log ----- */
+.game-log { padding: 12px 14px; }
+.game-log-body {
+  max-height: 160px;
+  overflow-y: auto;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.game-log-line { padding: 1px 0; }
+.game-log-line:last-child { color: var(--text); }

@@ -23,6 +23,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   const [interactive, setInteractive] = useState(false)
   const [game, setGame] = useState<GameState | null>(null)
   const [prompt, setPrompt] = useState<Prompt | null>(null)
+  const [gameLog, setGameLog] = useState<string[]>([])
 
   const refresh = useCallback(async () => {
     setRefreshing(true)
@@ -51,6 +52,8 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
     } else if (e.type === 'game') {
       if (e.game) setGame(e.game)
       setPrompt(e.prompt ?? null)
+    } else if (e.type === 'log' && e.text) {
+      setGameLog((prev) => [...prev.slice(-299), e.text as string])
     } else if (e.type === 'event') {
       refresh()
     }
@@ -105,6 +108,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
     setInteractive(false)
     setGame(null)
     setPrompt(null)
+    setGameLog([])
   }, [])
 
   const handleSendChat = useCallback(
@@ -161,6 +165,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
               game={game}
               prompt={prompt}
               interactive={interactive}
+              log={gameLog}
               onRespond={handleRespond}
               onLeave={handleLeaveGame}
             />

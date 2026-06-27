@@ -570,6 +570,10 @@ public class WebClientApp {
             GameClientMessage message = (GameClientMessage) cb.getData();
             boolean isDialog = method != null && method.getType() == ClientCallbackType.DIALOG;
             PromptDto prompt = isDialog ? PromptDto.from(method, message) : null;
+            // surface informational text (phase/turn narration, actions) as a log line
+            if (!isDialog && message.getMessage() != null && !message.getMessage().isEmpty()) {
+                pushLog(ctx, message.getMessage());
+            }
             pushGame(ctx, cb.getObjectId(), message.getGameView(), prompt);
             return;
         }
@@ -586,6 +590,13 @@ public class WebClientApp {
         }
         // table changes etc. - a cue for the browser to refresh
         push(ctx, "event", method == null ? "" : method.toString());
+    }
+
+    private void pushLog(WsContext ctx, String text) {
+        Map<String, Object> msg = new LinkedHashMap<>();
+        msg.put("type", "log");
+        msg.put("text", text.replaceAll("<[^>]+>", "")); // strip server HTML markup
+        pushMap(ctx, msg);
     }
 
     private void pushGame(WsContext ctx, UUID gameId, GameView gameView, PromptDto prompt) {
