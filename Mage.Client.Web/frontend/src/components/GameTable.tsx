@@ -155,9 +155,33 @@ export function GameTable({ game, prompt, interactive, log = [], onRespond, onLe
         </div>
       )}
 
+      {/* DOM affordance to play/select cards by name (the 3D meshes are also
+          clickable, but this is easier and keeps the action accessible). */}
+      {interactive && prompt?.kind === 'select' && (
+        <PlayableBar game={game} onRespond={onRespond} />
+      )}
+
       {interactive && prompt && <ActionBar prompt={prompt} onRespond={onRespond} />}
 
       {log.length > 0 && <GameLog lines={log} />}
+    </div>
+  )
+}
+
+function PlayableBar({ game, onRespond }: { game: GameState; onRespond: (kind: RespondKind, value?: string) => void }) {
+  const byId: Record<string, CardType> = {}
+  game.myHand.forEach((c) => (byId[c.id] = c))
+  game.players.forEach((p) => p.battlefield.forEach((c) => (byId[c.id] = c)))
+  const playable = game.canPlay.map((id) => byId[id]).filter(Boolean)
+  if (playable.length === 0) return null
+  return (
+    <div className="playable-bar panel">
+      <span className="muted playable-label">Play / activate:</span>
+      {playable.map((c) => (
+        <button key={c.id} className="btn play-chip" onClick={() => onRespond('uuid', c.id)}>
+          {c.name}
+        </button>
+      ))}
     </div>
   )
 }

@@ -36,6 +36,22 @@ test.describe('Game board (3D)', () => {
     await expect.poll(() => responded).toBe(true)
   })
 
+  test('playable bar lists castable cards and plays one by name', async ({ page }) => {
+    await gotoScreen(page, 'game')
+    const bar = page.locator('.playable-bar')
+    await expect(bar.getByRole('button', { name: 'Lightning Bolt' })).toBeVisible()
+    await expect(bar.getByRole('button', { name: 'Serra Angel' })).toBeVisible()
+
+    let playedId: string | null = null
+    await page.route('**/api/game/respond', (route) => {
+      const b = JSON.parse(route.request().postData() || '{}')
+      if (b.kind === 'uuid') playedId = b.value
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
+    })
+    await bar.getByRole('button', { name: 'Lightning Bolt' }).click()
+    await expect.poll(() => playedId).toBe('h1')
+  })
+
   test('mulligan prompt offers Yes/No', async ({ page }) => {
     await gotoScreen(page, 'mulligan')
     await expect(page.getByText(/Mulligan/)).toBeVisible()

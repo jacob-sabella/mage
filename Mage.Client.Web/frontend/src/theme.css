@@ -684,3 +684,9 @@ input::placeholder { color: var(--text-dim); }
 .pstat-name { font-weight: 700; font-size: 15px; }
 .pstat-life { color: var(--success); font-weight: 800; font-size: 15px; }
 .pstat-counts { font-size: 12px; }
+
+/* ----- playable cards bar (priority) ----- */
+.playable-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 14px; }
+.playable-label { font-size: 12px; font-weight: 700; }
+.play-chip { padding: 6px 12px; font-size: 13px; border-color: var(--accent-2); }
+.play-chip:hover { background: rgba(45, 212, 191, 0.16); color: var(--accent-2); }
