@@ -508,7 +508,7 @@ public class WebClientApp {
         }
         UUID tableId;
         try {
-            tableId = conn.createGameVsAi(req.deckPath);
+            tableId = conn.createGameVsAi(req.deckPath, req.opponents == null ? 1 : req.opponents);
         } catch (Exception e) {
             ctx.status(500).json(error("create failed: " + e.getMessage()));
             return;
@@ -812,6 +812,7 @@ public class WebClientApp {
     public static class CreateRequest {
         public String token;
         public String deckPath;
+        public Integer opponents; // number of AI opponents (default 1; 2+ = Free For All)
     }
 
     public static class JoinRequest {

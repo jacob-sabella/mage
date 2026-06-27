@@ -4,17 +4,19 @@ import type { DeckListItem } from '../api'
 
 interface Props {
   title?: string
-  onPick: (deck: DeckListItem) => void
+  onPick: (deck: DeckListItem, opponents: number) => void
   onClose: () => void
+  showOpponents?: boolean // show an AI-opponent count selector (game creation)
 }
 
 /** Modal browser for prebuilt / saved .dck files — no file paths needed. */
-export function DeckPicker({ title = 'Choose a deck', onPick, onClose }: Props) {
+export function DeckPicker({ title = 'Choose a deck', onPick, onClose, showOpponents = false }: Props) {
   const [decks, setDecks] = useState<DeckListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('')
+  const [opponents, setOpponents] = useState(1)
 
   useEffect(() => {
     listDecks()
@@ -65,12 +67,28 @@ export function DeckPicker({ title = 'Choose a deck', onPick, onClose }: Props) 
           </select>
         </div>
 
+        {showOpponents && (
+          <div className="opponent-select">
+            <span className="muted">AI opponents:</span>
+            {[1, 2, 3].map((n) => (
+              <button
+                key={n}
+                className={`opp-btn${opponents === n ? ' active' : ''}`}
+                onClick={() => setOpponents(n)}
+              >
+                {n}
+              </button>
+            ))}
+            <span className="muted opp-hint">{opponents === 1 ? 'Duel' : `Free-for-all · ${opponents + 1} players`}</span>
+          </div>
+        )}
+
         <div className="picker-list">
           {loading && <p className="muted">Loading decks…</p>}
           {error && <p className="deck-error">{error}</p>}
           {!loading && filtered.length === 0 && <p className="muted">No decks match.</p>}
           {filtered.map((d) => (
-            <button key={d.path} className="picker-item" onClick={() => onPick(d)}>
+            <button key={d.path} className="picker-item" onClick={() => onPick(d, opponents)}>
               <span className="picker-name">{d.name}</span>
               <span className="muted picker-cat">{d.category}</span>
             </button>

@@ -123,14 +123,14 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   const handleJoin = useCallback((tableId: string) => setDeckIntent({ mode: 'join', tableId }), [])
 
   const onDeckPicked = useCallback(
-    (path: string) => {
+    (path: string, opponents: number) => {
       const intent = deckIntent
       setDeckIntent(null)
       if (!intent) return
       setPendingPlay(true)
       if (intent.mode === 'create') {
-        setPlayStatus('Starting game…')
-        createGameVsAi(session.token, path)
+        setPlayStatus(opponents > 1 ? `Starting free-for-all (${opponents + 1} players)…` : 'Starting game…')
+        createGameVsAi(session.token, path, opponents)
           .then((r) => {
             if (!r.ok) setPlayStatus('Could not start the game (is the deck valid for the format?)')
           })
@@ -316,7 +316,8 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
       {deckIntent && (
         <DeckPicker
           title={deckIntent.mode === 'create' ? 'Pick your deck (vs AI)' : 'Pick a deck to join with'}
-          onPick={(d) => onDeckPicked(d.path)}
+          showOpponents={deckIntent.mode === 'create'}
+          onPick={(d, opp) => onDeckPicked(d.path, opp)}
           onClose={() => setDeckIntent(null)}
         />
       )}

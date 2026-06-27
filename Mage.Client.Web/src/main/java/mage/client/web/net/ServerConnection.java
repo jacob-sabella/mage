@@ -208,32 +208,44 @@ public class ServerConnection {
         return gameId != null && session.joinGame(gameId);
     }
 
-    /**
-     * Create a 1v1 table vs a computer opponent, seat both players with the
-     * given deck, and start the match. The server then pushes START_GAME and
-     * the live decision callbacks. Uses Freeform Commander so most decks
-     * (incl. singleton/commander) are accepted. Returns the table id, or null.
-     */
     public UUID createGameVsAi(String deckPath) {
+        return createGameVsAi(deckPath, 1);
+    }
+
+    /**
+     * Create and start a game vs {@code opponents} AI players, seating everyone
+     * with the given deck. One opponent is a Two Player Duel; two or more is a
+     * multiplayer Free For All (the 3D board seats every player). The format
+     * adapts to the deck — commander decks use Freeform Commander. The server
+     * then pushes START_GAME and the live decision callbacks. Returns the table
+     * id, or null.
+     */
+    public UUID createGameVsAi(String deckPath, int opponents) {
         UUID roomId = session.getMainRoomId();
         if (roomId == null) {
             return null;
         }
         DeckCardLists deck = DeckImporter.importDeckFromFile(deckPath, false);
 
-        // Pick a format that accepts the chosen deck: commander decks (a small
-        // sideboard holding the commander + a large singleton main) use Freeform
-        // Commander; everything else uses Two Player Duel with the most lenient
-        // (no-banlist) constructed validator.
+        int oppo = Math.max(1, Math.min(opponents, 5));
+        boolean ffa = oppo >= 2;
+
+        // commander decks (a small sideboard holding the commander + a large
+        // singleton main) use Freeform Commander; everything else uses the most
+        // lenient (no-banlist) constructed validator.
         int mainTotal = totalCards(deck.getCards());
         int sideTotal = totalCards(deck.getSideboard());
         boolean commander = sideTotal >= 1 && sideTotal <= 3 && mainTotal >= 90;
-        String gameType = commander ? "Freeform Commander Two Player Duel" : "Two Player Duel";
+        String gameType = commander
+                ? (ffa ? "Freeform Commander Free For All" : "Freeform Commander Two Player Duel")
+                : (ffa ? "Free For All" : "Two Player Duel");
         String deckType = commander ? "Variant Magic - Freeform Commander" : "Constructed - Freeform";
 
         MatchOptions options = new MatchOptions(playerName + "'s game", gameType, false);
         options.getPlayerTypes().add(PlayerType.HUMAN);
-        options.getPlayerTypes().add(PlayerType.COMPUTER_MAD);
+        for (int i = 0; i < oppo; i++) {
+            options.getPlayerTypes().add(PlayerType.COMPUTER_MAD);
+        }
         options.setDeckType(deckType);
         options.setLimited(false);
         options.setWinsNeeded(1);
@@ -251,7 +263,11 @@ public class ServerConnection {
             return null;
         }
         UUID tableId = table.getTableId();
-        boolean aiOk = session.joinTable(roomId, tableId, "Computer", PlayerType.COMPUTER_MAD, 6, deck, "");
+        boolean aiOk = true;
+        for (int i = 0; i < oppo; i++) {
+            String aiName = oppo == 1 ? "Computer" : "Computer " + (i + 1);
+            aiOk &= session.joinTable(roomId, tableId, aiName, PlayerType.COMPUTER_MAD, 6, deck, "");
+        }
         boolean meOk = session.joinTable(roomId, tableId, playerName, PlayerType.HUMAN, 1, deck, "");
         if (!aiOk || !meOk || !session.startMatch(roomId, tableId)) {
             session.removeTable(roomId, tableId);

@@ -27,4 +27,20 @@ test.describe('Deck picker', () => {
 
     await expect.poll(() => createdWith).toBe('/decks/red.dck')
   })
+
+  test('selecting opponents creates a free-for-all with that many AIs', async ({ page }) => {
+    await gotoScreen(page, 'lobby')
+    let opponents: number | null = null
+    await page.route('**/api/tables/create', async (route) => {
+      opponents = JSON.parse(route.request().postData() || '{}').opponents
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, tableId: 'g-1' }) })
+    })
+    await page.getByRole('button', { name: 'New game vs AI' }).click()
+    // pick 3 AI opponents, then a deck
+    await page.locator('.opp-btn', { hasText: '3' }).click()
+    await expect(page.getByText(/Free-for-all · 4 players/)).toBeVisible()
+    await page.getByRole('button', { name: /Mono Red Aggro/ }).click()
+
+    await expect.poll(() => opponents).toBe(3)
+  })
 })
