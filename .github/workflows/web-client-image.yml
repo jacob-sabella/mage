@@ -6,7 +6,7 @@ name: web-client image
 
 on:
   push:
-    branches: ["master", "vibe/xmage-claude-react-ui"]
+    branches: ["vibe/xmage-claude-react-ui"]
     tags: ["v*"]
     paths:
       - "Mage.Client.Web/**"
@@ -37,7 +37,7 @@ jobs:
         with:
           images: ghcr.io/jacob-sabella/mage-web
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest
             type=ref,event=branch
             type=sha,format=short
             type=semver,pattern={{version}}
@@ -70,7 +70,7 @@ jobs:
         with:
           images: ghcr.io/jacob-sabella/mage-server
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest
             type=ref,event=branch
             type=sha,format=short
             type=semver,pattern={{version}}
