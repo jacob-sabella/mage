@@ -186,10 +186,20 @@ public class ServerConnection {
         }
         DeckCardLists deck = DeckImporter.importDeckFromFile(deckPath, false);
 
-        MatchOptions options = new MatchOptions(playerName + "'s game", "Freeform Commander Two Player Duel", false);
+        // Pick a format that accepts the chosen deck: commander decks (a small
+        // sideboard holding the commander + a large singleton main) use Freeform
+        // Commander; everything else uses Two Player Duel with the most lenient
+        // (no-banlist) constructed validator.
+        int mainTotal = totalCards(deck.getCards());
+        int sideTotal = totalCards(deck.getSideboard());
+        boolean commander = sideTotal >= 1 && sideTotal <= 3 && mainTotal >= 90;
+        String gameType = commander ? "Freeform Commander Two Player Duel" : "Two Player Duel";
+        String deckType = commander ? "Variant Magic - Freeform Commander" : "Constructed - Freeform";
+
+        MatchOptions options = new MatchOptions(playerName + "'s game", gameType, false);
         options.getPlayerTypes().add(PlayerType.HUMAN);
         options.getPlayerTypes().add(PlayerType.COMPUTER_MAD);
-        options.setDeckType("Variant Magic - Freeform Commander");
+        options.setDeckType(deckType);
         options.setLimited(false);
         options.setWinsNeeded(1);
         options.setSkillLevel(SkillLevel.CASUAL);
@@ -210,6 +220,16 @@ public class ServerConnection {
             return null;
         }
         return tableId;
+    }
+
+    private static int totalCards(java.util.List<mage.cards.decks.DeckCardInfo> cards) {
+        int t = 0;
+        if (cards != null) {
+            for (mage.cards.decks.DeckCardInfo c : cards) {
+                t += Math.max(1, c.getAmount());
+            }
+        }
+        return t;
     }
 
     // --- player responses (server tracks the current pending decision) -------
