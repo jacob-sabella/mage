@@ -13,6 +13,7 @@ import mage.cards.repository.CardCriteria;
 import mage.cards.repository.CardInfo;
 import mage.cards.repository.CardRepository;
 import mage.client.web.dto.CardInfoDto;
+import mage.client.web.dto.DraftDto;
 import mage.client.web.dto.GameDto;
 import mage.client.web.dto.PromptDto;
 import mage.client.web.dto.TableDto;
@@ -109,6 +110,8 @@ public class WebClientApp {
         app.post("/api/watch", this::handleWatch);
         app.post("/api/join", this::handleJoin);
         app.post("/api/tables/create", this::handleCreateTable);
+        app.post("/api/draft/create", this::handleCreateDraft);
+        app.post("/api/draft/pick", this::handleDraftPick);
         app.post("/api/game/respond", this::handleRespond);
         app.get("/api/cards/search", this::handleCardSearch);
         app.get("/api/cardimg", this::handleCardImage);
@@ -721,6 +724,41 @@ public class WebClientApp {
             }
             return;
         }
+        // booster draft started: subscribe to its DRAFT_PICK callbacks
+        if (method == ClientCallbackMethod.START_DRAFT && cb.getData() instanceof TableClientMessage) {
+            UUID draftId = cb.getObjectId();
+            if (draftId != null) {
+                runAsync("fx-joindraft", () -> conn.joinDraft(draftId));
+                Map<String, Object> msg = new LinkedHashMap<>();
+                msg.put("type", "draftStart");
+                msg.put("draftId", draftId.toString());
+                pushMap(ctx, msg);
+            }
+            return;
+        }
+        // a booster to pick from (initial deal or after each pick)
+        if ((method == ClientCallbackMethod.DRAFT_INIT || method == ClientCallbackMethod.DRAFT_PICK)
+                && cb.getData() instanceof mage.view.DraftClientMessage) {
+            UUID draftId = cb.getObjectId();
+            mage.view.DraftClientMessage dm = (mage.view.DraftClientMessage) cb.getData();
+            Map<String, Object> msg = new LinkedHashMap<>();
+            msg.put("type", "draftPick");
+            msg.put("draftId", draftId == null ? null : draftId.toString());
+            msg.put("draft", dm.getDraftPickView() == null ? null : DraftDto.from(dm.getDraftPickView()));
+            pushMap(ctx, msg);
+            if (draftId != null) {
+                runAsync("fx-boosterack", () -> conn.setBoosterLoaded(draftId));
+            }
+            return;
+        }
+        if (method == ClientCallbackMethod.DRAFT_UPDATE) {
+            push(ctx, "draftUpdate", "");
+            return;
+        }
+        if (method == ClientCallbackMethod.DRAFT_OVER) {
+            push(ctx, "draftOver", "");
+            return;
+        }
         // a GameClientMessage is either a real decision (DIALOG) or just an
         // informational board update ("Waiting for X"). Only DIALOG callbacks
         // become an actionable prompt.
@@ -748,6 +786,60 @@ public class WebClientApp {
         }
         // table changes etc. - a cue for the browser to refresh
         push(ctx, "event", method == null ? "" : method.toString());
+    }
+
+    private void handleCreateDraft(Context ctx) {
+        CreateDraftRequest req = ctx.bodyAsClass(CreateDraftRequest.class);
+        ServerConnection conn = sessions.get(req == null ? null : req.token);
+        if (conn == null) {
+            ctx.status(401).json(error("not connected"));
+            return;
+        }
+        if (req.set == null || req.set.isEmpty()) {
+            ctx.status(400).json(error("set is required"));
+            return;
+        }
+        UUID tableId;
+        try {
+            tableId = conn.createDraft(req.set, req.packs == null ? 3 : req.packs,
+                    req.opponents == null ? 3 : req.opponents);
+        } catch (Exception e) {
+            ctx.status(500).json(error("create draft failed: " + e.getMessage()));
+            return;
+        }
+        if (tableId == null) {
+            ctx.status(500).json(error("could not create/start the draft"));
+            return;
+        }
+        // START_DRAFT + the boosters arrive on the WS.
+        ctx.json(Map.of("ok", true, "tableId", tableId.toString()));
+    }
+
+    private void handleDraftPick(Context ctx) {
+        DraftPickRequest req = ctx.bodyAsClass(DraftPickRequest.class);
+        ServerConnection conn = sessions.get(req == null ? null : req.token);
+        if (conn == null) {
+            ctx.status(401).json(error("not connected"));
+            return;
+        }
+        if (req.draftId == null || req.cardId == null) {
+            ctx.status(400).json(error("draftId and cardId are required"));
+            return;
+        }
+        try {
+            conn.sendCardPick(UUID.fromString(req.draftId), UUID.fromString(req.cardId));
+        } catch (Exception e) {
+            ctx.status(500).json(error("pick failed: " + e.getMessage()));
+            return;
+        }
+        ctx.json(Map.of("ok", true));
+    }
+
+    /** Run a (possibly remoting) call off the callback thread to avoid re-entrancy. */
+    private static void runAsync(String name, Runnable r) {
+        Thread t = new Thread(r, name);
+        t.setDaemon(true);
+        t.start();
     }
 
     private void pushLog(WsContext ctx, String text) {
@@ -813,6 +905,19 @@ public class WebClientApp {
         public String token;
         public String deckPath;
         public Integer opponents; // number of AI opponents (default 1; 2+ = Free For All)
+    }
+
+    public static class CreateDraftRequest {
+        public String token;
+        public String set;       // set code for the boosters (e.g. "M19")
+        public Integer packs;    // boosters per player (default 3)
+        public Integer opponents; // AI draft bots (default 3)
+    }
+
+    public static class DraftPickRequest {
+        public String token;
+        public String draftId;
+        public String cardId;
     }
 
     public static class JoinRequest {

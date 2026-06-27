@@ -9,7 +9,10 @@ import mage.constants.MatchBufferTime;
 import mage.constants.MatchTimeLimit;
 import mage.constants.SkillLevel;
 import mage.game.match.MatchOptions;
+import mage.game.tournament.LimitedOptions;
+import mage.game.tournament.TournamentOptions;
 import mage.players.PlayerType;
+import mage.view.DraftPickView;
 import mage.players.net.UserData;
 import mage.remote.Connection;
 import mage.remote.MageRemoteException;
@@ -206,6 +209,90 @@ public class ServerConnection {
     /** Subscribe to a game's callbacks as a seated player (called on START_GAME). */
     public boolean joinGame(UUID gameId) {
         return gameId != null && session.joinGame(gameId);
+    }
+
+    /**
+     * Create and start a booster draft vs {@code opponents} AI draft bots, using
+     * {@code packs} boosters of {@code setCode}. The server then pushes
+     * START_DRAFT and the DRAFT_PICK callbacks (boosters to pick from).
+     * Returns the table id, or null.
+     */
+    public UUID createDraft(String setCode, int packs, int opponents) {
+        UUID roomId = session.getMainRoomId();
+        if (roomId == null) {
+            return null;
+        }
+        int bots = Math.max(1, Math.min(opponents, 7));
+        int boosters = Math.max(1, Math.min(packs, 3));
+
+        TournamentOptions options = new TournamentOptions(playerName + "'s draft", "", false);
+        options.setTournamentType("Booster Draft Swiss");
+        options.getPlayerTypes().add(PlayerType.HUMAN);
+        for (int i = 0; i < bots; i++) {
+            options.getPlayerTypes().add(PlayerType.COMPUTER_DRAFT_BOT);
+        }
+        LimitedOptions limited = new LimitedOptions();
+        limited.setConstructionTime(600);
+        limited.setNumberBoosters(0); // 0 = use the explicit set-code pack list below
+        for (int i = 0; i < boosters; i++) {
+            limited.getSetCodes().add(setCode);
+        }
+        options.setLimitedOptions(limited);
+        options.setNumberRounds(2);
+        options.setPassword(""); // TournamentOptions has no default; null trips lobby refresh
+        options.setQuitRatio(100);
+        options.setMinimumRating(0);
+
+        MatchOptions match = options.getMatchOptions();
+        match.setDeckType("Limited");
+        match.setGameType("Two Player Duel");
+        match.setLimited(true);
+        match.setWinsNeeded(1);
+        match.setSkillLevel(SkillLevel.CASUAL);
+        match.setRange(RangeOfInfluence.ALL);
+        match.setAttackOption(MultiplayerAttackOption.MULTIPLE);
+        match.setMatchTimeLimit(MatchTimeLimit.NONE);
+        match.setMatchBufferTime(MatchBufferTime.NONE);
+        match.setQuitRatio(100);
+        match.setMinimumRating(0);
+
+        TableView table = session.createTournamentTable(roomId, options);
+        if (table == null) {
+            return null;
+        }
+        UUID tableId = table.getTableId();
+        DeckCardLists empty = new DeckCardLists(); // cards are drafted, not pre-built
+        boolean botsOk = true;
+        for (int i = 0; i < bots; i++) {
+            botsOk &= session.joinTournamentTable(roomId, tableId, "Draftbot " + (i + 1),
+                    PlayerType.COMPUTER_DRAFT_BOT, 6, empty, "");
+        }
+        boolean meOk = session.joinTournamentTable(roomId, tableId, playerName, PlayerType.HUMAN, 1, empty, "");
+        if (!botsOk || !meOk || !session.startTournament(roomId, tableId)) {
+            session.removeTable(roomId, tableId);
+            return null;
+        }
+        return tableId;
+    }
+
+    /** Subscribe to a draft's callbacks (called on START_DRAFT). */
+    public boolean joinDraft(UUID draftId) {
+        return draftId != null && session.joinDraft(draftId);
+    }
+
+    /** Acknowledge the current booster was received (keeps the draft moving). */
+    public void setBoosterLoaded(UUID draftId) {
+        if (draftId != null) {
+            session.setBoosterLoaded(draftId);
+        }
+    }
+
+    /** Pick a card from the current booster. Returns the resulting pick view. */
+    public DraftPickView sendCardPick(UUID draftId, UUID cardId) {
+        if (draftId == null || cardId == null) {
+            return null;
+        }
+        return session.sendCardPick(draftId, cardId, java.util.Collections.emptySet());
     }
 
     public UUID createGameVsAi(String deckPath) {
