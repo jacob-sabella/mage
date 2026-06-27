@@ -12,6 +12,7 @@ import {
 } from '../api'
 import type { MatchDto, RespondKind } from '../api'
 import { useServerEvents } from '../useServerEvents'
+import { setReportSnapshot } from '../reportState'
 import { ChatPanel } from './ChatPanel'
 import { DeckPicker } from './DeckPicker'
 import { ConstructView } from './ConstructView'
@@ -230,6 +231,11 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   useEffect(() => {
     onOnlineChange(online)
   }, [online, onOnlineChange])
+
+  // keep a fresh snapshot for the Report-a-problem modal (game state as context)
+  useEffect(() => {
+    setReportSnapshot(activeGameId ? { game, prompt, log: gameLog, interactive } : null)
+  }, [activeGameId, game, prompt, gameLog, interactive])
 
   async function handleDisconnect() {
     await disconnect(session.token)

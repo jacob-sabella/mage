@@ -579,7 +579,7 @@ export function Board3D({
         shadows
         camera={{ position: [0, 5.4, 10 ], fov: 46 }}
         dpr={[1, 2]}
-        gl={{ antialias: true }}
+        gl={{ antialias: true, preserveDrawingBuffer: true }}
       >
         {/* the world is the active family's environment */}
         <color attach="background" args={[scene.bg]} />

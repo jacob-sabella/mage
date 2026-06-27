@@ -231,15 +231,22 @@ export interface ReportContext {
   userAgent: string
 }
 
+export interface ReportExtras {
+  origin?: string
+  screenshot?: string | null // jpeg data URL of the screen at submit time
+  gameState?: unknown | null // snapshot of the current game for triage context
+}
+
 /** File a bug/feature GitHub issue via the gateway (token stays server-side). */
 export function reportProblem(
   title: string,
   body: string,
   kind: 'bug' | 'feature',
   context: ReportContext,
+  extras: ReportExtras = {},
 ): Promise<{ ok: boolean; url: string; number: number }> {
   return request<{ ok: boolean; url: string; number: number }>('/api/report', {
     method: 'POST',
-    body: JSON.stringify({ title, body, kind, context }),
+    body: JSON.stringify({ title, body, kind, context, ...extras }),
   })
 }

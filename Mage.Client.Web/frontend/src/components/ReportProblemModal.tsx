@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { reportProblem } from '../api'
+import { captureScreenshot, reportState } from '../reportState'
 
 export type ReportKind = 'bug' | 'feature'
 
@@ -48,12 +49,20 @@ export function ReportProblemModal({
     setStatus('sending')
     setErrMsg('')
     try {
-      const res = await reportProblem(title.trim(), body.trim(), kind, {
-        appVersion: 'web',
-        view,
-        url: window.location.href,
-        userAgent: navigator.userAgent,
-      })
+      // grab a screenshot + the live game snapshot for triage context
+      const screenshot = await captureScreenshot()
+      const res = await reportProblem(
+        title.trim(),
+        body.trim(),
+        kind,
+        {
+          appVersion: 'web',
+          view,
+          url: window.location.href,
+          userAgent: navigator.userAgent,
+        },
+        { origin: window.location.origin, screenshot, gameState: reportState.snapshot },
+      )
       setIssueUrl(res.url)
       setStatus('done')
     } catch (e) {

@@ -132,7 +132,7 @@ export function SceneBackground() {
       <Canvas
         camera={{ position: [0, 0, 18], fov: 60 }}
         dpr={[1, 1.5]}
-        gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+        gl={{ antialias: true, alpha: true, powerPreference: 'high-performance', preserveDrawingBuffer: true }}
       >
         <FamilyBackdrop kind={kind} />
       </Canvas>

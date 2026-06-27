@@ -126,6 +126,7 @@ public class WebClientApp {
         app.post("/api/decks/import", this::handleDeckImport);
         app.post("/api/decks/upload", this::handleDeckUpload);
         app.post("/api/report", this::handleReport);
+        app.get("/api/report-image/{id}", this::handleReportImage);
         app.post("/api/disconnect", this::handleDisconnect);
 
         app.ws("/ws", ws -> {
@@ -1082,7 +1083,13 @@ public class WebClientApp {
         public String body;
         public String kind; // "bug" (default) or "feature"
         public ReportContext context;
+        public String origin; // browser origin, for building the screenshot URL
+        public String screenshot; // data:image/jpeg;base64,... of the screen
+        public com.fasterxml.jackson.databind.JsonNode gameState; // live game snapshot
     }
+
+    // where report screenshots are stored + served from (/api/report-image/{id})
+    private static final File REPORT_DIR = new File(System.getProperty("java.io.tmpdir"), "mage-web-reports");
 
     public static class ReportContext {
         public String appVersion;
@@ -1115,12 +1122,30 @@ public class WebClientApp {
         if (!desc.isEmpty()) {
             md.append(desc).append("\n\n");
         }
+        // persist the screenshot (if any) and embed it so triage sees the screen
+        String imgId = saveReportImage(req.screenshot);
+        if (imgId != null) {
+            String base = req.origin == null || req.origin.isBlank() ? "" : req.origin.trim().replaceAll("/+$", "");
+            md.append("![screenshot](").append(base).append("/api/report-image/").append(imgId).append(")\n\n");
+        }
+
         md.append("---\n\n<details><summary>Client context</summary>\n\n");
         if (req.context != null) {
             appendContext(md, "App version", req.context.appVersion);
             appendContext(md, "View", req.context.view);
             appendContext(md, "URL", req.context.url);
             appendContext(md, "User agent", req.context.userAgent);
+        }
+        if (req.gameState != null && !req.gameState.isNull()) {
+            try {
+                String pretty = json.writerWithDefaultPrettyPrinter().writeValueAsString(req.gameState);
+                if (pretty.length() > 12000) {
+                    pretty = pretty.substring(0, 12000) + "\n… (truncated)";
+                }
+                md.append("\n**Game state:**\n\n```json\n").append(pretty).append("\n```\n");
+            } catch (Exception ignored) {
+                // state is best-effort context
+            }
         }
         md.append("\n</details>\n");
 
@@ -1166,6 +1191,56 @@ public class WebClientApp {
             }
         } catch (Exception e) {
             ctx.status(502).json(error("could not reach GitHub: " + e.getClass().getSimpleName()));
+        }
+    }
+
+    /** Decode a data-URL screenshot and store it; returns its id (filename stem) or null. */
+    private static String saveReportImage(String dataUrl) {
+        if (dataUrl == null || !dataUrl.startsWith("data:image/")) {
+            return null;
+        }
+        int comma = dataUrl.indexOf(',');
+        if (comma < 0) {
+            return null;
+        }
+        String b64 = dataUrl.substring(comma + 1);
+        byte[] bytes;
+        try {
+            bytes = java.util.Base64.getDecoder().decode(b64);
+        } catch (Exception e) {
+            return null;
+        }
+        if (bytes.length == 0 || bytes.length > 6_000_000) {
+            return null;
+        }
+        try {
+            REPORT_DIR.mkdirs();
+            String id = java.util.UUID.randomUUID().toString();
+            java.nio.file.Files.write(new File(REPORT_DIR, id + ".jpg").toPath(), bytes);
+            return id;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** Serve a stored report screenshot by id (so GitHub can render it in the issue). */
+    private void handleReportImage(Context ctx) {
+        String id = ctx.pathParam("id");
+        if (!id.matches("[a-fA-F0-9-]{36}")) { // UUID only — no path traversal
+            ctx.status(404);
+            return;
+        }
+        File f = new File(REPORT_DIR, id + ".jpg");
+        if (!f.isFile()) {
+            ctx.status(404);
+            return;
+        }
+        try {
+            ctx.contentType("image/jpeg");
+            ctx.header("Cache-Control", "public, max-age=2592000");
+            ctx.result(java.nio.file.Files.readAllBytes(f.toPath()));
+        } catch (Exception e) {
+            ctx.status(404);
         }
     }
 
