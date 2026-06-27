@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
+  createDraft,
   createGameVsAi,
   disconnect,
   fetchMatches,
@@ -13,8 +14,9 @@ import type { MatchDto, RespondKind } from '../api'
 import { useServerEvents } from '../useServerEvents'
 import { ChatPanel } from './ChatPanel'
 import { DeckPicker } from './DeckPicker'
+import { DraftView } from './DraftView'
 import { GameTable } from './GameTable'
-import type { ChatLine, GameState, Prompt, Session, TableDto } from '../types'
+import type { ChatLine, DraftState, GameState, Prompt, Session, TableDto } from '../types'
 
 // a table is joinable when it has an open seat and isn't already in a game
 function isJoinable(t: TableDto): boolean {
@@ -37,6 +39,8 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   const [refreshing, setRefreshing] = useState(false)
   const [chat, setChat] = useState<ChatLine[]>([])
   const [activeGameId, setActiveGameId] = useState<string | null>(null)
+  const [activeDraftId, setActiveDraftId] = useState<string | null>(null)
+  const [draftState, setDraftState] = useState<DraftState | null>(null)
   const [interactive, setInteractive] = useState(false)
   const [game, setGame] = useState<GameState | null>(null)
   const [prompt, setPrompt] = useState<Prompt | null>(null)
@@ -98,10 +102,36 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
       setPrompt(e.prompt ?? null)
     } else if (e.type === 'log' && e.text) {
       setGameLog((prev) => [...prev.slice(-299), e.text as string])
+    } else if (e.type === 'draftStart' && e.draftId) {
+      setActiveDraftId(e.draftId)
+      setDraftState(null)
+      setPlayStatus(null)
+    } else if (e.type === 'draftPick') {
+      if (e.draftId) setActiveDraftId(e.draftId)
+      setDraftState(e.draft ?? null)
+    } else if (e.type === 'draftOver') {
+      setActiveDraftId(null)
+      setDraftState(null)
+      setPlayStatus('Draft complete — deck construction from the web client is coming soon.')
     } else if (e.type === 'event') {
       refresh()
     }
   })
+
+  const handleNewDraft = useCallback(() => {
+    setPendingPlay(false)
+    setPlayStatus('Starting booster draft (M19)…')
+    createDraft(session.token, 'M19', 3, 3)
+      .then((r) => {
+        if (!r.ok) setPlayStatus('Could not start the draft')
+      })
+      .catch((err) => setPlayStatus(`Could not start draft: ${err instanceof Error ? err.message : 'error'}`))
+  }, [session.token])
+
+  const leaveDraft = useCallback(() => {
+    setActiveDraftId(null)
+    setDraftState(null)
+  }, [])
 
   const handleWatch = useCallback(
     (gameId: string) => {
@@ -191,6 +221,10 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
     onDisconnected()
   }
 
+  if (activeDraftId) {
+    return <DraftView token={session.token} draftId={activeDraftId} draft={draftState} onLeave={leaveDraft} />
+  }
+
   return (
     <section className="view lobby-view">
       <div className="lobby-header">
@@ -207,6 +241,11 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
         {!activeGameId && (
           <button className="btn primary" onClick={handleNewGame}>
             New game vs AI
+          </button>
+        )}
+        {!activeGameId && !showHistory && (
+          <button className="btn" onClick={handleNewDraft}>
+            Draft vs AI
           </button>
         )}
         {!activeGameId && (

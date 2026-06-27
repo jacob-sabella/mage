@@ -149,3 +149,22 @@ export interface DeckListItem {
 export function listDecks(): Promise<DeckListItem[]> {
   return request<DeckListItem[]>('/api/decks/list')
 }
+
+export function createDraft(
+  token: string,
+  set: string,
+  packs = 3,
+  opponents = 3,
+): Promise<{ ok: boolean; tableId: string }> {
+  return request<{ ok: boolean; tableId: string }>('/api/draft/create', {
+    method: 'POST',
+    body: JSON.stringify({ token, set, packs, opponents }),
+  })
+}
+
+export function draftPick(token: string, draftId: string, cardId: string): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>('/api/draft/pick', {
+    method: 'POST',
+    body: JSON.stringify({ token, draftId, cardId }),
+  })
+}

@@ -28,6 +28,23 @@ export interface ServerEvent {
   gameId?: string
   game?: GameState
   prompt?: Prompt | null
+  // present on draft frames
+  draftId?: string
+  tournamentId?: string
+  draft?: DraftState
+}
+
+export interface DraftCard {
+  id: string
+  name: string
+  set: string
+  num: string
+}
+
+export interface DraftState {
+  booster: DraftCard[]
+  picks: DraftCard[]
+  timeout: number
 }
 
 export interface PromptChoice {

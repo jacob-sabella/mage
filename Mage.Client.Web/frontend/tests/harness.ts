@@ -100,7 +100,26 @@ export const SAMPLE = {
   },
 }
 
-export type Scenario = 'lobby' | 'game' | 'mulligan' | 'target' | 'combat' | 'pile' | 'multiAmount' | 'ptUpdate'
+export type Scenario =
+  | 'lobby'
+  | 'game'
+  | 'mulligan'
+  | 'target'
+  | 'combat'
+  | 'pile'
+  | 'multiAmount'
+  | 'ptUpdate'
+  | 'draft'
+
+const DRAFT = {
+  booster: [
+    { id: 'd1', name: 'Loxodon Line Breaker', set: 'M19', num: '17' },
+    { id: 'd2', name: 'Disperse', set: 'M19', num: '50' },
+    { id: 'd3', name: 'Trumpet Blast', set: 'M19', num: '156' },
+  ],
+  picks: [{ id: 'd0', name: 'Goblin Instigator', set: 'M19', num: '146' }],
+  timeout: 0,
+}
 
 // the same board, but the viewer's Serra Angel has been buffed to 6/6 — used to
 // assert that a P/T change pushed by the server updates the on-board indicator.
@@ -143,8 +162,9 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
               ? 'multiAmount'
               : 'select'
   const second = scenario === 'ptUpdate' ? GAME_BUFFED : null
+  const isDraft = scenario === 'draft'
   await page.addInitScript(
-    ([game, prompt, isGame, secondGame]) => {
+    ([game, prompt, isGame, secondGame, draftOn, draftData]) => {
       class MockWS {
         onopen: ((e: unknown) => void) | null = null
         onclose: ((e: unknown) => void) | null = null
@@ -165,6 +185,12 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
                 }
               }, 150)
             }
+            if (draftOn) {
+              setTimeout(() => {
+                this.emit({ type: 'draftStart', draftId: 'd-1' })
+                this.emit({ type: 'draftPick', draftId: 'd-1', draft: draftData })
+              }, 150)
+            }
           }, 30)
         }
         emit(o: unknown) {
@@ -180,12 +206,14 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
       }
       ;(window as unknown as { WebSocket: unknown }).WebSocket = MockWS
     },
-    [SAMPLE.game, (SAMPLE.prompts as Record<string, unknown>)[promptKey], scenario !== 'lobby', second] as [
-      unknown,
-      unknown,
-      boolean,
-      unknown,
-    ],
+    [
+      SAMPLE.game,
+      (SAMPLE.prompts as Record<string, unknown>)[promptKey],
+      scenario !== 'lobby' && !isDraft,
+      second,
+      isDraft,
+      DRAFT,
+    ] as [unknown, unknown, boolean, unknown, boolean, unknown],
   )
 
   const json = (body: unknown) => async (route: import('@playwright/test').Route) =>
@@ -200,6 +228,8 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
   await page.route('**/api/decks/save', json({ ok: true, path: '/decks/out.dck' }))
   await page.route('**/api/cards/search**', json(SAMPLE.cards))
   await page.route('**/api/tables/create', json({ ok: true, tableId: 'g-1' }))
+  await page.route('**/api/draft/create', json({ ok: true, tableId: 'd-1' }))
+  await page.route('**/api/draft/pick', json({ ok: true }))
   await page.route('**/api/game/respond', json({ ok: true }))
   await page.route('**/api/watch', json({ ok: true }))
   await page.route('**/api/join', json({ ok: true }))
