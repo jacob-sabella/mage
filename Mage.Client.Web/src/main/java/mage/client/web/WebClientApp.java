@@ -339,12 +339,41 @@ public class WebClientApp {
             if (!query.isEmpty()) {
                 criteria.nameContains(query);
             }
-            criteria.count(60L);
+            // type + cmc filter reliably in the DB query
+            String type = ctx.queryParam("type");
+            if (type != null && !type.isEmpty()) {
+                try {
+                    criteria.types(mage.constants.CardType.valueOf(type.toUpperCase()));
+                } catch (IllegalArgumentException ignored) {
+                    // unknown type filter -> ignore
+                }
+            }
+            String cmc = ctx.queryParam("cmc");
+            if (cmc != null && !cmc.isEmpty()) {
+                try {
+                    criteria.manaValue(Integer.parseInt(cmc));
+                } catch (NumberFormatException ignored) {
+                    // ignore bad cmc
+                }
+            }
+            // color is filtered post-query: the DB color flags are unreliable
+            // (red(true) returns off-color cards), so match on the real color.
+            String colors = ctx.queryParam("colors");
+            String colorFilter = colors == null ? "" : colors.toUpperCase();
+            criteria.count(colorFilter.isEmpty() ? 100L : 400L);
+
             List<CardInfo> cards = CardRepository.instance.findCards(criteria);
             if (cards != null) {
                 for (CardInfo card : cards) {
-                    if (card != null) {
-                        results.add(CardInfoDto.from(card));
+                    if (card == null) {
+                        continue;
+                    }
+                    if (!colorFilter.isEmpty() && !matchesColorFilter(card, colorFilter)) {
+                        continue;
+                    }
+                    results.add(CardInfoDto.from(card));
+                    if (results.size() >= 100) {
+                        break;
                     }
                 }
             }
@@ -519,6 +548,21 @@ public class WebClientApp {
             out.add(m);
         }
         return out;
+    }
+
+    // card matches if it shares any requested color, or is colorless when "C" asked
+    private static boolean matchesColorFilter(CardInfo card, String filter) {
+        mage.ObjectColor c = card.getColor();
+        if (c == null) {
+            return filter.contains("C");
+        }
+        if (filter.contains("W") && c.isWhite()) return true;
+        if (filter.contains("U") && c.isBlue()) return true;
+        if (filter.contains("B") && c.isBlack()) return true;
+        if (filter.contains("R") && c.isRed()) return true;
+        if (filter.contains("G") && c.isGreen()) return true;
+        if (filter.contains("C") && c.isColorless()) return true;
+        return false;
     }
 
     private static String colorLetters(mage.ObjectColor color) {

@@ -65,8 +65,18 @@ export function respond(
 
 // Card search runs server-side against the engine's local card database; it
 // does not need a session token.
-export function searchCards(query: string): Promise<CardInfoDto[]> {
-  return request<CardInfoDto[]>(`/api/cards/search?q=${encodeURIComponent(query)}`)
+export interface CardSearchFilters {
+  colors?: string // any of WUBRGC
+  type?: string // e.g. Creature
+  cmc?: string // exact mana value
+}
+
+export function searchCards(query: string, filters: CardSearchFilters = {}): Promise<CardInfoDto[]> {
+  const p = new URLSearchParams({ q: query })
+  if (filters.colors) p.set('colors', filters.colors)
+  if (filters.type) p.set('type', filters.type)
+  if (filters.cmc) p.set('cmc', filters.cmc)
+  return request<CardInfoDto[]>(`/api/cards/search?${p.toString()}`)
 }
 
 export function saveDeck(name: string, cards: string[], path?: string): Promise<DeckSaveResponse> {

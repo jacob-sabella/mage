@@ -563,3 +563,17 @@ input::placeholder { color: var(--text-dim); }
 .type-counts { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 10px; font-size: 11px; }
 .deck-side-title { margin-top: 14px; }
 .deck-entry-cost { font-size: 11px; }
+
+/* ----- deck search filters ----- */
+.deck-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+.filter-pip {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid var(--stroke); background: var(--bg-raised);
+  color: var(--text-dim); font-weight: 700; font-size: 12px; cursor: pointer;
+}
+.filter-pip.on { color: #11141b; border-color: transparent; }
+.filter-select, .filter-cmc {
+  background: var(--bg-raised); border: 1px solid var(--stroke); border-radius: var(--radius-sm);
+  color: var(--text); padding: 7px 10px; font: inherit; font-size: 13px;
+}
+.filter-cmc { width: 80px; }

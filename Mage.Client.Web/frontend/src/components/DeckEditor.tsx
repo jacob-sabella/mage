@@ -23,6 +23,9 @@ export function DeckEditor() {
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
   const [searched, setSearched] = useState(false)
+  const [fColors, setFColors] = useState('')
+  const [fType, setFType] = useState('')
+  const [fCmc, setFCmc] = useState('')
 
   const [deck, setDeck] = useState<DeckCardEntry[]>([])
   const [sideboard, setSideboard] = useState<DeckCardEntry[]>([])
@@ -36,7 +39,7 @@ export function DeckEditor() {
     setSearching(true)
     setSearchError(null)
     try {
-      setResults(await searchCards(query.trim()))
+      setResults(await searchCards(query.trim(), { colors: fColors, type: fType, cmc: fCmc }))
       setSearched(true)
     } catch (err) {
       setSearchError(err instanceof Error ? err.message : 'search failed')
@@ -44,7 +47,9 @@ export function DeckEditor() {
     } finally {
       setSearching(false)
     }
-  }, [query])
+  }, [query, fColors, fType, fCmc])
+
+  const toggleColor = (c: string) => setFColors((p) => (p.includes(c) ? p.replace(c, '') : p + c))
 
   const addCard = useCallback((card: CardInfoDto) => {
     setDeck((prev) => {
@@ -116,6 +121,35 @@ export function DeckEditor() {
           <button className="btn primary" onClick={runSearch} disabled={searching}>
             {searching ? 'Searching…' : 'Search'}
           </button>
+        </div>
+        <div className="deck-filters">
+          {(['W', 'U', 'B', 'R', 'G', 'C'] as const).map((c) => (
+            <button
+              key={c}
+              className={`filter-pip${fColors.includes(c) ? ' on' : ''}`}
+              style={{ background: fColors.includes(c) ? COLOR_HEX[c] : undefined }}
+              onClick={() => toggleColor(c)}
+              title={`Filter: ${c}`}
+            >
+              {c}
+            </button>
+          ))}
+          <select className="filter-select" value={fType} onChange={(e) => setFType(e.target.value)}>
+            <option value="">Any type</option>
+            {TYPE_ORDER.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+          <input
+            className="filter-cmc"
+            type="number"
+            min={0}
+            placeholder="CMC"
+            value={fCmc}
+            onChange={(e) => setFCmc(e.target.value)}
+          />
         </div>
         {searchError && <p className="deck-error">{searchError}</p>}
         <div className="table-wrap">
