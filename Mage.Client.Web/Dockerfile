@@ -27,7 +27,7 @@ RUN --mount=type=cache,target=/root/.m2 \
     mvn -q -B -Pweb-client -pl Mage.Client.Web -am install -DskipTests && \
     mvn -q -B -Pweb-client -pl Mage.Client.Web \
         dependency:copy-dependencies \
-        -DoutputDirectory=Mage.Client.Web/target/lib \
+        -DoutputDirectory=/src/Mage.Client.Web/target/lib \
         -DincludeScope=runtime
 
 ##########################################################################

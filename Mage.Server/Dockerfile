@@ -9,8 +9,8 @@ WORKDIR /src
 COPY . .
 RUN --mount=type=cache,target=/root/.m2 \
     mvn -q -B -pl Mage.Server -am package -DskipTests && \
-    mkdir -p /dist && \
-    unzip -q Mage.Server/target/mage-server.zip -d /dist
+    mkdir -p /dist && cd /dist && \
+    jar xf /src/Mage.Server/target/mage-server.zip   # jar (JDK) avoids needing unzip
 
 FROM eclipse-temurin:17-jre
 WORKDIR /app
