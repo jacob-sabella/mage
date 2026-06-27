@@ -32,7 +32,36 @@ interface Props {
   onLeave: () => void
 }
 
+// F-key skip shortcuts -> PlayerAction names sent via /api/game/respond (action).
+const SKIP_KEYS: Record<string, string> = {
+  F2: 'PASS_PRIORITY_UNTIL_NEXT_TURN',
+  F4: 'PASS_PRIORITY_UNTIL_TURN_END_STEP',
+  F6: 'PASS_PRIORITY_CANCEL_ALL_ACTIONS',
+  F9: 'PASS_PRIORITY_UNTIL_MY_NEXT_TURN',
+  F10: 'PASS_PRIORITY_UNTIL_STACK_RESOLVED',
+}
+const SKIP_BUTTONS = [
+  { label: 'Next turn', key: 'F2', action: 'PASS_PRIORITY_UNTIL_NEXT_TURN' },
+  { label: 'End turn', key: 'F4', action: 'PASS_PRIORITY_UNTIL_TURN_END_STEP' },
+  { label: 'My turn', key: 'F9', action: 'PASS_PRIORITY_UNTIL_MY_NEXT_TURN' },
+  { label: 'Resolve', key: 'F10', action: 'PASS_PRIORITY_UNTIL_STACK_RESOLVED' },
+  { label: 'Cancel skips', key: 'F6', action: 'PASS_PRIORITY_CANCEL_ALL_ACTIONS' },
+]
+
 export function GameTable({ game, prompt, interactive, log = [], onRespond, onLeave }: Props) {
+  useEffect(() => {
+    if (!interactive) return
+    const onKey = (e: KeyboardEvent) => {
+      const action = SKIP_KEYS[e.key]
+      if (action) {
+        e.preventDefault()
+        onRespond('action', action)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [interactive, onRespond])
+
   if (!game) {
     return (
       <div className="game-table">
@@ -89,6 +118,21 @@ export function GameTable({ game, prompt, interactive, log = [], onRespond, onLe
           </button>
         )}
       </div>
+
+      {interactive && (
+        <div className="skip-bar">
+          {SKIP_BUTTONS.map((s) => (
+            <button
+              key={s.action}
+              className="btn skip-btn"
+              onClick={() => onRespond('action', s.action)}
+              title={`${s.label} (${s.key})`}
+            >
+              {s.label} <span className="skip-key">{s.key}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="game-board">
         {game.players.map((p) => (

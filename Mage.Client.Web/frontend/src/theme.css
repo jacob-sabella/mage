@@ -577,3 +577,8 @@ input::placeholder { color: var(--text-dim); }
   color: var(--text); padding: 7px 10px; font: inherit; font-size: 13px;
 }
 .filter-cmc { width: 80px; }
+
+/* ----- skip / stops bar ----- */
+.skip-bar { display: flex; flex-wrap: wrap; gap: 8px; }
+.skip-btn { padding: 7px 12px; font-size: 13px; }
+.skip-key { color: var(--text-dim); font-size: 11px; margin-left: 4px; }
