@@ -85,12 +85,14 @@ function Card3D({
   standing,
   showCost,
   cardProps,
+  onHoverCard,
 }: {
   card: GameCard
   position: [number, number, number]
   standing?: boolean
   showCost?: boolean
   cardProps: CardProps
+  onHoverCard?: (c: GameCard | null) => void
 }) {
   const [art, setArt] = useState<THREE.Texture | null>(null)
   const [hover, setHover] = useState(false)
@@ -135,8 +137,12 @@ function Card3D({
         onPointerOver={(e) => {
           e.stopPropagation()
           setHover(true)
+          onHoverCard?.(card)
         }}
-        onPointerOut={() => setHover(false)}
+        onPointerOut={() => {
+          setHover(false)
+          onHoverCard?.(null)
+        }}
         onClick={
           onClick
             ? (e) => {
@@ -217,16 +223,18 @@ function PlayerZone({
   player,
   z,
   cardProps,
+  onHoverCard,
 }: {
   player: GamePlayer
   z: number
   cardProps: CardProps
+  onHoverCard?: (c: GameCard | null) => void
 }) {
   const cards = useMemo(() => row(player.battlefield, 0, z), [player.battlefield, z])
   return (
     <group>
       {cards.map(({ card, pos }) => (
-        <Card3D key={card.id} card={card} position={pos} cardProps={cardProps} />
+        <Card3D key={card.id} card={card} position={pos} cardProps={cardProps} onHoverCard={onHoverCard} />
       ))}
     </group>
   )
@@ -245,7 +253,15 @@ function CameraRig({ target }: { target: ViewTarget }) {
   return null
 }
 
-export function Board3D({ game, cardProps }: { game: GameState; cardProps: CardProps }) {
+export function Board3D({
+  game,
+  cardProps,
+  onHoverCard,
+}: {
+  game: GameState
+  cardProps: CardProps
+  onHoverCard?: (c: GameCard | null) => void
+}) {
   // order players so the viewer is "near" (front), others across the table
   const players = game.players
   const viewerIdx = Math.max(0, players.findIndex((p) => p.name === game.me))
@@ -314,17 +330,17 @@ export function Board3D({ game, cardProps }: { game: GameState; cardProps: CardP
         </mesh>
 
         {seats.map((s) => (
-          <PlayerZone key={s.player.id} player={s.player} z={s.z} cardProps={cardProps} />
+          <PlayerZone key={s.player.id} player={s.player} z={s.z} cardProps={cardProps} onHoverCard={onHoverCard} />
         ))}
 
         {/* stack (standing, center) */}
         {stack.map(({ card, pos }) => (
-          <Card3D key={card.id} card={card} position={[pos[0], 0, 0]} standing showCost cardProps={cardProps} />
+          <Card3D key={card.id} card={card} position={[pos[0], 0, 0]} standing showCost cardProps={cardProps} onHoverCard={onHoverCard} />
         ))}
 
         {/* my hand: laid flat in front of the viewer, slightly raised */}
         {hand.map(({ card, pos }) => (
-          <Card3D key={card.id} card={card} position={[pos[0], 0.06, pos[2]]} showCost cardProps={cardProps} />
+          <Card3D key={card.id} card={card} position={[pos[0], 0.06, pos[2]]} showCost cardProps={cardProps} onHoverCard={onHoverCard} />
         ))}
 
         <CameraRig target={views[view].target} />

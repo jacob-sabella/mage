@@ -147,6 +147,21 @@ test.describe('Game board (3D)', () => {
     await expect(page.locator('.c3d-pip', { hasText: 'U' }).first()).toBeVisible()
   })
 
+  test('hovering a card shows a large readable preview (name, type, P/T)', async ({ page }) => {
+    await gotoScreen(page, 'game')
+    // no preview until hover
+    await expect(page.locator('.card-preview')).toHaveCount(0)
+    // hover the Serra Angel chip in the playable bar (a 4/4 creature)
+    await page.locator('.play-chip', { hasText: 'Serra Angel' }).hover()
+    const preview = page.locator('.card-preview')
+    await expect(preview).toBeVisible()
+    await expect(preview.locator('.card-preview-name')).toHaveText('Serra Angel')
+    await expect(preview.locator('.card-preview-pt')).toHaveText('4/4')
+    // moving away hides it
+    await page.locator('.playable-label').hover()
+    await expect(page.locator('.card-preview')).toHaveCount(0)
+  })
+
   test('snap-view buttons switch the active view', async ({ page }) => {
     await gotoScreen(page, 'game')
     const overview = page.getByRole('button', { name: 'Overview' })

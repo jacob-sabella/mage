@@ -31,6 +31,7 @@ const SKIP_BUTTONS = [
 ]
 
 export function GameTable({ game, prompt, interactive, log = [], onRespond, onLeave }: Props) {
+  const [preview, setPreview] = useState<CardType | null>(null)
   useEffect(() => {
     if (!interactive) return
     const onKey = (e: KeyboardEvent) => {
@@ -137,7 +138,8 @@ export function GameTable({ game, prompt, interactive, log = [], onRespond, onLe
         })}
       </div>
 
-      <Board3D game={game} cardProps={cardProps} />
+      <Board3D game={game} cardProps={cardProps} onHoverCard={setPreview} />
+      <CardPreview card={preview} />
 
       {game.combat.length > 0 && (
         <div className="combat-panel panel">
@@ -160,7 +162,7 @@ export function GameTable({ game, prompt, interactive, log = [], onRespond, onLe
       {/* DOM affordance to play/select cards by name (the 3D meshes are also
           clickable, but this is easier and keeps the action accessible). */}
       {interactive && prompt?.kind === 'select' && (
-        <PlayableBar game={game} onRespond={onRespond} />
+        <PlayableBar game={game} onRespond={onRespond} onHoverCard={setPreview} />
       )}
 
       {interactive && prompt && <ActionBar prompt={prompt} onRespond={onRespond} />}
@@ -187,7 +189,15 @@ function ManaPool({ pool }: { pool: string }) {
   )
 }
 
-function PlayableBar({ game, onRespond }: { game: GameState; onRespond: (kind: RespondKind, value?: string) => void }) {
+function PlayableBar({
+  game,
+  onRespond,
+  onHoverCard,
+}: {
+  game: GameState
+  onRespond: (kind: RespondKind, value?: string) => void
+  onHoverCard?: (c: CardType | null) => void
+}) {
   const byId: Record<string, CardType> = {}
   game.myHand.forEach((c) => (byId[c.id] = c))
   game.players.forEach((p) => p.battlefield.forEach((c) => (byId[c.id] = c)))
@@ -197,10 +207,54 @@ function PlayableBar({ game, onRespond }: { game: GameState; onRespond: (kind: R
     <div className="playable-bar panel">
       <span className="muted playable-label">Play / activate:</span>
       {playable.map((c) => (
-        <button key={c.id} className="btn play-chip" onClick={() => onRespond('uuid', c.id)}>
+        <button
+          key={c.id}
+          className="btn play-chip"
+          onClick={() => onRespond('uuid', c.id)}
+          onMouseEnter={() => onHoverCard?.(c)}
+          onMouseLeave={() => onHoverCard?.(null)}
+        >
           {c.name}
         </button>
       ))}
+    </div>
+  )
+}
+
+/** A large, fully-readable card panel shown while hovering a card (3D or the
+ *  playable bar): art + name + mana cost + type line + P/T or loyalty. */
+function CardPreview({ card }: { card: CardType | null }) {
+  if (!card) return null
+  const cost = (card.manaCost?.match(/\{([^}]+)\}/g) ?? []).map((s) => s.slice(1, -1))
+  const img = `/api/cardimg?set=${encodeURIComponent(card.set ?? '')}&num=${encodeURIComponent(
+    card.num ?? '',
+  )}&name=${encodeURIComponent(card.name)}`
+  const isCreature = (card.types ?? []).some((t) => /creature/i.test(t))
+  const isPw = (card.types ?? []).some((t) => /planeswalker/i.test(t))
+  const pt = isCreature && card.power != null && card.toughness != null ? `${card.power}/${card.toughness}` : null
+  const loy = isPw && card.loyalty != null ? `Loyalty ${card.loyalty}` : null
+  return (
+    <div className="card-preview" role="dialog" aria-label={`Card: ${card.name}`}>
+      <img
+        className="card-preview-img"
+        src={img}
+        alt={card.name}
+        onError={(e) => ((e.currentTarget.style.visibility = 'hidden'))}
+      />
+      <div className="card-preview-info">
+        <div className="card-preview-head">
+          <span className="card-preview-name">{card.name}</span>
+          <span className="card-preview-cost">
+            {cost.map((s, i) => (
+              <span key={i} className="mana-pip" style={{ background: MANA_COLOR[s] ?? '#9aa0ad' }}>
+                {s}
+              </span>
+            ))}
+          </span>
+        </div>
+        <div className="card-preview-type muted">{(card.types ?? []).join(' ')}</div>
+        {(pt || loy) && <div className="card-preview-pt">{pt ?? loy}</div>}
+      </div>
     </div>
   )
 }
