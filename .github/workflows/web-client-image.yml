@@ -6,7 +6,7 @@ name: web-client image
 
 on:
   push:
-    branches: ["master"]
+    branches: ["master", "vibe/xmage-claude-react-ui"]
     tags: ["v*"]
     paths:
       - "Mage.Client.Web/**"
