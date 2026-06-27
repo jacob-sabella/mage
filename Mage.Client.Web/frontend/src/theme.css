@@ -521,3 +521,13 @@ input::placeholder { color: var(--text-dim); }
   z-index: 2;            /* covers the text fallback when the image loads */
   border-radius: inherit;
 }
+
+/* ----- targetable player (starting player / player-targeting spells) ----- */
+.player-bar.targetable {
+  cursor: crosshair;
+  border-radius: 9px;
+  margin: -4px -6px 6px;
+  padding: 4px 6px;
+  box-shadow: 0 0 0 2px var(--accent);
+  animation: pulse-target 1.1s ease-in-out infinite;
+}

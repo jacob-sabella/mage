@@ -91,7 +91,18 @@ export function GameTable({ game, prompt, interactive, onRespond, onLeave }: Pro
 
       <div className="game-board">
         {game.players.map((p) => (
-          <PlayerArea key={p.id} player={p} active={p.name === game.activePlayer} cardProps={cardProps} />
+          <PlayerArea
+            key={p.id}
+            player={p}
+            active={p.name === game.activePlayer}
+            cardProps={cardProps}
+            // during a target/select decision a player can be the target
+            onTarget={
+              interactive && prompt && (prompt.kind === 'target' || prompt.kind === 'select')
+                ? () => onRespond('uuid', p.id)
+                : undefined
+            }
+          />
         ))}
       </div>
 
@@ -122,14 +133,20 @@ function PlayerArea({
   player,
   active,
   cardProps,
+  onTarget,
 }: {
   player: GamePlayer
   active: boolean
   cardProps: (c: CardType) => { highlight?: 'play' | 'target'; onClick?: (c: CardType) => void }
+  onTarget?: () => void
 }) {
   return (
     <div className={`player-area${active ? ' active' : ''}`}>
-      <div className="player-bar">
+      <div
+        className={`player-bar${onTarget ? ' targetable' : ''}`}
+        onClick={onTarget}
+        title={onTarget ? `Target ${player.name}` : undefined}
+      >
         <span className="player-name">{player.name}</span>
         <motion.span
           className="life"
