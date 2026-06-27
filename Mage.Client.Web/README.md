@@ -1,4 +1,4 @@
-# Mage.Client.Web — modern web client (work in progress)
+# Mage.Client.Web — modern web client
 
 A ground-up, browser-based UI for XMage, intended to eventually replace the
 legacy Swing client (`Mage.Client`).
@@ -25,32 +25,56 @@ functionality remains reachable — only the presentation layer is new.
 
 ## API
 
-| Method | Path                 | Body / query                          | Result            |
-|--------|----------------------|---------------------------------------|-------------------|
-| POST   | `/api/connect`       | `{host, port, username}`              | `{token, server}` |
-| GET    | `/api/tables`        | `?token=…`                            | `[TableDto]`      |
-| POST   | `/api/chat`          | `{token, message}`                    | `{ok}`            |
-| POST   | `/api/watch`         | `{token, gameId}`                     | `{ok}` (board via WS) |
-| POST   | `/api/join`          | `{token, tableId, deckPath}`          | `{ok}` (start via WS) |
-| POST   | `/api/game/respond`  | `{token, gameId, kind, value}`        | `{ok}`            |
-| POST   | `/api/disconnect`    | `{token}`                             | `{ok}`            |
-| WS     | `/ws`                | `?token=…`                            | server push events|
+| Method | Path                 | Body / query                          | Result                 |
+|--------|----------------------|---------------------------------------|------------------------|
+| POST   | `/api/connect`       | `{host, port, username}`              | `{token, server}`      |
+| GET    | `/api/session`       | `?token=…`                            | `{ok, server}` (resume)|
+| GET    | `/api/tables`        | `?token=…`                            | `[TableDto]`           |
+| GET    | `/api/matches`       | `?token=…`                            | `[MatchDto]` (history) |
+| POST   | `/api/chat`          | `{token, message}`                    | `{ok}`                 |
+| POST   | `/api/watch`         | `{token, gameId}`                     | `{ok}` (board via WS)  |
+| POST   | `/api/join`          | `{token, tableId, deckPath}`          | `{ok}` (start via WS)  |
+| POST   | `/api/tables/create` | `{token, deckPath}`                   | `{ok, tableId}` (vs AI)|
+| POST   | `/api/game/respond`  | `{token, gameId, kind, value}`        | `{ok}`                 |
+| GET    | `/api/cards/search`  | `?q=&colors=&type=&cmc=`              | `[CardInfoDto]`        |
+| GET    | `/api/cardimg`       | `?set=&num=&name=`                     | image/jpeg (real art)  |
+| GET    | `/api/decks/load`    | `?path=…`                             | `{name, cards, sideboard}` |
+| POST   | `/api/decks/save`    | `{name, cards, path?}`                | `{ok, path}`           |
+| POST   | `/api/disconnect`    | `{token}`                             | `{ok}`                 |
+| WS     | `/ws`                | `?token=…`                            | server push events     |
 
 WebSocket frames: `chat`, `game` (board + optional decision `prompt`),
-`gameStart` (a joined match began), `message` / `error` / `event`.
+`gameStart`, `log` (game narration), `message` / `error` / `event`.
 `respond` kinds: `boolean`, `uuid`, `integer`, `string`, `action`, `concede`.
+Decision prompts (`PromptDto.kind`): `ask` · `select` (priority; Pass=false,
+Done=true) · `target` (cards **and** players) · `amount` · `choice`
+(`choiceKind` string|uuid) · `generic`. The action kind sends a
+`PlayerAction` (skip/stops, e.g. `PASS_PRIORITY_UNTIL_MY_NEXT_TURN`).
 
-## What's implemented so far (vertical slice)
+## Implemented
 
-- Gateway (`WebClientApp`) on embedded Jetty (via Javalin) — REST + WebSocket.
-- Real connection layer reusing the shared `Session`.
-- **Login / connect** screen → opens a real upstream session.
-- **Lobby** screen → lists live tables from `Session.getTables(...)`.
-- WebSocket relays upstream messages/events to the browser (live event log).
-- React + Vite + TypeScript frontend with an Obsidian dark design system.
+- **Connect** — official-server presets (Beta/US/EU/EU2/Local); real server
+  errors surfaced (e.g. version mismatch). **Session resume** across refresh.
+- **Lobby** — live tables (Watch / Join), **New game vs AI** (Freeform
+  Commander, seats a `COMPUTER_MAD` opponent + you, starts the match), room
+  **chat**, **match history**.
+- **Game** — live board (players/life/zones, hand, stack, **combat display**),
+  real **card art** from a desktop client's image cache. Interactive play:
+  priority (play/Pass/Done), targets (cards **and** players), mulligan, choices,
+  amounts, **ability-picker**, discard, concede. **Game log**. **Skip/stops**
+  bar with F2/F4/F6/F9/F10 shortcuts (`PlayerAction` passes).
+- **Deck editor** — card **search with filters** (color/type/cmc), build with
+  quantities, **stats** (mana curve, color pips, type counts), **sideboard**,
+  **open** an existing `.dck`, and **save** to `.dck`.
+- **Look & feel** — Obsidian dark theme, three.js particle backdrop,
+  framer-motion card motion (shared-element zone transitions).
 
-These establish the architecture every later screen (deck editor, game table,
-draft, tournaments, chat) plugs into.
+### Critical detail
+
+Callback payloads are compressed: `WebMageClient.onCallback` must call
+`callback.decompressData()` before `getData()`, or every game-state callback
+throws `IllegalStateException: Client data must be decompressed first` and the
+board/prompts never reach the browser.
 
 ## Project layout
 
@@ -74,7 +98,7 @@ npm run build          # → ../src/main/resources/web
 ```
 
 For fast UI iteration, run the gateway (below) and the Vite dev server, which
-proxies `/api` and `/ws` to the gateway on :8080:
+proxies `/api` and `/ws` to the gateway on :8090:
 
 ```bash
 cd frontend && npm run dev      # http://localhost:5173
@@ -84,36 +108,44 @@ cd frontend && npm run dev      # http://localhost:5173
 
 Targets **Java 17** (Javalin/Jetty need 11+), while the rest of the project
 still compiles to Java 8, so it's kept out of the default reactor behind the
-`web-client` profile:
+`web-client` profile.
+
+**JBoss Remoting + Java serialization needs `--add-opens` on Java 9+** — without
+them, login fails with `Unable to make ... java.io.ObjectOutputStream.clear()
+accessible`. The provided script sets them:
 
 ```bash
-# compile
-mvn -Pweb-client -pl Mage.Client.Web -am compile
-
-# run the gateway + UI (defaults to port 8080, or set MAGE_WEB_PORT)
-mvn -Pweb-client -pl Mage.Client.Web -am exec:java
+# build + run with the required --add-opens (default port 8090)
+./Mage.Client.Web/run-web.sh [port]
 ```
 
-Then open <http://localhost:8080> and connect to a running XMage server
-(default `localhost:17171`).
+Optionally set `MAGE_IMAGE_DIR` to a desktop client's image cache
+(`.../mage-client/plugins/images`) for real card art. Then open
+<http://localhost:8090> and connect (default server `localhost:17171`).
+
+The card search / deck load / image features use the engine's local
+`CardRepository`; point the gateway's working dir at a populated `db/` (e.g.
+copy a server's `db/cards.h2.mv.db`) or it returns empty results.
 
 ## Roadmap
 
-1. ✅ Gateway + connection + lobby vertical slice
-2. ✅ Live chat (shared `ChatSession`)
-3. ✅ Game table — spectate a live `GameView` (board, stack, phase)
-4. ✅ Interactive play — join a table with a deck; priority / target / choice /
-   amount decisions over the WebSocket, responses via `/api/game/respond`
-5. Richer board: hand/graveyard/exile zones, combat arrows, card images
-6. Deck editor (pairs with table creation + deck management)
-7. Draft / sealed / tournament rooms; preferences, profile
+Done: connect + presets + resume · lobby + chat + match history · spectate ·
+create-game-vs-AI · interactive play (priority/target incl. players/mulligan/
+choice/amount/ability-picker/discard/concede) · skip/stops + F-keys · combat
+display · game log · card art · deck editor (search+filters/build/stats/
+sideboard/open/save) · 3D + motion.
+
+Not yet: replay playback (needs server history enabled) · tournaments
+(draft/sealed) · profile/avatar · preferences persistence · reconnect
+mid-game. Combat/scry/mana ergonomics want live playtesting.
 
 ### Notes on interactive play
 
-- Decisions arrive as a `prompt` on the `game` WS frame and are projected by
-  `PromptDto` (`ask` / `select` / `target` / `amount` / `choice` / `generic`).
-- `/api/join` loads a `.dck` via the engine's `DeckImporter`; `deckPath` is a
-  path on the **server** (gateway) host. The default sample deck is
-  `Mage.Client/release/sample-decks/AI/FastRedHaste.dck`.
-- Mana payment, pile, and ability-pick prompts currently render as generic
-  (cancellable) prompts; dedicated controls are a follow-up.
+- Decisions arrive as a `prompt` on the `game` WS frame, projected by
+  `PromptDto`. Cards and players are clickable targets; the action bar adapts
+  to the prompt kind.
+- `/api/join` and `/api/tables/create` load a `.dck` via the engine's
+  `DeckImporter`; `deckPath` is a path on the **gateway** host.
+- Mana payment maps to click-a-source (target). Pile / multi-amount prompts
+  still render as generic (cancellable) prompts; dedicated controls are a
+  follow-up.
