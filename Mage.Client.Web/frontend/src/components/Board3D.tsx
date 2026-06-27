@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Html } from '@react-three/drei'
+import { Grid, Html } from '@react-three/drei'
 import * as THREE from 'three'
 import type { GameCard, GamePlayer, GameState } from '../types'
 
@@ -12,8 +12,8 @@ function manaSymbols(cost?: string | null): string[] {
 const MANA_PIP: Record<string, string> = { W: '#e9e3c0', U: '#4a90e2', B: '#6b5b73', R: '#e0555f', G: '#3aa55f' }
 const isType = (c: GameCard, re: RegExp) => (c.types ?? []).some((t) => re.test(t))
 
-const CARD_W = 1
-const CARD_H = 1.4
+const CARD_W = 1.2
+const CARD_H = 1.68
 const COLOR_BG: Record<string, string> = { W: '#cfc9a8', U: '#3b6ea5', B: '#3a3340', R: '#a53b3b', G: '#3a7a52' }
 
 function bg(colors?: string | null) {
@@ -126,13 +126,22 @@ function Card3D({
   const rot: [number, number, number] = standing
     ? [0, 0, 0]
     : [-Math.PI / 2, 0, card.tapped ? -Math.PI / 2 : 0]
-  const lift = hover ? 0.35 : 0
-  const glow = highlight === 'play' ? '#2dd4bf' : highlight === 'target' ? '#5b8cff' : '#000'
+  const lift = hover ? 0.7 : 0
+  const scale = hover ? 1.35 : 1
+  const glow = highlight === 'play' ? '#21e6ff' : highlight === 'target' ? '#ff2e97' : '#ffffff'
+  const yFace = lift + (standing ? CARD_H / 2 : 0.02)
 
   return (
     <group position={position}>
+      {/* glowing backing plate for highlighted (playable/targetable) or hovered cards */}
+      {(highlight || hover) && (
+        <mesh position={[0, lift + (standing ? CARD_H / 2 : 0.012), standing ? -0.01 : 0]} rotation={rot} scale={scale}>
+          <planeGeometry args={[CARD_W * 1.12, CARD_H * 1.1]} />
+          <meshBasicMaterial color={glow} transparent opacity={hover ? 0.85 : 0.55} toneMapped={false} />
+        </mesh>
+      )}
       <mesh
-        position={[0, lift + (standing ? CARD_H / 2 : 0.01), 0]}
+        position={[0, yFace, 0]}
         rotation={rot}
         onPointerOver={(e) => {
           e.stopPropagation()
@@ -151,25 +160,13 @@ function Card3D({
               }
             : undefined
         }
-        scale={hover ? 1.12 : 1}
+        scale={scale}
       >
         <planeGeometry args={[CARD_W, CARD_H]} />
-        <meshStandardMaterial
-          map={tex}
-          color="#ffffff"
-          side={THREE.DoubleSide}
-          emissive={glow}
-          emissiveIntensity={highlight ? (hover ? 0.9 : 0.55) : 0}
-          roughness={0.7}
-          metalness={0.05}
-        />
+        {/* unlit + toneMapped off → card art shows at full, vivid, readable colour
+            instead of being washed out by the scene lighting */}
+        <meshBasicMaterial map={tex} color="#ffffff" side={THREE.DoubleSide} toneMapped={false} />
       </mesh>
-      {highlight && (
-        <mesh position={[0, 0.005, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[CARD_W * 0.75, CARD_W * 0.92, 32]} />
-          <meshBasicMaterial color={glow} transparent opacity={0.5} side={THREE.DoubleSide} />
-        </mesh>
-      )}
 
       {/* crisp DOM indicators anchored to the card — readable at any zoom/angle */}
       {isType(card, /creature/i) && card.power != null && card.toughness != null && (
@@ -214,7 +211,7 @@ function Card3D({
 }
 
 /** Lay a row of cards centered at (cx, cz) along X. */
-function row(cards: GameCard[], cx: number, cz: number, gap = 1.15) {
+function row(cards: GameCard[], cx: number, cz: number, gap = 1.45) {
   const w = (cards.length - 1) * gap
   return cards.map((c, i) => ({ card: c, pos: [cx - w / 2 + i * gap, 0, cz] as [number, number, number] }))
 }
@@ -281,17 +278,19 @@ export function Board3D({
       const sign = s.z > 0 ? 1 : -1
       return {
         name: s.player.name,
+        // lower, closer angle than a top-down view so cards face the camera and
+        // their art/text is large and readable
         target: {
-          pos: new THREE.Vector3(0, 7.2, s.z + sign * 8),
-          look: new THREE.Vector3(0, 0, s.z + sign * 1.5),
+          pos: new THREE.Vector3(0, 5.4, s.z + sign * 7.4),
+          look: new THREE.Vector3(0, 0, s.z + sign * 0.6),
         },
       }
     }),
   ]
   const [view, setView] = useState(1) // default: behind the viewer
 
-  const hand = useMemo(() => row(game.myHand, 0, 6.2, 1.2), [game.myHand])
-  const stack = useMemo(() => row(game.stack, 0, 0, 1.1), [game.stack])
+  const hand = useMemo(() => row(game.myHand, 0, 5.9, 1.42), [game.myHand])
+  const stack = useMemo(() => row(game.stack, 0, 0.6, 1.4), [game.stack])
 
   return (
     <div className="board3d">
@@ -309,24 +308,49 @@ export function Board3D({
       </div>
       <Canvas
         shadows
-        camera={{ position: [0, 7.2, 10.6], fov: 50 }}
-        dpr={[1, 1.8]}
+        camera={{ position: [0, 5.4, 10 ], fov: 46 }}
+        dpr={[1, 2]}
         gl={{ antialias: true }}
       >
-        <color attach="background" args={['#0e1016']} />
-        <fog attach="fog" args={['#0e1016', 16, 30]} />
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[4, 10, 6]} intensity={1.1} castShadow />
-        <directionalLight position={[-6, 6, -4]} intensity={0.4} color="#5b8cff" />
+        {/* synthwave night: deep purple, neon magenta key + cyan fill */}
+        <color attach="background" args={['#0a0118']} />
+        <fog attach="fog" args={['#0a0118', 26, 62]} />
+        <ambientLight intensity={0.85} />
+        <directionalLight position={[4, 11, 6]} intensity={0.9} color="#ff4fb0" castShadow />
+        <directionalLight position={[-6, 7, -4]} intensity={0.55} color="#21e6ff" />
+        <pointLight position={[0, 6, 4]} intensity={0.5} color="#ff2e97" distance={26} />
 
-        {/* table */}
+        {/* neon grid floor stretching to the horizon */}
+        <Grid
+          position={[0, -0.05, 0]}
+          args={[60, 60]}
+          cellSize={1.4}
+          cellThickness={1}
+          cellColor="#7a2c9e"
+          sectionSize={7}
+          sectionThickness={1.5}
+          sectionColor="#ff2e97"
+          fadeDistance={42}
+          fadeStrength={2}
+          infiniteGrid
+        />
+
+        {/* play surface: a dark glassy pad with a neon perimeter */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]} receiveShadow>
-          <planeGeometry args={[16, 13]} />
-          <meshStandardMaterial color="#16321f" roughness={0.95} />
+          <planeGeometry args={[15, 11.5]} />
+          <meshStandardMaterial color="#150a30" roughness={0.6} metalness={0.2} transparent opacity={0.92} />
+        </mesh>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.012, 0]}>
+          <circleGeometry args={[5.2, 64]} />
+          <meshBasicMaterial color="#21e6ff" transparent opacity={0.06} toneMapped={false} />
         </mesh>
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
-          <ringGeometry args={[4.6, 4.85, 64]} />
-          <meshBasicMaterial color="#2dd4bf" transparent opacity={0.18} />
+          <ringGeometry args={[5.05, 5.2, 96]} />
+          <meshBasicMaterial color="#ff2e97" transparent opacity={0.7} toneMapped={false} />
+        </mesh>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.008, 0]}>
+          <ringGeometry args={[3.0, 3.08, 96]} />
+          <meshBasicMaterial color="#21e6ff" transparent opacity={0.45} toneMapped={false} />
         </mesh>
 
         {seats.map((s) => (

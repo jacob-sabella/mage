@@ -4,7 +4,7 @@ import { TopBar } from './components/TopBar'
 import { LoginView } from './components/LoginView'
 import { LobbyView } from './components/LobbyView'
 import { DeckEditor } from './components/DeckEditor'
-import { usePrefs } from './prefs'
+import { usePrefs, THEMES } from './prefs'
 import type { Session } from './types'
 import './theme.css'
 
@@ -25,6 +25,24 @@ function SettingsView() {
       <div className="panel settings-card">
         <h1 className="h1">Preferences</h1>
         <p className="subtitle">Stored in this browser.</p>
+        <div className="setting-row">
+          <span>
+            <strong>Theme</strong>
+            <span className="muted setting-hint">Neon colour palette</span>
+          </span>
+          <div className="theme-picker">
+            {THEMES.map((t) => (
+              <button
+                key={t.id}
+                className={`theme-swatch t-${t.id}${prefs.theme === t.id ? ' active' : ''}`}
+                onClick={() => setPref('theme', t.id)}
+                title={t.label}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
         <label className="setting-row">
           <span>
             <strong>Card images</strong>

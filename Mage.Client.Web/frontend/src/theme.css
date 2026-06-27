@@ -1,22 +1,49 @@
 /*
- * Obsidian - design system for the modern XMage web client.
- * Deep-slate dark theme with indigo / cyan accents.
+ * NEON GRID - a synthwave / neo-MTG design system for the XMage web client.
+ * Deep-purple night, neon magenta + cyan, glow, and a perspective grid horizon.
+ * Switchable palettes via [data-theme] (Settings).
  */
+:root,
+[data-theme="synthwave"] {
+  --bg-deep: #0a0118;
+  --bg: #160a2eDD;
+  --bg-raised: #1f1142;
+  --bg-hover: #2c1a5c;
+  --stroke: #3a2168;
+  --accent: #ff2e97;        /* neon magenta */
+  --accent-2: #21e6ff;      /* neon cyan */
+  --accent-press: #e01f80;
+  --text: #f3e9ff;
+  --text-dim: #b29ad6;
+  --danger: #ff476f;
+  --success: #21e6ff;
+  --grad-a: #1a0938;
+  --grad-b: #4a1170;
+  --grad-c: #ff2e97;
+}
+[data-theme="outrun"] {
+  --bg-deep: #120516; --bg: #1c0a22DD; --bg-raised: #2a0f33; --bg-hover: #3a1646; --stroke: #4a1f55;
+  --accent: #ff7a18; --accent-2: #af4bff; --accent-press: #e86200;
+  --text: #ffeede; --text-dim: #d6a98f; --danger: #ff476f; --success: #ffb84d;
+  --grad-a: #2a0a2e; --grad-b: #7a1f4a; --grad-c: #ff7a18;
+}
+[data-theme="cyber"] {
+  --bg-deep: #03120f; --bg: #061f1aDD; --bg-raised: #082a22; --bg-hover: #0c3a2f; --stroke: #114a3a;
+  --accent: #39ff9e; --accent-2: #00e5ff; --accent-press: #21d683;
+  --text: #e3fff4; --text-dim: #8fd6bf; --danger: #ff5b6b; --success: #39ff9e;
+  --grad-a: #04221a; --grad-b: #0a4a3a; --grad-c: #00e5ff;
+}
+[data-theme="vapor"] {
+  --bg-deep: #0e0820; --bg: #190f33DD; --bg-raised: #221546; --bg-hover: #2f2060; --stroke: #3a2a66;
+  --accent: #ff6ad5; --accent-2: #26d9c3; --accent-press: #e85bbf;
+  --text: #f6ecff; --text-dim: #c2a9e0; --danger: #ff6a8a; --success: #26d9c3;
+  --grad-a: #1a1242; --grad-b: #5a2a8a; --grad-c: #ff6ad5;
+}
+
 :root {
-  --bg-deep: #16181d;
-  --bg: #1c1f26;
-  --bg-raised: #222630;
-  --bg-hover: #2a2f3b;
-  --stroke: #303644;
-  --accent: #5b8cff;
-  --accent-2: #2dd4bf;
-  --accent-press: #4577ef;
-  --text: #e2e6ee;
-  --text-dim: #99a1b3;
-  --danger: #e0555f;
-  --success: #4ec98a;
   --radius: 14px;
   --radius-sm: 9px;
+  --glow: 0 0 14px;
 }
 
 * { box-sizing: border-box; }
@@ -29,13 +56,37 @@ html, body, #root {
 #root {
   display: flex;
   flex-direction: column;
+  position: relative;
+  z-index: 0;
 }
 
 body {
-  background: radial-gradient(1200px 600px at 70% -10%, #1b2030 0%, var(--bg-deep) 60%);
+  background:
+    radial-gradient(70% 42% at 50% 6%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 62%),
+    linear-gradient(180deg, var(--grad-a) 0%, var(--grad-b) 58%, var(--bg-deep) 100%);
+  background-attachment: fixed;
   color: var(--text);
   font-family: "Segoe UI", Roboto, "Helvetica Neue", system-ui, sans-serif;
   font-size: 14px;
+}
+
+/* glowing perspective grid along the horizon */
+body::after {
+  content: "";
+  position: fixed;
+  left: -25%;
+  right: -25%;
+  bottom: 0;
+  height: 42vh;
+  pointer-events: none;
+  z-index: -1;
+  background-image:
+    repeating-linear-gradient(to right, color-mix(in srgb, var(--accent) 55%, transparent) 0 2px, transparent 2px 64px),
+    repeating-linear-gradient(to bottom, color-mix(in srgb, var(--accent-2) 45%, transparent) 0 2px, transparent 2px 64px);
+  transform: perspective(40vh) rotateX(72deg);
+  transform-origin: bottom center;
+  mask-image: linear-gradient(to top, #000 0%, transparent 90%);
+  opacity: 0.35;
 }
 
 .spacer { flex: 1; }
@@ -754,8 +805,8 @@ input::placeholder { color: var(--text-dim); }
 
 /* ----- hover card preview (large, readable) ----- */
 .card-preview {
-  position: fixed; left: 24px; top: 150px; z-index: 50; width: 250px;
-  background: var(--bg); border: 1px solid var(--stroke); border-radius: var(--radius);
+  position: fixed; left: 24px; top: 130px; z-index: 50; width: 320px;
+  background: var(--bg); border: 1px solid var(--accent-2); border-radius: var(--radius);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65); overflow: hidden; pointer-events: none;
 }
 .card-preview-img { width: 100%; display: block; background: #11141b; min-height: 110px; }
@@ -808,3 +859,83 @@ input::placeholder { color: var(--text-dim); }
 .game-over-card { padding: 28px 34px; text-align: center; display: flex; flex-direction: column; gap: 14px; min-width: 320px; }
 .game-over-title { font-size: 24px; font-weight: 800; }
 .game-over-msg { font-size: 16px; color: var(--text-dim); }
+
+/* ----- turn / phase progression ----- */
+.turn-label { font-size: 15px; }
+.turn-label b { font-size: 16px; color: var(--text); }
+.prio-chip {
+  font-size: 12px; font-weight: 700; padding: 5px 13px; border-radius: 20px;
+  background: var(--bg-raised); color: var(--text-dim);
+}
+.prio-chip.you { background: rgba(45, 212, 191, 0.18); color: var(--accent-2); box-shadow: inset 0 0 0 1px var(--accent-2); }
+
+.phase-track { display: flex; align-items: center; gap: 5px; }
+.phase-seg {
+  flex: 1; text-align: center; font-size: 12px; font-weight: 700; letter-spacing: 0.3px;
+  padding: 8px 6px; border-radius: 9px; color: var(--text-dim);
+  background: var(--bg); border: 1px solid var(--stroke);
+  transition: background 0.25s, color 0.25s, box-shadow 0.25s;
+}
+.phase-seg.past { color: var(--text); opacity: 0.55; }
+.phase-seg.active {
+  color: #06120d; background: var(--accent-2); border-color: transparent;
+  box-shadow: 0 0 18px rgba(45, 212, 191, 0.55);
+}
+.phase-step { margin-left: 6px; font-size: 12px; white-space: nowrap; flex-shrink: 0; }
+
+/* ===== synthwave neon glow pass ===== */
+.h1, .brand-name { text-shadow: 0 0 16px color-mix(in srgb, var(--accent) 60%, transparent); }
+.brand-accent { text-shadow: 0 0 14px color-mix(in srgb, var(--accent-2) 70%, transparent); }
+.brand-dot { background: var(--accent); box-shadow: 0 0 16px var(--accent), 0 0 4px #fff; }
+
+.panel {
+  background: var(--bg);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--stroke));
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5), inset 0 0 0 1px color-mix(in srgb, var(--accent-2) 8%, transparent);
+  backdrop-filter: blur(7px);
+}
+
+.btn { backdrop-filter: blur(4px); }
+.btn.primary {
+  background: linear-gradient(180deg, var(--accent), var(--accent-press));
+  color: #fff;
+  box-shadow: var(--glow) color-mix(in srgb, var(--accent) 65%, transparent), inset 0 1px 0 rgba(255,255,255,0.25);
+  text-shadow: 0 0 8px rgba(0,0,0,0.4);
+}
+.btn.primary:hover {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 85%, #fff), var(--accent));
+  box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 85%, transparent);
+}
+.btn.primary:active { background: var(--accent-press); }
+.btn:hover { border-color: color-mix(in srgb, var(--accent) 40%, var(--stroke)); }
+
+input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent), 0 0 14px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.conn-pill.online { background: color-mix(in srgb, var(--accent-2) 18%, transparent); color: var(--accent-2); box-shadow: var(--glow) color-mix(in srgb, var(--accent-2) 40%, transparent); }
+.chip { background: color-mix(in srgb, var(--accent-2) 16%, transparent); color: var(--accent-2); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-2) 35%, transparent); }
+.prio-chip.you { box-shadow: inset 0 0 0 1px var(--accent-2), var(--glow) color-mix(in srgb, var(--accent-2) 45%, transparent); }
+.phase-seg.active { box-shadow: 0 0 20px color-mix(in srgb, var(--accent-2) 60%, transparent); }
+.phase-pill { color: var(--accent); }
+
+.topbar { background: color-mix(in srgb, var(--bg-deep) 70%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--accent) 22%, var(--stroke)); backdrop-filter: blur(8px); }
+
+/* nav tabs / table hovers pick up the neon accent */
+.data-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.board3d { border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--stroke)); box-shadow: inset 0 0 60px color-mix(in srgb, var(--accent) 8%, transparent); }
+.action-bar.panel { border-color: color-mix(in srgb, var(--accent) 45%, var(--stroke)); box-shadow: 0 -8px 30px color-mix(in srgb, var(--accent) 14%, transparent); }
+
+/* ----- theme picker ----- */
+.theme-picker { display: flex; gap: 8px; flex-wrap: wrap; }
+.theme-swatch {
+  padding: 8px 12px; border-radius: var(--radius-sm); cursor: pointer;
+  font-size: 12px; font-weight: 700; color: #fff; border: 2px solid transparent;
+  text-shadow: 0 0 6px rgba(0,0,0,0.5);
+}
+.theme-swatch.active { border-color: #fff; box-shadow: 0 0 14px currentColor; }
+.theme-swatch.t-synthwave { background: linear-gradient(120deg, #ff2e97, #21e6ff); }
+.theme-swatch.t-outrun { background: linear-gradient(120deg, #ff7a18, #af4bff); }
+.theme-swatch.t-cyber { background: linear-gradient(120deg, #39ff9e, #00e5ff); color: #04221a; }
+.theme-swatch.t-vapor { background: linear-gradient(120deg, #ff6ad5, #26d9c3); }

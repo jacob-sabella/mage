@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { motion } from 'framer-motion'
 import { Board3D } from './Board3D'
 import type { RespondKind } from '../api'
 import { plain } from '../text'
@@ -78,19 +77,16 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
         <button className="btn ghost" onClick={onLeave}>
           ← Back to lobby
         </button>
-        <span className="chip">Turn {game.turn}</span>
-        <motion.span
-          className="phase-pill"
-          key={`${game.phase}-${game.step}`}
-          initial={{ scale: 1.18, boxShadow: '0 0 18px rgba(91,140,255,0.6)' }}
-          animate={{ scale: 1, boxShadow: '0 0 0px rgba(91,140,255,0)' }}
-          transition={{ duration: 0.5 }}
-        >
-          {game.phase}
-          {game.step && game.step !== game.phase ? ` · ${game.step}` : ''}
-        </motion.span>
+        <span className="turn-label">
+          <b>Turn {game.turn}</b>
+          {game.activePlayer ? ` · ${game.activePlayer}'s turn` : ''}
+        </span>
         <span className="spacer" />
-        {game.priorityPlayer && <span className="muted">Priority: {game.priorityPlayer}</span>}
+        {game.priorityPlayer && (
+          <span className={`prio-chip${game.priorityPlayer === game.me ? ' you' : ''}`}>
+            {game.priorityPlayer === game.me ? 'Your priority' : `Priority: ${game.priorityPlayer}`}
+          </span>
+        )}
         {interactive && (
           <button
             className="btn ghost concede"
@@ -102,6 +98,9 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
           </button>
         )}
       </div>
+
+      <PhaseTrack phase={game.phase} step={game.step} />
+
 
       {interactive && (
         <div className="skip-bar">
@@ -436,6 +435,36 @@ function MultiAmountControl({ prompt, onRespond }: { prompt: Prompt; onRespond: 
       <button className="btn primary" disabled={!inRange} onClick={() => onRespond('string', vals.join(' '))}>
         OK
       </button>
+    </div>
+  )
+}
+
+const PHASE_SEGMENTS = ['Untap', 'Upkeep', 'Draw', 'Main 1', 'Combat', 'Main 2', 'End']
+function phaseIndex(phase?: string | null, step?: string | null): number {
+  const s = `${step || ''} ${phase || ''}`.toLowerCase()
+  if (/untap/.test(s)) return 0
+  if (/upkeep/.test(s)) return 1
+  if (/draw/.test(s)) return 2
+  if (/precombat main/.test(s)) return 3
+  if (/postcombat main/.test(s)) return 5
+  if (/combat|attack|block|damage/.test(s)) return 4
+  if (/end|cleanup/.test(s)) return 6
+  if (/main/.test(s)) return 3
+  return -1
+}
+
+/** A horizontal turn-structure track with the current step lit, so it's obvious
+ *  where in the turn we are. */
+function PhaseTrack({ phase, step }: { phase?: string | null; step?: string | null }) {
+  const idx = phaseIndex(phase, step)
+  return (
+    <div className="phase-track" aria-label="turn phase">
+      {PHASE_SEGMENTS.map((label, i) => (
+        <div key={label} className={`phase-seg${i === idx ? ' active' : i < idx ? ' past' : ''}`}>
+          {label}
+        </div>
+      ))}
+      {step && <span className="phase-step muted">{step}</span>}
     </div>
   )
 }
