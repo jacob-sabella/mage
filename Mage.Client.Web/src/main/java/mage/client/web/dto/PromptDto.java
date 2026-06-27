@@ -25,6 +25,7 @@ public class PromptDto {
     public int min;
     public int max;
     public List<ChoiceOption> choices = new ArrayList<>();
+    public String choiceKind = "string"; // how a chosen option is sent: string | uuid
     public List<String> targets = new ArrayList<>(); // already-selected target ids
 
     public static class ChoiceOption {
@@ -77,6 +78,21 @@ public class PromptDto {
                 dto.kind = "generic";
                 dto.canCancel = true;
                 break;
+        }
+        return dto;
+    }
+
+    /** Build from an ability-picker callback (choose which ability/mode). */
+    public static PromptDto fromAbilityPicker(mage.view.AbilityPickerView picker) {
+        PromptDto dto = new PromptDto();
+        dto.kind = "choice";
+        dto.choiceKind = "uuid"; // chosen option is an ability id sent as a UUID
+        dto.canCancel = true;
+        dto.message = picker.getMessage();
+        if (picker.getChoices() != null) {
+            for (Map.Entry<UUID, String> e : picker.getChoices().entrySet()) {
+                dto.choices.add(new ChoiceOption(e.getKey().toString(), e.getValue()));
+            }
         }
         return dto;
     }

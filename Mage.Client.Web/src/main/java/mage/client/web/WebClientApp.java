@@ -573,6 +573,12 @@ public class WebClientApp {
             pushGame(ctx, cb.getObjectId(), message.getGameView(), prompt);
             return;
         }
+        // choose an ability / mode (different payload type)
+        if (cb.getData() instanceof mage.view.AbilityPickerView) {
+            mage.view.AbilityPickerView picker = (mage.view.AbilityPickerView) cb.getData();
+            pushGame(ctx, cb.getObjectId(), picker.getGameView(), PromptDto.fromAbilityPicker(picker));
+            return;
+        }
         // live game state (spectating or our own board update): GAME_INIT / GAME_UPDATE
         if (cb.getData() instanceof GameView) {
             pushGame(ctx, cb.getObjectId(), (GameView) cb.getData(), null);

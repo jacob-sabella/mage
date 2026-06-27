@@ -241,7 +241,7 @@ function ActionBar({ prompt, onRespond }: { prompt: Prompt; onRespond: (kind: Re
       {prompt.kind === 'choice' && (
         <div className="choice-list">
           {prompt.choices.map((c) => (
-            <button key={c.key} className="btn" onClick={() => onRespond('string', c.key)}>
+            <button key={c.key} className="btn" onClick={() => onRespond(prompt.choiceKind ?? 'string', c.key)}>
               {c.label}
             </button>
           ))}

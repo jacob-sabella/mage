@@ -42,6 +42,7 @@ export interface Prompt {
   min: number
   max: number
   choices: PromptChoice[]
+  choiceKind?: 'string' | 'uuid'
   targets: string[]
 }
 
