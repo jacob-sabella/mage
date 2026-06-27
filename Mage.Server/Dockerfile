@@ -7,8 +7,10 @@
 FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /src
 COPY . .
+# the assembly plugin isn't bound to a phase, so invoke assembly:single explicitly
+# to produce target/mage-server.zip (lib/ + plugins/ + config/).
 RUN --mount=type=cache,target=/root/.m2 \
-    mvn -q -B -pl Mage.Server -am package -DskipTests && \
+    mvn -q -B -pl Mage.Server -am package assembly:single -DskipTests && \
     mkdir -p /dist && cd /dist && \
     jar xf /src/Mage.Server/target/mage-server.zip   # jar (JDK) avoids needing unzip
 

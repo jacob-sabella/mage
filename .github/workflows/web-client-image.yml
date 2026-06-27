@@ -10,6 +10,8 @@ on:
     tags: ["v*"]
     paths:
       - "Mage.Client.Web/**"
+      - "Mage.Server/**"
+      - "Mage.Sets/**"
       - "Mage.Common/**"
       - "Mage/**"
       - ".github/workflows/web-client-image.yml"
