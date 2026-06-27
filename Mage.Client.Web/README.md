@@ -149,6 +149,14 @@ deck picker, 3D board + status strip + snap-views, prompts (priority/mulligan/
 target/declare-attackers), the playable-cards bar, respond round-trip, deck
 editor, settings persistence.
 
+**Live smoke test** (`npm run smoke`, needs `ws` + a running gateway/server):
+`scripts/smoke-game.mjs` creates a real game vs AI and auto-plays it through the
+gateway, asserting the protocol loop survives every prompt kind and every combat
+phase (priority, mana payment, attackers, blockers, combat damage) with no
+respond errors. It's exploratory (its auto-play policy is best-effort, so depth
+varies) — the deterministic guarantee is the Playwright suite above; this is for
+flushing out real-server regressions.
+
 ## Roadmap
 
 Done: connect + presets + resume · lobby + chat + match history · spectate ·
