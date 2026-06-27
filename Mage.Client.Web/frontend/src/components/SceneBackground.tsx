@@ -3,6 +3,7 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { usePrefs, CHROMA_FAMILY } from '../prefs'
 import { FamilyBackdrop } from './backdrops'
+import { audioLevel } from '../audioReactive'
 
 /**
  * Synthwave backdrop: a glowing banded retro sun low on the horizon with a drift
@@ -48,8 +49,12 @@ export function SynthSun({
   size?: number
 }) {
   const tex = useMemo(makeSunTexture, [])
+  const groupRef = useRef<THREE.Group>(null)
+  useFrame(() => {
+    if (groupRef.current) groupRef.current.scale.setScalar(1 + audioLevel.level * audioLevel.glow * 0.12)
+  })
   return (
-    <group position={position}>
+    <group ref={groupRef} position={position}>
       {/* soft halo */}
       <mesh>
         <circleGeometry args={[size * 0.7, 64]} />
@@ -65,6 +70,7 @@ export function SynthSun({
 
 export function SynthStars({ count = 1400 }: { count?: number }) {
   const ref = useRef<THREE.Points>(null)
+  const matRef = useRef<THREE.PointsMaterial>(null)
   const { positions, colors } = useMemo(() => {
     const positions = new Float32Array(count * 3)
     const colors = new Float32Array(count * 3)
@@ -88,8 +94,14 @@ export function SynthStars({ count = 1400 }: { count?: number }) {
   useFrame((state, delta) => {
     const p = ref.current
     if (!p) return
-    p.rotation.y += delta * 0.012
+    const lvl = audioLevel.level * audioLevel.glow
+    p.rotation.y += delta * (0.012 + audioLevel.bass * audioLevel.glow * 0.03)
     p.rotation.x = Math.sin(state.clock.elapsedTime * 0.04) * 0.05
+    const m = matRef.current
+    if (m) {
+      m.opacity = Math.min(1, 0.9 + lvl * 0.1)
+      m.size = 0.13 * (1 + lvl * 0.6)
+    }
   })
 
   return (
@@ -99,6 +111,7 @@ export function SynthStars({ count = 1400 }: { count?: number }) {
         <bufferAttribute attach="attributes-color" args={[colors, 3]} />
       </bufferGeometry>
       <pointsMaterial
+        ref={matRef}
         size={0.13}
         vertexColors
         transparent

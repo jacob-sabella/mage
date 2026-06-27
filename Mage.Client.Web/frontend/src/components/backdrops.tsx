@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { BackdropKind } from '../prefs'
 import { SynthSun, SynthStars } from './SceneBackground'
+import { audioLevel } from '../audioReactive'
 
 /** Shared drifting-particle system. `dir` = +1 rise, -1 fall. */
 function Drift({
@@ -29,6 +30,7 @@ function Drift({
   opacity?: number
 }) {
   const ref = useRef<THREE.Points>(null)
+  const matRef = useRef<THREE.PointsMaterial>(null)
   const { positions, colorBuf, vel } = useMemo(() => {
     const positions = new Float32Array(count * 3)
     const colorBuf = new Float32Array(count * 3)
@@ -61,6 +63,7 @@ function Drift({
       if (dir < 0 && arr[i * 3 + 1] < yOffset) arr[i * 3 + 1] = top
     }
     p.geometry.attributes.position.needsUpdate = true
+    if (matRef.current) matRef.current.opacity = opacity * (1 + audioLevel.level * audioLevel.glow * 0.5)
   })
 
   return (
@@ -70,6 +73,7 @@ function Drift({
         <bufferAttribute attach="attributes-color" args={[colorBuf, 3]} />
       </bufferGeometry>
       <pointsMaterial
+        ref={matRef}
         size={size}
         vertexColors
         transparent
@@ -97,8 +101,10 @@ function Planet({
   ringColor?: string
 }) {
   const ref = useRef<THREE.Mesh>(null)
+  const matRef = useRef<THREE.MeshStandardMaterial>(null)
   useFrame((_, delta) => {
     if (ref.current) ref.current.rotation.y += delta * 0.05
+    if (matRef.current) matRef.current.emissiveIntensity = 0.12 + audioLevel.bass * audioLevel.glow * 0.5
   })
   return (
     <group position={position}>
@@ -109,7 +115,7 @@ function Planet({
       </mesh>
       <mesh ref={ref} castShadow>
         <sphereGeometry args={[size, 36, 36]} />
-        <meshStandardMaterial color={color} roughness={0.85} metalness={0.1} emissive={color} emissiveIntensity={0.12} />
+        <meshStandardMaterial ref={matRef} color={color} roughness={0.85} metalness={0.1} emissive={color} emissiveIntensity={0.12} />
       </mesh>
       {ring && (
         <mesh rotation={[Math.PI / 2.6, 0.2, 0]}>
@@ -123,8 +129,12 @@ function Planet({
 
 /** A simple glowing disc (moon/orb) high in the scene. */
 function Orb({ position, size, color, opacity = 0.5 }: { position: [number, number, number]; size: number; color: string; opacity?: number }) {
+  const ref = useRef<THREE.Group>(null)
+  useFrame(() => {
+    if (ref.current) ref.current.scale.setScalar(1 + audioLevel.level * audioLevel.glow * 0.1)
+  })
   return (
-    <group position={position}>
+    <group ref={ref} position={position}>
       <mesh>
         <circleGeometry args={[size * 1.5, 48]} />
         <meshBasicMaterial color={color} transparent opacity={opacity * 0.25} blending={THREE.AdditiveBlending} depthWrite={false} />

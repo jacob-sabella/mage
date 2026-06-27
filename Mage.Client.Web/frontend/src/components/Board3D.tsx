@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Grid, Html, OrbitControls } from '@react-three/drei'
 import { FamilyBackdrop } from './backdrops'
 import { usePrefs, CHROMA_FAMILY } from '../prefs'
+import { audioLevel } from '../audioReactive'
 
 // per-family in-game scene tint (background, fog, table, grid on/off)
 const SCENE: Record<string, { bg: string; table: string; ring: string; ring2: string; grid: boolean; gridA: string; gridB: string; key: string; fill: string }> = {
@@ -418,6 +419,28 @@ function CameraRig({ target }: { target: ViewTarget }) {
   return null
 }
 
+/** Pulses the family key + ring lights to the audio level (read from the shared
+ *  singleton each frame — no re-renders). Lives inside <Canvas> so useFrame runs. */
+function BoardAudioPulse({
+  keyRef,
+  ringRef,
+  baseKey,
+  baseRing,
+}: {
+  keyRef: RefObject<THREE.DirectionalLight | null>
+  ringRef: RefObject<THREE.PointLight | null>
+  baseKey: number
+  baseRing: number
+}) {
+  useFrame(() => {
+    const lvl = audioLevel.level * audioLevel.glow
+    const bass = audioLevel.bass * audioLevel.glow
+    if (keyRef.current) keyRef.current.intensity = baseKey * (1 + lvl * 0.4)
+    if (ringRef.current) ringRef.current.intensity = baseRing * (1 + bass * 0.9)
+  })
+  return null
+}
+
 type ViewMode = '3d' | '2d' | 'free'
 
 /** Radial fan menu for camera control: a mode ring (2D/3D/Free) plus, in 3D, a
@@ -499,6 +522,8 @@ export function Board3D({
   const { prefs } = usePrefs()
   const backdrop = CHROMA_FAMILY[prefs.theme]?.backdrop ?? 'vapor'
   const scene = SCENE[backdrop] ?? SCENE.vapor
+  const keyLightRef = useRef<THREE.DirectionalLight>(null)
+  const ringLightRef = useRef<THREE.PointLight>(null)
 
   // seat all players radially around the table (supports 2..N)
   const { seats, radius, spectating } = useMemo(() => seatPlayers(game.players, game.me), [game.players, game.me])
@@ -562,9 +587,10 @@ export function Board3D({
         <FamilyBackdrop kind={backdrop} inGame />
 
         <ambientLight intensity={0.85} />
-        <directionalLight position={[4, 11, 6]} intensity={0.9} color={scene.key} castShadow />
+        <directionalLight ref={keyLightRef} position={[4, 11, 6]} intensity={0.9} color={scene.key} castShadow />
         <directionalLight position={[-6, 7, -4]} intensity={0.55} color={scene.fill} />
-        <pointLight position={[0, 6, 4]} intensity={0.5} color={scene.ring} distance={26} />
+        <pointLight ref={ringLightRef} position={[0, 6, 4]} intensity={0.5} color={scene.ring} distance={26} />
+        <BoardAudioPulse keyRef={keyLightRef} ringRef={ringLightRef} baseKey={0.9} baseRing={0.5} />
 
         {/* floor: a neon grid for Vaporwave, plain for other families */}
         {scene.grid && (
