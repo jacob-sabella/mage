@@ -5,6 +5,13 @@ import io.javalin.Javalin;
 import io.javalin.http.Context;
 import io.javalin.http.staticfiles.Location;
 import io.javalin.websocket.WsContext;
+import mage.cards.decks.DeckCardInfo;
+import mage.cards.decks.DeckCardLists;
+import mage.cards.decks.exporter.XmageDeckExporter;
+import mage.cards.repository.CardCriteria;
+import mage.cards.repository.CardInfo;
+import mage.cards.repository.CardRepository;
+import mage.client.web.dto.CardInfoDto;
 import mage.client.web.dto.GameDto;
 import mage.client.web.dto.PromptDto;
 import mage.client.web.dto.TableDto;
@@ -17,6 +24,10 @@ import mage.view.GameClientMessage;
 import mage.view.GameView;
 import mage.view.TableClientMessage;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import java.util.LinkedHashMap;
@@ -90,6 +101,8 @@ public class WebClientApp {
         app.post("/api/watch", this::handleWatch);
         app.post("/api/join", this::handleJoin);
         app.post("/api/game/respond", this::handleRespond);
+        app.get("/api/cards/search", this::handleCardSearch);
+        app.post("/api/decks/save", this::handleDeckSave);
         app.post("/api/disconnect", this::handleDisconnect);
 
         app.ws("/ws", ws -> {
@@ -274,6 +287,111 @@ public class WebClientApp {
         ctx.json(conn.getTables().stream().map(TableDto::from).collect(Collectors.toList()));
     }
 
+    /**
+     * Search the engine's local card database. This runs entirely against the
+     * gateway's bundled {@link CardRepository}, so it needs no upstream session.
+     * The card DB may be empty (it's downloaded at runtime); we degrade to an
+     * empty result rather than failing.
+     */
+    private void handleCardSearch(Context ctx) {
+        String query = ctx.queryParam("q");
+        if (query == null) {
+            query = "";
+        }
+        query = query.trim();
+
+        List<CardInfoDto> results = new ArrayList<>();
+        try {
+            CardCriteria criteria = new CardCriteria();
+            if (!query.isEmpty()) {
+                criteria.nameContains(query);
+            }
+            criteria.count(60L);
+            List<CardInfo> cards = CardRepository.instance.findCards(criteria);
+            if (cards != null) {
+                for (CardInfo card : cards) {
+                    if (card != null) {
+                        results.add(CardInfoDto.from(card));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // empty / unavailable card DB in this sandbox: return what we have
+        }
+        ctx.json(results);
+    }
+
+    /**
+     * Build a {@link DeckCardLists} from the requested card names (resolving
+     * each against the local DB for set/number) and write it to a {@code .dck}
+     * file on the gateway host via the engine's {@link XmageDeckExporter}.
+     */
+    private void handleDeckSave(Context ctx) {
+        DeckSaveRequest req = ctx.bodyAsClass(DeckSaveRequest.class);
+        if (req == null || req.cards == null || req.cards.isEmpty()) {
+            ctx.status(400).json(error("at least one card is required"));
+            return;
+        }
+
+        DeckCardLists lists = new DeckCardLists();
+        lists.setName(req.name == null || req.name.isEmpty() ? "Untitled" : req.name);
+
+        // Collapse duplicate names into amounts, preserving first-seen order.
+        LinkedHashMap<String, Integer> counts = new LinkedHashMap<>();
+        for (String cardName : req.cards) {
+            if (cardName == null || cardName.trim().isEmpty()) {
+                continue;
+            }
+            counts.merge(cardName.trim(), 1, Integer::sum);
+        }
+
+        List<DeckCardInfo> deckCards = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : counts.entrySet()) {
+            String cardName = entry.getKey();
+            String setCode = "";
+            String cardNumber = "";
+            try {
+                CardInfo info = CardRepository.instance.findCard(cardName);
+                if (info != null) {
+                    setCode = info.getSetCode() == null ? "" : info.getSetCode();
+                    cardNumber = info.getCardNumber() == null ? "" : info.getCardNumber();
+                }
+            } catch (Exception ignored) {
+                // unknown / empty DB: still record the card by name
+            }
+            deckCards.add(new DeckCardInfo(cardName, cardNumber, setCode, entry.getValue()));
+        }
+        lists.setCards(deckCards);
+
+        String path = req.path == null ? null : req.path.trim();
+        if (path == null || path.isEmpty()) {
+            String safe = lists.getName().replaceAll("[^a-zA-Z0-9-_ ]", "_").trim();
+            if (safe.isEmpty()) {
+                safe = "deck";
+            }
+            path = safe + ".dck";
+        } else if (!path.toLowerCase().endsWith(".dck")) {
+            path = path + ".dck";
+        }
+
+        try {
+            File file = new File(path);
+            File parent = file.getAbsoluteFile().getParentFile();
+            if (parent != null && !parent.exists()) {
+                parent.mkdirs();
+            }
+            new XmageDeckExporter().writeDeck(file, lists);
+        } catch (IOException e) {
+            ctx.status(500).json(error("could not write deck: " + e.getMessage()));
+            return;
+        }
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("ok", true);
+        body.put("path", new File(path).getAbsolutePath());
+        ctx.json(body);
+    }
+
     private void handleDisconnect(Context ctx) {
         String token = ctx.queryParam("token");
         if (token == null) {
@@ -392,5 +510,11 @@ public class WebClientApp {
         public String gameId;
         public String kind;  // boolean | uuid | integer | string | action | concede
         public String value;
+    }
+
+    public static class DeckSaveRequest {
+        public String name;
+        public List<String> cards;
+        public String path;  // optional .dck path on the gateway host
     }
 }
