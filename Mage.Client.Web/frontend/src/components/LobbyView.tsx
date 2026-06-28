@@ -97,21 +97,25 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
       setGame(null)
       setPrompt(null)
     } else if (e.type === 'game') {
-      // adopt the game if we don't have one yet (covers a missed gameStart frame)
-      if (!activeRef.current && e.gameId) {
+      // adopt the game if we're expecting one but missed the gameStart frame
+      if (!activeRef.current && e.gameId && pendingPlay) {
         activeRef.current = e.gameId
         setActiveGameId(e.gameId)
-        setInteractive(pendingPlay)
+        setInteractive(true)
         setPendingPlay(false)
         setPlayStatus(null)
       }
+      // discard stale events for any game other than the one we're currently in
+      if (!activeRef.current || (e.gameId && e.gameId !== activeRef.current)) return
       if (e.game) setGame(e.game)
       setPrompt(e.prompt ?? null)
     } else if (e.type === 'gameOver') {
+      if (!activeRef.current || (e.gameId && e.gameId !== activeRef.current)) return
       if (e.game) setGame(e.game)
       setPrompt(null)
       setGameOver(e.text && e.text.trim() ? e.text : 'Game over')
     } else if (e.type === 'log' && e.text) {
+      if (!activeRef.current || (e.gameId && e.gameId !== activeRef.current)) return
       setGameLog((prev) => [...prev.slice(-299), e.text as string])
     } else if (e.type === 'draftStart' && e.draftId) {
       setActiveDraftId(e.draftId)
