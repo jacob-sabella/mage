@@ -59,20 +59,27 @@ export function ReportProblemModal({
   // undefined = use preCapture/fallback; null = user removed; string = user uploaded or pre-captured
   const [activeScreenshot, setActiveScreenshot] = useState<string | null | undefined>(preCapture)
   const [isRetaking, setIsRetaking] = useState(false)
+  const [captureError, setCaptureError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const backdropRef = useRef<HTMLDivElement>(null)
 
   const retakeScreenshot = async () => {
     if (!backdropRef.current || isRetaking) return
     setIsRetaking(true)
+    setCaptureError(null)
     const shot = await captureHidingElement(backdropRef.current)
-    if (shot !== null) setActiveScreenshot(shot)
+    if (shot !== null) {
+      setActiveScreenshot(shot)
+    } else {
+      setCaptureError('Capture failed — try again or upload an image.')
+    }
     setIsRetaking(false)
   }
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    setCaptureError(null)
     const reader = new FileReader()
     reader.onload = (evt) => {
       const result = evt.target?.result
@@ -165,7 +172,7 @@ export function ReportProblemModal({
                     <button className="btn ghost small" onClick={() => fileInputRef.current?.click()}>
                       Replace
                     </button>
-                    <button className="btn ghost small" onClick={() => setActiveScreenshot(null)}>
+                    <button className="btn ghost small" onClick={() => { setActiveScreenshot(null); setCaptureError(null) }}>
                       Remove
                     </button>
                   </div>
@@ -189,6 +196,7 @@ export function ReportProblemModal({
                 onChange={handleFileUpload}
               />
             </div>
+            {captureError && <p className="form-error">{captureError}</p>}
             {status === 'error' && <p className="form-error">{errMsg}</p>}
             <div className="modal-actions">
               <button className="btn ghost" onClick={onClose} disabled={status === 'sending'}>
