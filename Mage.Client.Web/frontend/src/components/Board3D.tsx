@@ -14,7 +14,6 @@ const SCENE: Record<string, { bg: string; table: string; ring: string; ring2: st
 }
 import * as THREE from 'three'
 import type { GameCard, GamePlayer, GameState } from '../types'
-import { FamilyBackdrop } from './backdrops'
 
 /** Parse a mana-cost string like "{2}{R}{R}" into symbol tokens. */
 function manaSymbols(cost?: string | null): string[] {
@@ -1006,13 +1005,11 @@ export function Board3D({
         shadows
         camera={{ position: isMobile ? [0, 16, 0.01] : [0, 5.4, 10], fov: 46 }}
         dpr={[1, 2]}
-        gl={{ antialias: true, preserveDrawingBuffer: true }}
+        gl={{ antialias: true, preserveDrawingBuffer: true, alpha: true }}
       >
-        {/* Opaque canvas with the backdrop rendered inside so WebGL depth-sorting
-            correctly occludes the background behind the 3D table and cards. */}
-        <color attach="background" args={[scene.bg]} />
-        <fog attach="fog" args={[scene.bg, 40, 80]} />
-        <FamilyBackdrop kind={backdrop} inGame />
+        {/* Transparent canvas — the full-screen SceneBackground (the same 3D scene
+            as the lobby) shows through, so the game board lives inside the app
+            backdrop instead of a separate scene. */}
 
         <ambientLight intensity={0.85} />
         <directionalLight position={[4, 11, 6]} intensity={0.9} color={scene.key} castShadow />
