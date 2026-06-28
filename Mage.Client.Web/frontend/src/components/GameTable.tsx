@@ -134,7 +134,7 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
               onClick={canTarget ? () => onRespond('uuid', p.id) : undefined}
             >
               <span className="pstat-name">{p.name}</span>
-              <span className="pstat-life">♥ {p.life}</span>
+              <LifeTotal life={p.life} />
               <span className="muted pstat-counts">
                 Hand {p.handCount} · Lib {p.libraryCount} · Grave {p.graveyardCount}
               </span>
@@ -216,6 +216,32 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
 const MANA_COLOR: Record<string, string> = { W: '#e9e3c0', U: '#4a90e2', B: '#6b5b73', R: '#e0555f', G: '#3aa55f', C: '#9aa0ad' }
 
 /** Floating mana pool as colored pips (W U B R G C). */
+/** Life total that flashes green/red and floats a +N/-N delta when it changes,
+ *  so life swings (damage, gain) are obvious at a glance. */
+function LifeTotal({ life }: { life: number }) {
+  const prev = useRef(life)
+  const [delta, setDelta] = useState<number | null>(null)
+  const [flash, setFlash] = useState<'up' | 'down' | null>(null)
+  useEffect(() => {
+    if (life === prev.current) return
+    const d = life - prev.current
+    prev.current = life
+    setDelta(d)
+    setFlash(d > 0 ? 'up' : 'down')
+    const t = setTimeout(() => {
+      setDelta(null)
+      setFlash(null)
+    }, 1100)
+    return () => clearTimeout(t)
+  }, [life])
+  return (
+    <span className={`pstat-life${flash ? ` flash-${flash}` : ''}`}>
+      ♥ {life}
+      {delta != null && <span className={`life-delta ${delta > 0 ? 'up' : 'down'}`}>{delta > 0 ? `+${delta}` : delta}</span>}
+    </span>
+  )
+}
+
 function ManaPool({ pool }: { pool: string }) {
   const syms = pool.match(/\{(\w)\}/g)?.map((s) => s[1]) ?? []
   if (syms.length === 0) return null
