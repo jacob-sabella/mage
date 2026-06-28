@@ -639,7 +639,7 @@ type ViewMode = '3d' | '2d' | 'free'
 const ZOOM_MIN = 0.35
 const ZOOM_MAX = 3.0
 const ZOOM_STEP = 0.25
-const ZOOM_DEFAULT = 1.0
+const ZOOM_DEFAULT = 0.75
 
 /** Scale the camera's distance from its look-at point by 1/zoom.
  *  zoom=1 → no change; zoom=2 → twice as close; zoom=0.5 → twice as far. */
