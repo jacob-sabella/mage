@@ -52,6 +52,10 @@ function makeCardTexture(card: GameCard): THREE.Texture {
   cv.height = h * k
   const g = cv.getContext('2d')!
   g.scale(k, k)
+  // clip all drawing to a rounded rect so corners are transparent
+  g.beginPath()
+  g.roundRect(0, 0, w, h, 28)
+  g.clip()
   const base = bg(card.colors)
   g.fillStyle = base
   g.fillRect(0, 0, w, h)
@@ -102,6 +106,10 @@ function makeCardBack(): THREE.Texture {
   cv.width = w
   cv.height = h
   const g = cv.getContext('2d')!
+  // clip all drawing to a rounded rect so corners are transparent
+  g.beginPath()
+  g.roundRect(0, 0, w, h, 28)
+  g.clip()
   g.fillStyle = '#1a1430'
   g.fillRect(0, 0, w, h)
   g.fillStyle = '#2c2150'
@@ -172,7 +180,7 @@ function CardPile({
       {Array.from({ length: Math.max(0, layers - 1) }).map((_, i) => (
         <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[0.012 * i, 0.012 + i * step, 0.012 * i]}>
           <planeGeometry args={[CARD_W, CARD_H]} />
-          <meshBasicMaterial map={back} toneMapped={false} />
+          <meshBasicMaterial map={back} toneMapped={false} transparent />
         </mesh>
       ))}
       {/* top of the pile */}
@@ -182,7 +190,7 @@ function CardPile({
         ) : (
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, topY, 0]}>
             <planeGeometry args={[CARD_W, CARD_H]} />
-            <meshBasicMaterial map={back} toneMapped={false} />
+            <meshBasicMaterial map={back} toneMapped={false} transparent />
           </mesh>
         ))}
       <Html position={[0, 0.34, CARD_H * 0.62]} center distanceFactor={10} zIndexRange={[15, 0]} className="c3d-badge c3d-zone">
@@ -222,23 +230,33 @@ function Card3D({
     return () => fallback.dispose()
   }, [fallback, maxAniso])
 
-  // try to upgrade to real card art
+  // try to upgrade to real card art (composited onto a canvas so it gets rounded corners)
   useEffect(() => {
     let alive = true
-    new THREE.TextureLoader().load(
-      imgUrl(card),
-      (t) => {
-        t.colorSpace = THREE.SRGBColorSpace
-        t.anisotropy = maxAniso // anisotropic filtering keeps angled cards crisp
-        t.minFilter = THREE.LinearMipmapLinearFilter
-        t.magFilter = THREE.LinearFilter
-        t.needsUpdate = true
-        if (alive) setArt(t)
-        else t.dispose()
-      },
-      undefined,
-      () => alive && setArt(null),
-    )
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      if (!alive) return
+      const cv = document.createElement('canvas')
+      cv.width = img.naturalWidth
+      cv.height = img.naturalHeight
+      const g = cv.getContext('2d')!
+      const r = (28 / 256) * cv.width
+      g.beginPath()
+      g.roundRect(0, 0, cv.width, cv.height, r)
+      g.clip()
+      g.drawImage(img, 0, 0)
+      const t = new THREE.CanvasTexture(cv)
+      t.colorSpace = THREE.SRGBColorSpace
+      t.anisotropy = maxAniso
+      t.minFilter = THREE.LinearMipmapLinearFilter
+      t.magFilter = THREE.LinearFilter
+      t.needsUpdate = true
+      if (alive) setArt(t)
+      else t.dispose()
+    }
+    img.onerror = () => { if (alive) setArt(null) }
+    img.src = imgUrl(card)
     return () => {
       alive = false
     }
@@ -315,7 +333,7 @@ function Card3D({
           <planeGeometry args={[CARD_W, CARD_H]} />
           {/* unlit + toneMapped off → card art shows at full, vivid, readable colour
               instead of being washed out by the scene lighting */}
-          <meshBasicMaterial map={tex} color="#ffffff" toneMapped={false} />
+          <meshBasicMaterial map={tex} color="#ffffff" toneMapped={false} transparent />
         </mesh>
 
         {/* crisp DOM indicators anchored to the card — readable at any zoom/angle */}
