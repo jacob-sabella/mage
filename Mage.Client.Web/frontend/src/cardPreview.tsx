@@ -1,4 +1,5 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { getCachedUrl, preloadImage } from './imageCache'
 
 interface Preview {
   src: string
@@ -24,10 +25,29 @@ export function useCardPreview() {
 /** Fixed large preview of the hovered card. */
 export function CardPreviewLayer() {
   const { preview } = useCardPreview()
-  if (!preview) return null
+  const [src, setSrc] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!preview) {
+      setSrc(null)
+      return
+    }
+    // Use the blob URL immediately if already cached, else fall back to the raw
+    // URL so the image starts displaying right away while caching in background.
+    setSrc(getCachedUrl(preview.src))
+    let alive = true
+    preloadImage(preview.src).then((url) => {
+      if (alive) setSrc(url)
+    })
+    return () => {
+      alive = false
+    }
+  }, [preview?.src])
+
+  if (!preview || !src) return null
   return (
     <div className="card-preview-layer">
-      <img className="card-preview-img" src={preview.src} alt={preview.name} />
+      <img className="card-preview-img" src={src} alt={preview.name} />
     </div>
   )
 }

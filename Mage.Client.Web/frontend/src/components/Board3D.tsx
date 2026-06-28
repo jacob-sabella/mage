@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Billboard, Grid, Html, OrbitControls } from '@react-three/drei'
 import { usePrefs, CHROMA_FAMILY } from '../prefs'
+import { preloadImage } from '../imageCache'
 
 // per-family in-game scene tint (background, fog, table, grid on/off)
 const SCENE: Record<string, { bg: string; table: string; ring: string; ring2: string; grid: boolean; gridA: string; gridB: string; key: string; fill: string }> = {
@@ -235,30 +236,34 @@ function Card3D({
   // try to upgrade to real card art (composited onto a canvas so it gets rounded corners)
   useEffect(() => {
     let alive = true
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
-    img.onload = () => {
-      if (!alive) return
-      const cv = document.createElement('canvas')
-      cv.width = img.naturalWidth
-      cv.height = img.naturalHeight
-      const g = cv.getContext('2d')!
-      const r = (28 / 256) * cv.width
-      g.beginPath()
-      g.roundRect(0, 0, cv.width, cv.height, r)
-      g.clip()
-      g.drawImage(img, 0, 0)
-      const t = new THREE.CanvasTexture(cv)
-      t.colorSpace = THREE.SRGBColorSpace
-      t.anisotropy = maxAniso
-      t.minFilter = THREE.LinearMipmapLinearFilter
-      t.magFilter = THREE.LinearFilter
-      t.needsUpdate = true
-      if (alive) setArt(t)
-      else t.dispose()
-    }
-    img.onerror = () => { if (alive) setArt(null) }
-    img.src = imgUrl(card)
+    preloadImage(imgUrl(card))
+      .then((src) => {
+        if (!alive) return
+        const img = new Image()
+        img.onload = () => {
+          if (!alive) return
+          const cv = document.createElement('canvas')
+          cv.width = img.naturalWidth
+          cv.height = img.naturalHeight
+          const g = cv.getContext('2d')!
+          const r = (28 / 256) * cv.width
+          g.beginPath()
+          g.roundRect(0, 0, cv.width, cv.height, r)
+          g.clip()
+          g.drawImage(img, 0, 0)
+          const t = new THREE.CanvasTexture(cv)
+          t.colorSpace = THREE.SRGBColorSpace
+          t.anisotropy = maxAniso
+          t.minFilter = THREE.LinearMipmapLinearFilter
+          t.magFilter = THREE.LinearFilter
+          t.needsUpdate = true
+          if (alive) setArt(t)
+          else t.dispose()
+        }
+        img.onerror = () => { if (alive) setArt(null) }
+        img.src = src
+      })
+      .catch(() => { if (alive) setArt(null) })
     return () => {
       alive = false
     }
