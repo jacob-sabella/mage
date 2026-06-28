@@ -67,4 +67,56 @@ test.describe('Report a problem', () => {
     await page.getByRole('button', { name: 'Submit report' }).click()
     await expect(page.getByText('not configured on this server')).toBeVisible()
   })
+
+  test('screenshot can be removed before submitting', async ({ page }) => {
+    await gotoScreen(page, 'lobby')
+    let posted: { screenshot?: string | null } | null = null
+    await page.route('**/api/report', async (route) => {
+      posted = JSON.parse(route.request().postData() || '{}')
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true, url: 'https://github.com/jacob-sabella/mage/issues/9', number: 9 }),
+      })
+    })
+    await page.getByRole('button', { name: 'Report problem' }).click()
+    // Remove the screenshot (if auto-captured) or skip if not present
+    const removeBtn = page.getByRole('button', { name: 'Remove' })
+    if (await removeBtn.isVisible()) {
+      await removeBtn.click()
+    }
+    await expect(page.getByText('No screenshot')).toBeVisible()
+    await page.getByPlaceholder('Short summary').fill('test remove screenshot')
+    await page.getByRole('button', { name: 'Submit report' }).click()
+    await expect(page.getByText('your report was filed', { exact: false })).toBeVisible()
+    // screenshot should be null or absent when user removed it
+    expect(posted!.screenshot ?? null).toBeNull()
+  })
+
+  test('user can upload a custom screenshot', async ({ page }) => {
+    await gotoScreen(page, 'lobby')
+    let posted: { screenshot?: string | null } | null = null
+    await page.route('**/api/report', async (route) => {
+      posted = JSON.parse(route.request().postData() || '{}')
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true, url: 'https://github.com/jacob-sabella/mage/issues/10', number: 10 }),
+      })
+    })
+    await page.getByRole('button', { name: 'Report problem' }).click()
+    // Upload a fake 1x1 PNG
+    const fakeImage = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwADhQGAWjR9awAAAABJRU5ErkJggg==',
+      'base64',
+    )
+    const attachBtn = page.getByRole('button', { name: /Attach screenshot|Replace/ })
+    await expect(attachBtn).toBeVisible()
+    const fileInput = page.locator('.report-screenshot-input')
+    await fileInput.setInputFiles({ name: 'screen.png', mimeType: 'image/png', buffer: fakeImage })
+    await expect(page.getByText('Screenshot attached')).toBeVisible()
+    await page.getByPlaceholder('Short summary').fill('test upload screenshot')
+    await page.getByRole('button', { name: 'Submit report' }).click()
+    await expect(page.getByText('your report was filed', { exact: false })).toBeVisible()
+    expect(typeof posted!.screenshot).toBe('string')
+    expect(posted!.screenshot).toContain('data:image/')
+  })
 })

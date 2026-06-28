@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { reportProblem } from '../api'
 import { captureScreenshot, reportState } from '../reportState'
@@ -8,14 +8,14 @@ export type ReportKind = 'bug' | 'feature'
 const COPY: Record<ReportKind, { heading: string; blurb: string; titlePh: string; bodyPh: string; bodyLabel: string }> = {
   bug: {
     heading: 'Report a problem',
-    blurb: 'Opens a public issue on GitHub. Current screen, page URL and your browser are attached automatically.',
+    blurb: 'Opens a public issue on GitHub. Page URL and browser are attached automatically.',
     titlePh: 'Short summary',
     bodyPh: 'Steps to reproduce, what you expected, what you saw…',
     bodyLabel: 'What happened?',
   },
   feature: {
     heading: 'Request a feature',
-    blurb: 'Opens a public issue on GitHub describing your idea. Current screen and browser are attached automatically.',
+    blurb: 'Opens a public issue on GitHub describing your idea. Browser info is attached automatically.',
     titlePh: 'Short summary of the idea',
     bodyPh: 'What would you like to see, and why?',
     bodyLabel: 'Describe the feature',
@@ -45,15 +45,30 @@ export function ReportProblemModal({
   const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle')
   const [issueUrl, setIssueUrl] = useState('')
   const [errMsg, setErrMsg] = useState('')
+  // undefined = use preCapture/fallback; null = user removed; string = user uploaded or pre-captured
+  const [activeScreenshot, setActiveScreenshot] = useState<string | null | undefined>(preCapture)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (evt) => {
+      const result = evt.target?.result
+      if (typeof result === 'string') setActiveScreenshot(result)
+    }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
 
   const submit = async () => {
     if (!title.trim() || status === 'sending') return
     setStatus('sending')
     setErrMsg('')
     try {
-      // Use pre-captured screenshot (taken before modal opened) so the dialog
-      // doesn't appear in the capture; fall back to capturing now if unavailable
-      const screenshot = preCapture !== undefined ? preCapture : await captureScreenshot()
+      // Use active screenshot (pre-captured, user-uploaded, or null if removed);
+      // fall back to capturing now only if no screenshot decision was made at all
+      const screenshot = activeScreenshot !== undefined ? activeScreenshot : await captureScreenshot()
       const res = await reportProblem(
         title.trim(),
         body.trim(),
@@ -117,6 +132,36 @@ export function ReportProblemModal({
                 onChange={(e) => setBody(e.target.value)}
               />
             </label>
+            <div className="report-screenshot">
+              {activeScreenshot ? (
+                <div className="report-screenshot-preview">
+                  <img src={activeScreenshot} alt="Screenshot to attach" className="report-screenshot-img" />
+                  <div className="report-screenshot-row">
+                    <span className="report-screenshot-label">Screenshot attached</span>
+                    <button className="btn ghost small" onClick={() => fileInputRef.current?.click()}>
+                      Replace
+                    </button>
+                    <button className="btn ghost small" onClick={() => setActiveScreenshot(null)}>
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="report-screenshot-empty">
+                  <span className="report-screenshot-label">No screenshot</span>
+                  <button className="btn ghost small" onClick={() => fileInputRef.current?.click()}>
+                    Attach screenshot
+                  </button>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="report-screenshot-input"
+                onChange={handleFileUpload}
+              />
+            </div>
             {status === 'error' && <p className="form-error">{errMsg}</p>}
             <div className="modal-actions">
               <button className="btn ghost" onClick={onClose} disabled={status === 'sending'}>
