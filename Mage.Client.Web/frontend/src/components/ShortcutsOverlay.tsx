@@ -10,6 +10,9 @@ const GROUPS: { title: string; items: { keys: string; label: string }[] }[] = [
       { keys: 'F9', label: 'Skip until my turn' },
       { keys: 'F10', label: 'Resolve / stop on next ability' },
       { keys: 'F6', label: 'Cancel skips' },
+      { keys: 'D', label: 'Done / confirm selection' },
+      { keys: 'P / Space', label: 'Pass priority' },
+      { keys: 'Y / N', label: 'Answer yes / no' },
     ],
   },
   {
