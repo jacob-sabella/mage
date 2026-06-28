@@ -27,10 +27,15 @@ const isType = (c: GameCard, re: RegExp) => (c.types ?? []).some((t) => re.test(
 const CARD_W = 1.2
 const CARD_H = 1.68
 /** Max width (in local units) a battlefield row may span before cards start overlapping.
- *  Zone piles sit at x ≈ ±3.0, so this keeps cards comfortably between them and
- *  prevents battlefield rows from overflowing into neighbouring players' zones. */
-const MAX_ROW_W = 4.8
+ *  Zone piles sit at x ≈ ±PILE_X, so this must stay below PILE_X*2 to prevent
+ *  battlefield rows from overflowing into the zone piles. */
+const MAX_ROW_W = 4.2
 const MAX_PER_ROW = 12
+/** X-position of the zone piles (library/GY on the right, exile on the left).
+ *  Must be > MAX_ROW_W/2 + CARD_W/2 to keep piles clear of the battlefield rows. */
+const PILE_X = 3.5
+/** A card or a named land stack — same name lands collapse into one slot with a count. */
+type RowItem = { card: GameCard; stackCount?: number }
 const COLOR_BG: Record<string, string> = { W: '#cfc9a8', U: '#3b6ea5', B: '#3a3340', R: '#a53b3b', G: '#3a7a52' }
 
 function bg(colors?: string | null) {
@@ -207,6 +212,7 @@ function Card3D({
   position,
   standing,
   showCost,
+  stackCount,
   cardProps,
   onHoverCard,
   onPressCard,
@@ -215,6 +221,7 @@ function Card3D({
   position: [number, number, number]
   standing?: boolean
   showCost?: boolean
+  stackCount?: number
   cardProps: CardProps
   onHoverCard?: (c: GameCard | null) => void
   onPressCard?: (c: GameCard | null) => void
@@ -385,43 +392,75 @@ function Card3D({
             ))}
           </Html>
         )}
+        {stackCount != null && stackCount > 1 && (
+          <Html
+            position={[-CARD_W * 0.3, 0.14, CARD_H * 0.3]}
+            center
+            distanceFactor={9}
+            zIndexRange={[20, 0]}
+            className="c3d-badge c3d-stack"
+          >
+            ×{stackCount}
+          </Html>
+        )}
       </group>
     </group>
   )
 }
 
-/** Lay a row of cards centered at (cx, cz) along X.
+/** Lay a row of cards/stacks centered at (cx, cz) along X.
  *  When the row would exceed MAX_ROW_W the gap shrinks so cards overlap
  *  (Slay-the-Spire style) instead of spilling outside the player's zone. */
-function row(cards: GameCard[], cx: number, cz: number, gap = 1.45) {
-  const n = cards.length
+function row(items: RowItem[], cx: number, cz: number, gap = 1.45) {
+  const n = items.length
   if (n === 0) return []
   // Cap the gap so the total row width never exceeds MAX_ROW_W.
   const effectiveGap = n > 1 ? Math.min(gap, MAX_ROW_W / (n - 1)) : gap
   const w = (n - 1) * effectiveGap
   // Tiny per-card y stagger prevents coplanar z-fighting when adjacent cards share
   // edge pixels under MSAA — visually imperceptible at this scale.
-  return cards.map((c, i) => ({ card: c, pos: [cx - w / 2 + i * effectiveGap, i * 0.0002, cz] as [number, number, number] }))
+  return items.map(({ card, stackCount }, i) => ({
+    card,
+    stackCount,
+    pos: [cx - w / 2 + i * effectiveGap, i * 0.0002, cz] as [number, number, number],
+  }))
+}
+
+/** Group same-named lands into stacks (Arena-style), preserving first-seen order. */
+function groupLands(lands: GameCard[]): RowItem[] {
+  const map = new Map<string, { card: GameCard; count: number }>()
+  const order: string[] = []
+  for (const c of lands) {
+    if (map.has(c.name)) {
+      map.get(c.name)!.count++
+    } else {
+      map.set(c.name, { card: c, count: 1 })
+      order.push(c.name)
+    }
+  }
+  return order.map((name) => {
+    const { card, count } = map.get(name)!
+    return { card, stackCount: count > 1 ? count : undefined }
+  })
 }
 
 type Seat = { player: GamePlayer; x: number; z: number; yaw: number; isViewer: boolean }
 
 /** Standard MTG battlefield layout in a seat's LOCAL space: creatures in a front
- *  row (toward centre, local -z), lands + other permanents in a back row (+z). */
-function battlefieldLayout(player: GamePlayer): { card: GameCard; pos: [number, number, number] }[] {
-  const creatures: GameCard[] = []
-  const back: GameCard[] = []
+ *  row (toward centre, local -z), non-land permanents + grouped land stacks in a back row (+z).
+ *  Same-named lands collapse into a single slot (Arena-style) to reduce crowding. */
+function battlefieldLayout(player: GamePlayer): { card: GameCard; pos: [number, number, number]; stackCount?: number }[] {
+  const creatures: RowItem[] = []
+  const nonlands: RowItem[] = []
+  const lands: GameCard[] = []
   for (const c of player.battlefield) {
     const t = (c.types ?? []).map((x) => x.toLowerCase())
-    if (t.some((x) => x.includes('creature'))) creatures.push(c)
-    else back.push(c)
+    if (t.some((x) => x.includes('creature'))) creatures.push({ card: c })
+    else if (t.some((x) => x.includes('land'))) lands.push(c)
+    else nonlands.push({ card: c })
   }
-  back.sort((a, b) => {
-    const al = (a.types ?? []).some((x) => /land/i.test(x)) ? 0 : 1
-    const bl = (b.types ?? []).some((x) => /land/i.test(x)) ? 0 : 1
-    return al - bl
-  })
-  return [...row(creatures, 0, -0.95), ...row(back, 0, 0.95)]
+  const landItems = groupLands(lands)
+  return [...row(creatures, 0, -0.95), ...row([...nonlands, ...landItems], 0, 0.95)]
 }
 
 /** World position of a seat-local point, applying the seat's yaw + translation. */
@@ -447,18 +486,16 @@ function PlayerZone({
   const [expanded, setExpanded] = useState(false)
 
   const { placed, creatureOverflow, backOverflow, creatureVisCount, backVisCount } = useMemo(() => {
-    const creatures: GameCard[] = []
-    const back: GameCard[] = []
+    const creatures: RowItem[] = []
+    const nonlands: RowItem[] = []
+    const lands: GameCard[] = []
     for (const c of seat.player.battlefield) {
       const t = (c.types ?? []).map((x) => x.toLowerCase())
-      if (t.some((x) => x.includes('creature'))) creatures.push(c)
-      else back.push(c)
+      if (t.some((x) => x.includes('creature'))) creatures.push({ card: c })
+      else if (t.some((x) => x.includes('land'))) lands.push(c)
+      else nonlands.push({ card: c })
     }
-    back.sort((a, b) => {
-      const al = (a.types ?? []).some((x) => /land/i.test(x)) ? 0 : 1
-      const bl = (b.types ?? []).some((x) => /land/i.test(x)) ? 0 : 1
-      return al - bl
-    })
+    const back: RowItem[] = [...nonlands, ...groupLands(lands)]
     const creatureOverflow = Math.max(0, creatures.length - MAX_PER_ROW)
     const backOverflow = Math.max(0, back.length - MAX_PER_ROW)
     const visCreatures = expanded ? creatures : creatures.slice(0, MAX_PER_ROW)
@@ -487,8 +524,8 @@ function PlayerZone({
 
   return (
     <group position={[seat.x, 0, seat.z]} rotation={[0, seat.yaw, 0]}>
-      {placed.map(({ card, pos }) => (
-        <Card3D key={card.id} card={card} position={pos} cardProps={cardProps} onHoverCard={onHoverCard} onPressCard={onPressCard} />
+      {placed.map(({ card, pos, stackCount }) => (
+        <Card3D key={card.id} card={card} position={pos} stackCount={stackCount} cardProps={cardProps} onHoverCard={onHoverCard} onPressCard={onPressCard} />
       ))}
       {/* overflow badges: show +N when a row is clipped */}
       {!expanded && creatureOverflow > 0 && (
@@ -514,10 +551,11 @@ function PlayerZone({
         </Html>
       )}
       {/* zone piles — standard playmat: library + graveyard to the player's
-          right, exile set apart on the left ("outside the game") */}
-      <CardPile position={[3.0, 1.7]} count={p.libraryCount} faceUp={false} label="Lib" cardProps={cardProps} onHoverCard={onHoverCard} />
-      <CardPile position={[3.0, 0.0]} count={p.graveyardCount} top={gy} faceUp label="GY" cardProps={cardProps} onHoverCard={onHoverCard} />
-      <CardPile position={[-3.0, 1.7]} count={p.exile.length} top={ex} faceUp label="Exile" cardProps={cardProps} onHoverCard={onHoverCard} />
+          right, exile set apart on the left ("outside the game").
+          PILE_X keeps piles clear of the MAX_ROW_W battlefield rows. */}
+      <CardPile position={[PILE_X, 1.7]} count={p.libraryCount} faceUp={false} label="Lib" cardProps={cardProps} onHoverCard={onHoverCard} />
+      <CardPile position={[PILE_X, 0.0]} count={p.graveyardCount} top={gy} faceUp label="GY" cardProps={cardProps} onHoverCard={onHoverCard} />
+      <CardPile position={[-PILE_X, 1.7]} count={p.exile.length} top={ex} faceUp label="Exile" cardProps={cardProps} onHoverCard={onHoverCard} />
     </group>
   )
 }
