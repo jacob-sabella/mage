@@ -978,6 +978,8 @@ input::placeholder { color: var(--text-dim); }
 }
 .view-radial.mode { font-weight: 700; border-color: color-mix(in srgb, var(--accent-2) 50%, var(--stroke)); }
 .view-radial.active { background: var(--accent); color: #0d1119; border-color: transparent; font-weight: 700; }
+/* hide the zoom bar while the radial menu is open so it doesn't block menu items */
+.view-menu.open ~ .zoom-bar { display: none; }
 .zoom-bar {
   position: absolute; top: 68px; left: 16px; z-index: 4;
   display: flex; align-items: center; gap: 2px;
