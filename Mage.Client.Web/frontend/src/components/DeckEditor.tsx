@@ -18,6 +18,22 @@ function isLand(e: DeckCardEntry) {
   return (e.types ?? []).some((t) => t.toLowerCase() === 'land')
 }
 
+// auto-saved work-in-progress deck (survives reloads)
+const DRAFT_KEY = 'mage.deck.draft'
+interface DeckDraft {
+  deck: DeckCardEntry[]
+  sideboard: DeckCardEntry[]
+  name: string
+}
+function loadDraft(): DeckDraft | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY)
+    return raw ? (JSON.parse(raw) as DeckDraft) : null
+  } catch {
+    return null
+  }
+}
+
 export function DeckEditor() {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<CardInfoDto[]>([])
@@ -28,15 +44,27 @@ export function DeckEditor() {
   const [fType, setFType] = useState('')
   const [fCmc, setFCmc] = useState('')
 
-  const [deck, setDeck] = useState<DeckCardEntry[]>([])
-  const [sideboard, setSideboard] = useState<DeckCardEntry[]>([])
-  const [deckName, setDeckName] = useState('My Deck')
+  // restore an in-progress deck from a previous session so a refresh never
+  // discards your work-in-progress deck
+  const draft0 = useMemo(loadDraft, [])
+  const [deck, setDeck] = useState<DeckCardEntry[]>(draft0?.deck ?? [])
+  const [sideboard, setSideboard] = useState<DeckCardEntry[]>(draft0?.sideboard ?? [])
+  const [deckName, setDeckName] = useState(draft0?.name ?? 'My Deck')
   const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<string | null>(null)
   // hover a card (search result or deck entry) to preview its art
   const [preview, setPreview] = useState<PreviewCard | null>(null)
 
   const total = deck.reduce((s, e) => s + e.count, 0)
+
+  // persist the in-progress deck on every change
+  useEffect(() => {
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ deck, sideboard, name: deckName }))
+    } catch {
+      /* storage full / unavailable — non-fatal */
+    }
+  }, [deck, sideboard, deckName])
 
   const runSearch = useCallback(async () => {
     setSearching(true)
