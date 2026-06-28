@@ -666,14 +666,14 @@ function ViewMenu({
     mode === '3d'
       ? views.map((v, i) => ({ key: 'f-' + i, label: v.name, active: view === i, cat: 'focus', onClick: () => setView(i) }))
       : []
-  // fan into the board's down-right quadrant only (keeps items on-screen). Modes
-  // sit on an inner ring, focus targets on an outer ring, so neither crowds.
-  // The arc and radius both scale with player count so names never overlap.
+  // Fan into the board's down-right quadrant only (keeps items on-screen).
+  // a1 is capped at 88° so cos(angle) stays positive — past 90° items would
+  // translate leftward and disappear off the left edge of the screen.
   const a0 = 8
-  const a1 = focusItems.length > 1 ? Math.min(160, 90 + focusItems.length * 12) : 90
+  const a1 = 88
   const rings = [
     { items: modeItems, R: 74 },
-    { items: focusItems, R: 130 + focusItems.length * 16 },
+    { items: focusItems, R: 110 + focusItems.length * 10 },
   ].filter((g) => g.items.length)
   const placed = rings.flatMap((g) =>
     g.items.map((it, i) => {
