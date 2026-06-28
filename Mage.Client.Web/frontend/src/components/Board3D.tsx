@@ -294,7 +294,7 @@ function Card3D({
             raycast={() => null}
           >
             <planeGeometry args={[CARD_W * 1.12, CARD_H * 1.1]} />
-            <meshBasicMaterial color={glow} transparent opacity={hover ? 0.85 : 0.55} toneMapped={false} />
+            <meshBasicMaterial color={glow} transparent opacity={hover ? 0.85 : 0.55} toneMapped={false} depthWrite={false} />
           </mesh>
         )}
         <mesh
@@ -306,7 +306,7 @@ function Card3D({
           <planeGeometry args={[CARD_W, CARD_H]} />
           {/* unlit + toneMapped off → card art shows at full, vivid, readable colour
               instead of being washed out by the scene lighting */}
-          <meshBasicMaterial map={tex} color="#ffffff" side={THREE.DoubleSide} toneMapped={false} />
+          <meshBasicMaterial map={tex} color="#ffffff" toneMapped={false} />
         </mesh>
 
         {/* crisp DOM indicators anchored to the card — readable at any zoom/angle */}
@@ -355,7 +355,9 @@ function Card3D({
 /** Lay a row of cards centered at (cx, cz) along X. */
 function row(cards: GameCard[], cx: number, cz: number, gap = 1.45) {
   const w = (cards.length - 1) * gap
-  return cards.map((c, i) => ({ card: c, pos: [cx - w / 2 + i * gap, 0, cz] as [number, number, number] }))
+  // Tiny per-card y stagger prevents coplanar z-fighting when adjacent cards share
+  // edge pixels under MSAA — visually imperceptible at this scale.
+  return cards.map((c, i) => ({ card: c, pos: [cx - w / 2 + i * gap, i * 0.0002, cz] as [number, number, number] }))
 }
 
 type Seat = { player: GamePlayer; x: number; z: number; yaw: number; isViewer: boolean }
