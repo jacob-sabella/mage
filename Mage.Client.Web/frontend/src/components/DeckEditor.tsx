@@ -253,6 +253,7 @@ export function DeckEditor() {
       </section>
 
       <section className="panel deck-list">
+        <DeckCardPreview card={preview} />
         <div className="deck-list-head">
           <h2 className="deck-title">{deckName}</h2>
           <span className="spacer" />
@@ -325,8 +326,6 @@ export function DeckEditor() {
         </div>
       </section>
 
-      <DeckCardPreview card={preview} />
-
       {pickerOpen && (
         <DeckPicker title="Open a deck" onPick={(d) => doLoad(d.path)} onClose={() => setPickerOpen(false)} />
       )}
@@ -375,9 +374,9 @@ export function DeckEditor() {
 type PreviewCard = { name: string; set?: string | null; num?: string | null; manaCost?: string | null; types?: string[] }
 const PIP_COLOR: Record<string, string> = { W: '#e9e3c0', U: '#4a90e2', B: '#6b5b73', R: '#e0555f', G: '#3aa55f', C: '#9aa0ad' }
 
-/** Floating card-art preview for the deck editor (mirrors the in-game preview). */
+/** Inline card-art preview pinned at the top of the deck list panel. */
 function DeckCardPreview({ card }: { card: PreviewCard | null }) {
-  if (!card) return null
+  if (!card) return <div className="card-preview card-preview-empty muted">Hover a card to preview</div>
   const cost = (card.manaCost?.match(/\{([^}]+)\}/g) ?? []).map((s) => s.slice(1, -1))
   const img = `/api/cardimg?set=${encodeURIComponent(card.set ?? '')}&num=${encodeURIComponent(card.num ?? '')}&name=${encodeURIComponent(card.name)}`
   return (
