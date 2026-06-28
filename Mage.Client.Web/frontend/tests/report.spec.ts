@@ -137,6 +137,27 @@ test.describe('Report a problem', () => {
     await expect(page.getByRole('button', { name: 'Upload' })).toBeVisible()
   })
 
+  test('capture-page shows an error when screenshot capture fails', async ({ page }) => {
+    await gotoScreen(page, 'lobby')
+    // Override html2canvas to always throw so capture fails
+    await page.route('**/html2canvas.esm-*.js', (route) =>
+      route.fulfill({
+        contentType: 'text/javascript; charset=utf-8',
+        body: `export default async function(){ throw new Error('capture failed') }`,
+      }),
+    )
+    await page.getByRole('button', { name: 'Report problem' }).click()
+    await expect(page.getByRole('heading', { name: 'Report a problem' })).toBeVisible()
+    // Initial capture may have already used the failure mock; ensure no-screenshot state
+    const removeBtn = page.getByRole('button', { name: 'Remove' })
+    if (await removeBtn.isVisible()) {
+      await removeBtn.click()
+    }
+    await expect(page.getByText('No screenshot')).toBeVisible()
+    await page.getByRole('button', { name: 'Capture page' }).click()
+    await expect(page.getByText('Capture failed')).toBeVisible()
+  })
+
   test('retake button is present when a screenshot is attached', async ({ page }) => {
     await gotoScreen(page, 'lobby')
     await page.getByRole('button', { name: 'Report problem' }).click()
