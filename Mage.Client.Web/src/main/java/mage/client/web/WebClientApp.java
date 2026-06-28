@@ -76,6 +76,22 @@ public class WebClientApp {
     public static void main(String[] args) {
         int port = resolvePort(args);
         new WebClientApp().start(port);
+        // Build the local card DB in the background so deck-editor search/import
+        // work. CardRepository drops its table on every new build and relies on
+        // CardScanner.scan() (Mage.Sets) to repopulate — the server does this on
+        // startup; the gateway must too, or its DB stays empty.
+        Thread scan = new Thread(() -> {
+            try {
+                long t = System.currentTimeMillis();
+                System.out.println("Building card DB (CardScanner.scan)…");
+                mage.cards.repository.CardScanner.scan();
+                System.out.println("Card DB ready in " + (System.currentTimeMillis() - t) / 1000 + "s");
+            } catch (Throwable e) {
+                System.err.println("Card scan failed: " + e);
+            }
+        }, "card-scan");
+        scan.setDaemon(true);
+        scan.start();
     }
 
     private static int resolvePort(String[] args) {
