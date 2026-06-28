@@ -271,6 +271,10 @@ function Card3D({
           setHover(true)
           onHoverCard?.(card)
         }}
+        onPointerMove={(e) => {
+          e.stopPropagation()
+          onHoverCard?.(card)
+        }}
         onPointerLeave={() => {
           setHover(false)
           onHoverCard?.(null)
@@ -517,8 +521,14 @@ function CameraRig({ target }: { target: ViewTarget }) {
   const { camera } = useThree()
   const look = useRef(new THREE.Vector3(0, 0, 0))
   useFrame(() => {
-    camera.position.lerp(target.pos, 0.1)
-    look.current.lerp(target.look, 0.1)
+    // Stop micro-lerping once close enough. Infinite lerp keeps the camera in
+    // constant motion, which causes R3F to re-evaluate pointer intersections
+    // every frame — the changing ray angle flickers card-hover detection.
+    const SNAP = 0.0015
+    if (camera.position.distanceTo(target.pos) > SNAP) camera.position.lerp(target.pos, 0.1)
+    else camera.position.copy(target.pos)
+    if (look.current.distanceTo(target.look) > SNAP) look.current.lerp(target.look, 0.1)
+    else look.current.copy(target.look)
     camera.lookAt(look.current)
   })
   return null

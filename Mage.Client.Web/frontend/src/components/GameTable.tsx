@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Board3D } from './Board3D'
 import type { RespondKind } from '../api'
 import { plain } from '../text'
@@ -32,6 +32,18 @@ const SKIP_BUTTONS = [
 
 export function GameTable({ game, prompt, interactive, log = [], result, onRespond, onLeave }: Props) {
   const [preview, setPreview] = useState<CardType | null>(null)
+  const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Debounce clearing the preview so rapid enter/leave events (from 3D raycasting)
+  // don't cause a 1-frame flash of null between cards.
+  const handleHoverCard = useCallback((card: CardType | null) => {
+    if (card) {
+      if (clearTimerRef.current) clearTimeout(clearTimerRef.current)
+      setPreview(card)
+    } else {
+      clearTimerRef.current = setTimeout(() => setPreview(null), 180)
+    }
+  }, [])
 
   useEffect(() => {
     if (!interactive) return
@@ -127,7 +139,7 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
         <Board3D
           game={game}
           cardProps={cardProps}
-          onHoverCard={setPreview}
+          onHoverCard={handleHoverCard}
           targets={prompt?.kind === 'target' ? prompt.targets : undefined}
         />
         <CardPreview card={preview} />
@@ -180,7 +192,7 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
               </button>
             ))}
           </div>
-          {prompt?.kind === 'select' && <PlayableBar game={game} onRespond={onRespond} onHoverCard={setPreview} />}
+          {prompt?.kind === 'select' && <PlayableBar game={game} onRespond={onRespond} onHoverCard={handleHoverCard} />}
           <span className="spacer" />
           <ActionBar prompt={prompt} onRespond={onRespond} />
         </div>
