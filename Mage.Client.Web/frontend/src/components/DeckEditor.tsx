@@ -336,6 +336,17 @@ export function DeckEditor() {
           <input ref={fileInputRef} type="file" accept=".dck" style={{ display: 'none' }} onChange={onUpload} />
         </div>
 
+        {deck.length > 0 && (
+          <div className={`deck-legality${total >= 60 ? ' ok' : ''}`} title="Constructed decks need at least 60 cards">
+            <div className="deck-legality-bar">
+              <div className="deck-legality-fill" style={{ width: `${Math.min(100, (total / 60) * 100)}%` }} />
+            </div>
+            <span className="deck-legality-label muted">
+              {total} / 60 {total >= 60 ? '· ready' : `· ${60 - total} to go`}
+            </span>
+          </div>
+        )}
+
         {deck.length > 0 && <DeckStats stats={stats} />}
 
         <div className="deck-list-body">
