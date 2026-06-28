@@ -548,6 +548,7 @@ export function DeckEditor() {
                         className={`deck-entry${overLimit(e) ? ' over-limit' : ''}`}
                         onMouseEnter={() => showPreview(e)}
                         onMouseLeave={() => showPreview(null)}
+                        onClick={() => showPreview(e)}
                       >
                         <span className="deck-entry-count">{e.count}×</span>
                         <span className="deck-entry-name">{e.name}</span>
@@ -575,7 +576,7 @@ export function DeckEditor() {
               </div>
               <ul className="deck-entries">
                 {sideboard.map((e) => (
-                  <li key={e.name} className="deck-entry">
+                  <li key={e.name} className="deck-entry" onMouseEnter={() => showPreview(e)} onClick={() => showPreview(e)}>
                     <span className="deck-entry-count">{e.count}×</span>
                     <span className="deck-entry-name">{e.name}</span>
                   </li>
