@@ -75,9 +75,14 @@ export function LoginView({ onConnected }: Props) {
 
   return (
     <section className="view login-view">
-      <div className="panel login-card">
-        <h1 className="h1">Connect to a server</h1>
-        <p className="subtitle">Play Magic against players and AI opponents.</p>
+      <div className="login-stack">
+        <div className="login-hero">
+          <div className="login-hero-title">XMAGE</div>
+          <div className="login-hero-tag muted">Magic: the Gathering, reimagined for the web</div>
+        </div>
+        <div className="panel login-card">
+          <h1 className="h1">Connect to a server</h1>
+          <p className="subtitle">Play Magic against players and AI opponents.</p>
 
         <span className="field-label">QUICK CONNECT</span>
         <div className="server-presets">
@@ -120,6 +125,7 @@ export function LoginView({ onConnected }: Props) {
           {busy ? 'Connecting…' : 'Connect'}
         </button>
         {status.text && <p className={`status ${status.kind}`}>{status.text}</p>}
+        </div>
       </div>
     </section>
   )
