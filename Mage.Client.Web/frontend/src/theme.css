@@ -1734,3 +1734,5 @@ html, body { overflow-x: hidden; }
 .play-chip { display: inline-flex; align-items: center; gap: 6px; }
 .play-chip-cost { display: inline-flex; gap: 2px; }
 .play-chip-cost .mana-pip { width: 16px; height: 16px; font-size: 10px; }
+
+.filter-clear { padding: 5px 10px; font-size: 12px; }

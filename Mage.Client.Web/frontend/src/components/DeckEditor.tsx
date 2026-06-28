@@ -319,6 +319,21 @@ export function DeckEditor() {
             <option value="rare">Rare</option>
             <option value="mythic">Mythic</option>
           </select>
+          {(query || fColors || fType || fCmc || fRarity) && (
+            <button
+              className="btn ghost filter-clear"
+              title="Clear all filters"
+              onClick={() => {
+                setQuery('')
+                setFColors('')
+                setFType('')
+                setFCmc('')
+                setFRarity('')
+              }}
+            >
+              Clear ✕
+            </button>
+          )}
         </div>
         {searchError && <p className="deck-error">{searchError}</p>}
         {results.length > 0 && (
