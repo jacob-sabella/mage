@@ -4,6 +4,15 @@ import { reportProblem } from '../api'
 import { captureScreenshot, reportState } from '../reportState'
 import { useEscapeClose } from '../useEscapeClose'
 
+async function captureHidingElement(el: HTMLElement): Promise<string | null> {
+  el.style.display = 'none'
+  // Two animation frames so the browser paints without the element before html2canvas reads the DOM
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+  const shot = await captureScreenshot()
+  el.style.display = ''
+  return shot
+}
+
 export type ReportKind = 'bug' | 'feature'
 
 const COPY: Record<ReportKind, { heading: string; blurb: string; titlePh: string; bodyPh: string; bodyLabel: string }> = {
@@ -49,7 +58,17 @@ export function ReportProblemModal({
   const [errMsg, setErrMsg] = useState('')
   // undefined = use preCapture/fallback; null = user removed; string = user uploaded or pre-captured
   const [activeScreenshot, setActiveScreenshot] = useState<string | null | undefined>(preCapture)
+  const [isRetaking, setIsRetaking] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const backdropRef = useRef<HTMLDivElement>(null)
+
+  const retakeScreenshot = async () => {
+    if (!backdropRef.current || isRetaking) return
+    setIsRetaking(true)
+    const shot = await captureHidingElement(backdropRef.current)
+    if (shot !== null) setActiveScreenshot(shot)
+    setIsRetaking(false)
+  }
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -93,7 +112,7 @@ export function ReportProblemModal({
 
   // portal to body so the topbar's backdrop-filter stacking context can't trap it
   return createPortal(
-    <div className="modal-backdrop" onClick={onClose}>
+    <div ref={backdropRef} className="modal-backdrop" onClick={onClose}>
       <div className="modal panel report-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <h2 className="h1">{copy.heading}</h2>
@@ -140,6 +159,9 @@ export function ReportProblemModal({
                   <img src={activeScreenshot} alt="Screenshot to attach" className="report-screenshot-img" />
                   <div className="report-screenshot-row">
                     <span className="report-screenshot-label">Screenshot attached</span>
+                    <button className="btn ghost small" onClick={retakeScreenshot} disabled={isRetaking}>
+                      {isRetaking ? 'Capturing…' : 'Retake'}
+                    </button>
                     <button className="btn ghost small" onClick={() => fileInputRef.current?.click()}>
                       Replace
                     </button>
@@ -151,8 +173,11 @@ export function ReportProblemModal({
               ) : (
                 <div className="report-screenshot-empty">
                   <span className="report-screenshot-label">No screenshot</span>
+                  <button className="btn ghost small" onClick={retakeScreenshot} disabled={isRetaking}>
+                    {isRetaking ? 'Capturing…' : 'Capture page'}
+                  </button>
                   <button className="btn ghost small" onClick={() => fileInputRef.current?.click()}>
-                    Attach screenshot
+                    Upload
                   </button>
                 </div>
               )}

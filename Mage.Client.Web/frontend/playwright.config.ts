@@ -1,4 +1,10 @@
+import { existsSync } from 'fs'
 import { defineConfig, devices } from '@playwright/test'
+
+// Pre-installed chromium in the Claude Code remote execution environment.
+// On real CI runners this path won't exist, so fall back to the Playwright-installed binary.
+const LOCAL_CHROMIUM = '/opt/pw-browsers/chromium'
+const localChromiumPath = existsSync(LOCAL_CHROMIUM) ? LOCAL_CHROMIUM : undefined
 
 // Integration tests drive the built app in a real (headless) browser against a
 // faux backend (see tests/harness.ts) — deterministic, no gateway/server needed.
@@ -16,6 +22,9 @@ export default defineConfig({
     // packages them into the app as a viewable gallery. Off for normal runs.
     video: process.env.CLIPS ? { mode: 'on', size: { width: 720, height: 450 } } : 'off',
   },
+  // html2canvas screenshot capture (async) can take several seconds before the
+  // report modal opens — use a generous assertion timeout to avoid flaky tests.
+  expect: { timeout: 15000 },
   projects: [
     {
       name: 'chromium',
@@ -23,6 +32,7 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         launchOptions: {
+          ...(localChromiumPath ? { executablePath: localChromiumPath } : {}),
           // software WebGL so the three.js board renders headless
           args: ['--use-gl=angle', '--use-angle=swiftshader', '--ignore-gpu-blocklist', '--enable-webgl'],
         },
