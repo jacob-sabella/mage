@@ -56,7 +56,10 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   const [pendingPlay, setPendingPlay] = useState(false)
   const [playStatus, setPlayStatus] = useState<string | null>(null)
   const [gameOver, setGameOver] = useState<string | null>(null)
-  const [chatOpen, setChatOpen] = useState(true)
+  // start with chat collapsed on small/short screens to free space for the board
+  const [chatOpen, setChatOpen] = useState(
+    () => !(typeof window !== 'undefined' && window.matchMedia('(max-width: 760px), (max-height: 540px)').matches),
+  )
   // synchronous mirror of activeGameId so back-to-back gameStart+game frames in
   // one event-loop tick don't read a stale value (which clobbered interactive)
   const activeRef = useRef<string | null>(null)

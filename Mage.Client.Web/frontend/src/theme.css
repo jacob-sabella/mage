@@ -1682,3 +1682,31 @@ html, body { overflow-x: hidden; }
 
 /* let the 3D board own touch gestures (pan/pinch) instead of the page */
 .board3d, .board3d canvas { touch-action: none; }
+
+/* mobile layout fixes (from the responsive audit): let tall screens scroll and
+   give the board + deck panels real heights so nothing collapses/overlaps */
+@media (max-width: 760px) {
+  #app { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .game-table { height: auto; }
+  /* shorter board so the action dock + playable chips stay on-screen; the board
+     is pan/pinch-zoomable so its size matters less */
+  .board-wrap, .board3d { min-height: 46vh; }
+  .board-focus .board-wrap, .board-focus .board3d { min-height: 74vh; }
+  /* pin the action dock to the bottom so its buttons are always reachable */
+  .control-dock { position: sticky; bottom: 0; z-index: 20; }
+  .deck-editor { flex: none; min-height: auto; }
+  .deck-search, .deck-list { flex: none; }
+  .card-grid { max-height: 56vh; }
+}
+
+/* short / landscape-phone viewports: same scroll + real board height as mobile,
+   and trim tall chrome so the board isn't crushed */
+@media (max-height: 540px) {
+  #app { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .lobby-body { flex-direction: column; gap: 8px; }
+  .chat-col { width: 100% !important; min-width: 0 !important; }
+  .game-table { height: auto; }
+  .board-wrap, .board3d { min-height: 78vh; }
+  .lobby-header { margin-bottom: 2px; }
+  .lobby-header .h1 { font-size: 20px; }
+}

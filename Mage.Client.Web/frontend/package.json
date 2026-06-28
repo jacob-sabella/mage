@@ -13,7 +13,8 @@
     "test:ui": "playwright test --ui",
     "test:e2e": "playwright test --project=e2e",
     "smoke": "node scripts/smoke-game.mjs",
-    "clips": "node scripts/build-clips.mjs"
+    "clips": "node scripts/build-clips.mjs",
+    "test:audit": "AUDIT=1 playwright test layout-audit --project=chromium"
   },
   "dependencies": {
     "@react-three/drei": "^9.122.0",

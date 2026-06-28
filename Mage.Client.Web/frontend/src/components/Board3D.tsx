@@ -972,7 +972,10 @@ export function Board3D({
   )
   // auto = cinematic cam that follows the active player; 2D = fixed top-down;
   // 3D = the angled seat views; free = user-orbited. Same world either way.
-  const isMobile = useMemo(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches, [])
+  const isMobile = useMemo(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 760px), (max-height: 540px)').matches,
+    [],
+  )
   // Small screens default to free mode: a flat top-down board you pan with one
   // finger and pinch to zoom — a large zoomable/pannable canvas (rotate locked).
   const [mode, setMode] = useState<ViewMode>(() => (isMobile ? 'free' : '3d'))
