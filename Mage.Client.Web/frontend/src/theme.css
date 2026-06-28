@@ -1603,3 +1603,59 @@ html, body { overflow-x: hidden; }
   font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
   color: #0d1119; background: var(--accent-2); border-radius: 5px; padding: 1px 5px; flex-shrink: 0;
 }
+
+/* ============================================================
+   Mobile / small-screen support
+   ============================================================ */
+@media (max-width: 760px) {
+  #app { padding: 8px; }
+
+  /* top bar: condense, allow wrap, drop low-value text */
+  .topbar { padding: 7px 10px; gap: 6px; flex-wrap: wrap; }
+  .topbar .version-chip, .topbar .server-label { display: none; }
+  .topbar-report { padding: 6px 9px; font-size: 12px; }
+  .app-nav { padding: 0 8px; overflow-x: auto; }
+  .nav-tab { padding: 8px 12px; white-space: nowrap; }
+
+  /* game + lobby: stack the chat under the board instead of beside it */
+  .lobby-body { flex-direction: column; gap: 8px; }
+  .lobby-main { min-height: 56vh; }
+  .chat-col { width: 100% !important; min-width: 0 !important; flex: 0 0 auto; }
+  .chat-col .chat-panel, .chat-col .panel { max-height: 32vh; }
+  .chat-messages { min-height: 90px; }
+
+  /* turn controls: let everything wrap, full-width playable bar */
+  .game-toolbar { flex-wrap: wrap; gap: 6px; }
+  .player-strip { flex-wrap: wrap; }
+  .control-dock { padding: 8px 10px; gap: 6px 8px; }
+  .control-dock .playable-bar { max-width: 100%; flex: 1 1 100%; }
+  .control-dock .action-bar { min-width: 0; flex: 1 1 100%; }
+
+  /* deck editor: single column, search above the deck list */
+  .deck-editor { flex-direction: column; }
+  .deck-search, .deck-list { width: 100%; max-width: 100%; }
+  .card-grid { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); }
+
+  /* cards/forms: full width, less padding */
+  .settings-card, .login-card { width: 100%; padding: 20px; }
+  .login-stack { gap: 16px; }
+  .field-row { flex-wrap: wrap; }
+
+  /* modals: single column + fit the viewport */
+  .modal { max-width: 96vw; }
+  .clips-body { grid-template-columns: 1fr; }
+  .clips-list { max-height: 34vh; }
+  .sample-hand { grid-template-columns: repeat(3, 1fr); }
+  .img-stats { gap: 14px; }
+
+  /* comfortable tap targets */
+  .btn { min-height: 36px; }
+  .nav-tab { min-height: 40px; }
+}
+
+@media (max-width: 480px) {
+  .topbar-report { padding: 6px 9px; }
+  .card-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
+  .sample-hand { grid-template-columns: repeat(2, 1fr); }
+  .h1 { font-size: 22px; }
+}
