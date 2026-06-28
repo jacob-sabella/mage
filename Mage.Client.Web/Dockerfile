@@ -11,6 +11,8 @@ WORKDIR /src/Mage.Client.Web/frontend
 COPY Mage.Client.Web/frontend/package.json Mage.Client.Web/frontend/package-lock.json ./
 RUN npm ci
 COPY Mage.Client.Web/frontend/ ./
+# .git must be present so vite.config.ts can run `git log` to build the changelog
+COPY .git /src/.git
 RUN npm run build
 
 ##########################################################################
