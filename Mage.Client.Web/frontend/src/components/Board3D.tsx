@@ -28,6 +28,7 @@ const CARD_H = 1.68
  *  Zone piles sit at x ≈ ±3.0, so this keeps cards comfortably between them and
  *  prevents battlefield rows from overflowing into neighbouring players' zones. */
 const MAX_ROW_W = 4.8
+const MAX_PER_ROW = 12
 const COLOR_BG: Record<string, string> = { W: '#cfc9a8', U: '#3b6ea5', B: '#3a3340', R: '#a53b3b', G: '#3a7a52' }
 
 function bg(colors?: string | null) {
@@ -407,18 +408,75 @@ function PlayerZone({
   cardProps: CardProps
   onHoverCard?: (c: GameCard | null) => void
 }) {
-  // the whole group is rotated to face the table centre.
-  const placed = useMemo(() => {
-    return battlefieldLayout(seat.player)
-  }, [seat.player.battlefield])
+  const [expanded, setExpanded] = useState(false)
+
+  const { placed, creatureOverflow, backOverflow, creatureVisCount, backVisCount } = useMemo(() => {
+    const creatures: GameCard[] = []
+    const back: GameCard[] = []
+    for (const c of seat.player.battlefield) {
+      const t = (c.types ?? []).map((x) => x.toLowerCase())
+      if (t.some((x) => x.includes('creature'))) creatures.push(c)
+      else back.push(c)
+    }
+    back.sort((a, b) => {
+      const al = (a.types ?? []).some((x) => /land/i.test(x)) ? 0 : 1
+      const bl = (b.types ?? []).some((x) => /land/i.test(x)) ? 0 : 1
+      return al - bl
+    })
+    const creatureOverflow = Math.max(0, creatures.length - MAX_PER_ROW)
+    const backOverflow = Math.max(0, back.length - MAX_PER_ROW)
+    const visCreatures = expanded ? creatures : creatures.slice(0, MAX_PER_ROW)
+    const visBack = expanded ? back : back.slice(0, MAX_PER_ROW)
+    return {
+      placed: [...row(visCreatures, 0, -0.95), ...row(visBack, 0, 0.95)],
+      creatureOverflow,
+      backOverflow,
+      creatureVisCount: visCreatures.length,
+      backVisCount: visBack.length,
+    }
+  }, [seat.player.battlefield, expanded])
+
   const p = seat.player
   const gy = p.graveyard.length ? p.graveyard[p.graveyard.length - 1] : null
   const ex = p.exile.length ? p.exile[p.exile.length - 1] : null
+
+  // X position of the overflow badge: one gap-width past the last visible card.
+  // Uses the same capped-gap formula as row() so the badge lines up correctly
+  // even when MAX_ROW_W forces cards to compress.
+  const overflowX = (n: number) => {
+    if (n <= 0) return 0
+    const g = n > 1 ? Math.min(1.45, MAX_ROW_W / (n - 1)) : 1.45
+    return ((n - 1) * g) / 2 + g
+  }
+
   return (
     <group position={[seat.x, 0, seat.z]} rotation={[0, seat.yaw, 0]}>
       {placed.map(({ card, pos }) => (
         <Card3D key={card.id} card={card} position={pos} cardProps={cardProps} onHoverCard={onHoverCard} />
       ))}
+      {/* overflow badges: show +N when a row is clipped */}
+      {!expanded && creatureOverflow > 0 && (
+        <Html position={[overflowX(creatureVisCount), 0.2, -0.95]} center distanceFactor={10} zIndexRange={[20, 0]}>
+          <button className="c3d-overflow-btn" onClick={() => setExpanded(true)}>
+            +{creatureOverflow}
+          </button>
+        </Html>
+      )}
+      {!expanded && backOverflow > 0 && (
+        <Html position={[overflowX(backVisCount), 0.2, 0.95]} center distanceFactor={10} zIndexRange={[20, 0]}>
+          <button className="c3d-overflow-btn" onClick={() => setExpanded(true)}>
+            +{backOverflow}
+          </button>
+        </Html>
+      )}
+      {/* collapse button when all cards are shown */}
+      {expanded && (creatureOverflow > 0 || backOverflow > 0) && (
+        <Html position={[0, 0.3, -1.8]} center distanceFactor={10} zIndexRange={[20, 0]}>
+          <button className="c3d-overflow-btn c3d-overflow-collapse" onClick={() => setExpanded(false)}>
+            ▲ collapse
+          </button>
+        </Html>
+      )}
       {/* zone piles — standard playmat: library + graveyard to the player's
           right, exile set apart on the left ("outside the game") */}
       <CardPile position={[3.0, 1.7]} count={p.libraryCount} faceUp={false} label="Lib" cardProps={cardProps} onHoverCard={onHoverCard} />
