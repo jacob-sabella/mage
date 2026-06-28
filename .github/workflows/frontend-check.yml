@@ -7,11 +7,9 @@ name: frontend check
 on:
   push:
     branches: ["vibe/xmage-claude-react-ui"]
-    paths:
-      - "Mage.Client.Web/frontend/**"
   pull_request:
-    paths:
-      - "Mage.Client.Web/frontend/**"
+  # no path filter: a required check must report on EVERY PR, or PRs that don't
+  # touch the frontend get stuck waiting on a check that never runs.
 
 jobs:
   typecheck:
