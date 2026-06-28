@@ -972,10 +972,10 @@ export function Board3D({
   )
   // auto = cinematic cam that follows the active player; 2D = fixed top-down;
   // 3D = the angled seat views; free = user-orbited. Same world either way.
-  // Small screens default to the flat top-down view — it reads far better there.
-  const [mode, setMode] = useState<ViewMode>(
-    () => (typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches ? '2d' : '3d'),
-  )
+  const isMobile = useMemo(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches, [])
+  // Small screens default to free mode: a flat top-down board you pan with one
+  // finger and pinch to zoom — a large zoomable/pannable canvas (rotate locked).
+  const [mode, setMode] = useState<ViewMode>(() => (isMobile ? 'free' : '3d'))
   const TOP_DOWN: ViewTarget = useMemo(
     () => ({ pos: new THREE.Vector3(0, 15 + seats.length * 0.8, 2.2), look: new THREE.Vector3(0, 0, 0) }),
     [seats.length],
@@ -1001,7 +1001,7 @@ export function Board3D({
       {mode !== 'free' && <ZoomBar zoom={zoom} onZoom={setZoom} />}
       <Canvas
         shadows
-        camera={{ position: [0, 5.4, 10 ], fov: 46 }}
+        camera={{ position: isMobile ? [0, 16, 0.01] : [0, 5.4, 10], fov: 46 }}
         dpr={[1, 2]}
         gl={{ antialias: true, preserveDrawingBuffer: true }}
       >
@@ -1086,7 +1086,19 @@ export function Board3D({
         {/* free cam → user orbits/pans; otherwise the camera is driven to the
             selected (2D top-down or 3D seat) viewpoint */}
         {mode === 'free' ? (
-          <OrbitControls makeDefault enablePan enableDamping dampingFactor={0.08} minDistance={1.5} maxDistance={40} target={[0, 0, 0]} />
+          <OrbitControls
+            makeDefault
+            enablePan
+            enableDamping
+            dampingFactor={0.08}
+            minDistance={1.5}
+            maxDistance={isMobile ? 60 : 40}
+            target={[0, 0, 0]}
+            // mobile = a flat pan/pinch canvas: one finger pans, two pinch-zoom,
+            // rotation locked so the board stays readable top-down
+            enableRotate={!isMobile}
+            touches={isMobile ? { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_PAN } : undefined}
+          />
         ) : mode === 'auto' ? (
           <CinematicRig seats={seats} activeName={game.activePlayer} radius={radius} zoom={zoom} combat={game.combat.length} />
         ) : (

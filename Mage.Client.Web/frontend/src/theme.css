@@ -1679,3 +1679,6 @@ html, body { overflow-x: hidden; }
 /* deck 4-copy-limit warning */
 .deck-limit-warn { font-size: 12px; color: #ffb13b; font-weight: 600; margin: 2px 0 0; }
 .deck-entry.over-limit .deck-entry-count { color: #ffb13b; font-weight: 800; }
+
+/* let the 3D board own touch gestures (pan/pinch) instead of the page */
+.board3d, .board3d canvas { touch-action: none; }
