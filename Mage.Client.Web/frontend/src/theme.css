@@ -978,6 +978,17 @@ input::placeholder { color: var(--text-dim); }
 }
 .view-radial.mode { font-weight: 700; border-color: color-mix(in srgb, var(--accent-2) 50%, var(--stroke)); }
 .view-radial.active { background: var(--accent); color: #0d1119; border-color: transparent; font-weight: 700; }
+.zoom-bar {
+  position: absolute; top: 68px; left: 16px; z-index: 4;
+  display: flex; align-items: center; gap: 2px;
+  background: rgba(14, 16, 22, 0.7); backdrop-filter: blur(6px);
+  padding: 3px 6px; border-radius: 999px; border: 1px solid var(--stroke);
+}
+.zoom-btn {
+  padding: 2px 9px; font-size: 16px; font-weight: 700;
+  border-radius: 999px; line-height: 1; min-width: 28px;
+}
+.zoom-label { font-size: 11px; min-width: 34px; text-align: center; color: var(--muted); }
 
 /* compact player status strip above the board */
 .player-strip { display: flex; gap: 12px; }

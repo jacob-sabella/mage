@@ -530,6 +530,45 @@ function BoardArrows({ seats, combat, targets }: { seats: Seat[]; combat: GameSt
 
 type ViewMode = '3d' | '2d' | 'free'
 
+const ZOOM_MIN = 0.35
+const ZOOM_MAX = 3.0
+const ZOOM_STEP = 0.25
+const ZOOM_DEFAULT = 1.0
+
+/** Scale the camera's distance from its look-at point by 1/zoom.
+ *  zoom=1 → no change; zoom=2 → twice as close; zoom=0.5 → twice as far. */
+function applyZoom(t: ViewTarget, zoom: number): ViewTarget {
+  const dir = t.pos.clone().sub(t.look)
+  return { pos: t.look.clone().addScaledVector(dir, 1 / zoom), look: t.look.clone() }
+}
+
+/** Compact +/− zoom strip shown in 3D and 2D modes. */
+function ZoomBar({ zoom, onZoom }: { zoom: number; onZoom: (z: number) => void }) {
+  return (
+    <div className="zoom-bar">
+      <button
+        className="btn zoom-btn"
+        onClick={() => onZoom(Math.max(ZOOM_MIN, +(zoom - ZOOM_STEP).toFixed(2)))}
+        title="Zoom out"
+        aria-label="Zoom out"
+      >
+        −
+      </button>
+      <span className="zoom-label" title="Click to reset zoom" onClick={() => onZoom(ZOOM_DEFAULT)} style={{ cursor: 'pointer' }}>
+        {Math.round(zoom * 100)}%
+      </span>
+      <button
+        className="btn zoom-btn"
+        onClick={() => onZoom(Math.min(ZOOM_MAX, +(zoom + ZOOM_STEP).toFixed(2)))}
+        title="Zoom in"
+        aria-label="Zoom in"
+      >
+        +
+      </button>
+    </div>
+  )
+}
+
 /** Radial fan menu for camera control: a mode ring (2D/3D/Free) plus, in 3D, a
  *  focus ring (Overview + each seat). Collapsed to a single button by default. */
 function ViewMenu({
@@ -656,7 +695,11 @@ export function Board3D({
     if (view >= views.length) setView(spectating ? 0 : 1)
   }, [views.length, view, spectating])
 
-  const target = mode === '2d' ? TOP_DOWN : views[view].target
+  const [zoom, setZoom] = useState(ZOOM_DEFAULT)
+
+  const rawTarget = mode === '2d' ? TOP_DOWN : views[view].target
+  // free mode uses OrbitControls scroll-wheel zoom; for 3d/2d we scale the camera distance
+  const target = mode === 'free' ? rawTarget : applyZoom(rawTarget, zoom)
 
   const hand = useMemo(() => row(game.myHand, 0, 5.9, 1.42), [game.myHand])
   const stack = useMemo(() => row(game.stack, 0, 0.6, 1.4), [game.stack])
@@ -664,6 +707,7 @@ export function Board3D({
   return (
     <div className="board3d">
       <ViewMenu mode={mode} setMode={setMode} views={views} view={view} setView={setView} />
+      {mode !== 'free' && <ZoomBar zoom={zoom} onZoom={setZoom} />}
       <Canvas
         shadows
         camera={{ position: [0, 5.4, 10 ], fov: 46 }}
@@ -732,7 +776,7 @@ export function Board3D({
         {/* free cam → user orbits/pans; otherwise the camera is driven to the
             selected (2D top-down or 3D seat) viewpoint */}
         {mode === 'free' ? (
-          <OrbitControls makeDefault enablePan enableDamping dampingFactor={0.08} minDistance={4} maxDistance={40} target={[0, 0, 0]} />
+          <OrbitControls makeDefault enablePan enableDamping dampingFactor={0.08} minDistance={1.5} maxDistance={40} target={[0, 0, 0]} />
         ) : (
           <CameraRig target={target} />
         )}
