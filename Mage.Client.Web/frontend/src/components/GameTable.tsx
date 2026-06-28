@@ -35,6 +35,14 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
   const [pressedCard, setPressedCard] = useState<CardType | null>(null)
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // mobile "focus board" mode: hide chat + strips for a full-screen table
+  const [boardFocus, setBoardFocus] = useState(false)
+  useEffect(() => {
+    const root = document.documentElement
+    root.classList.toggle('board-focus', boardFocus)
+    return () => root.classList.remove('board-focus')
+  }, [boardFocus])
+
   // Debounce clearing the preview so rapid enter/leave events (from 3D raycasting)
   // don't cause a 1-frame flash of null between cards.
   const handleHoverCard = useCallback((card: CardType | null) => {
@@ -144,6 +152,15 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
           )
         })}
       </div>
+
+      <button
+        className="focus-toggle"
+        onClick={() => setBoardFocus((f) => !f)}
+        title={boardFocus ? 'Exit focus' : 'Focus board'}
+        aria-label={boardFocus ? 'Exit focus board' : 'Focus board'}
+      >
+        {boardFocus ? '✕' : '⛶'}
+      </button>
 
       <div className="board-wrap">
         <Board3D

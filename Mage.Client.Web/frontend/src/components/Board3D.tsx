@@ -972,7 +972,10 @@ export function Board3D({
   )
   // auto = cinematic cam that follows the active player; 2D = fixed top-down;
   // 3D = the angled seat views; free = user-orbited. Same world either way.
-  const [mode, setMode] = useState<ViewMode>('3d')
+  // Small screens default to the flat top-down view — it reads far better there.
+  const [mode, setMode] = useState<ViewMode>(
+    () => (typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches ? '2d' : '3d'),
+  )
   const TOP_DOWN: ViewTarget = useMemo(
     () => ({ pos: new THREE.Vector3(0, 15 + seats.length * 0.8, 2.2), look: new THREE.Vector3(0, 0, 0) }),
     [seats.length],
