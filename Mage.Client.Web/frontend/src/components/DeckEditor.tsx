@@ -445,7 +445,15 @@ export function DeckEditor() {
       <section className="panel deck-list">
         <DeckCardPreview card={preview} />
         <div className="deck-list-head">
-          <h2 className="deck-title">{deckName}</h2>
+          <input
+            className="deck-title deck-title-input"
+            value={deckName}
+            onChange={(e) => setDeckName(e.target.value)}
+            aria-label="Deck name"
+            title="Rename deck"
+            spellCheck={false}
+          />
+          <span className="deck-title-pencil" aria-hidden>✎</span>
           <span className="spacer" />
           <span className="chip">{total} cards</span>
           <button className="btn watch-btn" onClick={() => setImportOpen(true)}>
