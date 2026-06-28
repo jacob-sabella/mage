@@ -1109,6 +1109,12 @@ input::placeholder { color: var(--text-dim); }
 /* ----- hover card preview (inline inside deck list, top of right panel) ----- */
 .card-preview {
   width: 100%;
+  /* Fixed height prevents layout shifts that cause flicker: when the preview
+     jumps from empty→full, deck entries below would shift and trigger
+     onMouseLeave/onMouseEnter loops. A stable container height avoids this. */
+  height: 280px;
+  display: flex;
+  flex-direction: column;
   background: var(--bg-raised);
   border: 1px solid color-mix(in srgb, var(--accent-2) 35%, var(--stroke));
   border-radius: var(--radius-sm);
@@ -1117,14 +1123,14 @@ input::placeholder { color: var(--text-dim); }
   flex-shrink: 0;
 }
 .card-preview-empty {
-  height: 76px;
+  flex: 1;
   display: flex; align-items: center; justify-content: center;
   font-size: 12px;
   border-style: dashed;
   border-color: var(--stroke);
   background: transparent;
 }
-.card-preview-img { width: 100%; display: block; background: #11141b; height: auto; object-fit: contain; }
+.card-preview-img { width: 100%; flex: 1; min-height: 0; display: block; background: #11141b; object-fit: contain; }
 .card-preview-info { padding: 10px 12px; }
 .card-preview-head { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
 .card-preview-name { font-weight: 700; font-size: 15px; }
