@@ -81,6 +81,7 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
           <b>Turn {game.turn}</b>
           {game.activePlayer ? ` · ${game.activePlayer}'s turn` : ''}
         </span>
+        <PhaseTrack phase={game.phase} step={game.step} />
         <span className="spacer" />
         {game.priorityPlayer && (
           <span className={`prio-chip${game.priorityPlayer === game.me ? ' you' : ''}`}>
@@ -98,8 +99,6 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
           </button>
         )}
       </div>
-
-      <PhaseTrack phase={game.phase} step={game.step} />
 
 
       <div className="player-strip">
