@@ -37,6 +37,7 @@ export function useServerEvents(token: string | null, onEvent?: (e: ServerEvent)
       ws.onmessage = (ev) => {
         try {
           const msg = JSON.parse(ev.data) as ServerEvent
+          if (msg.type === 'heartbeat') return // keepalive only — ignore
           setEvents((prev) => [...prev.slice(-99), msg])
           onEventRef.current?.(msg)
         } catch {

@@ -124,6 +124,11 @@ public class WebClientApp {
                 staticFiles.directory = "/web";
                 staticFiles.location = Location.CLASSPATH;
             });
+            // Don't drop idle game sockets — players sit on long mulligans / the
+            // opponent's turn with no frames flowing. A heartbeat (below) keeps them
+            // active, and this raises the hard ceiling well past any normal wait.
+            config.jetty.wsFactoryConfig(factory ->
+                    factory.setIdleTimeout(java.time.Duration.ofHours(2)));
         });
 
         app.post("/api/connect", this::handleConnect);
@@ -189,7 +194,30 @@ public class WebClientApp {
         });
 
         app.start(port);
+        startHeartbeat();
         System.out.println("XMage web client running at http://localhost:" + port);
+    }
+
+    /** Push a tiny heartbeat to every open socket so it never goes idle (which would
+     *  otherwise close the connection during a long wait — mulligan, opponent turn). */
+    private void startHeartbeat() {
+        java.util.concurrent.ScheduledExecutorService hb =
+                java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+                    Thread t = new Thread(r, "ws-heartbeat");
+                    t.setDaemon(true);
+                    return t;
+                });
+        hb.scheduleAtFixedRate(() -> {
+            for (WsContext ctx : sockets.values()) {
+                try {
+                    if (ctx.session.isOpen()) {
+                        push(ctx, "heartbeat", "");
+                    }
+                } catch (Exception ignored) {
+                    // dead sockets are cleaned up on close
+                }
+            }
+        }, 25, 25, java.util.concurrent.TimeUnit.SECONDS);
     }
 
     private void handleConnect(Context ctx) {
