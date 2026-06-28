@@ -63,6 +63,8 @@ public class WebClientApp {
     private final SessionRegistry sessions = new SessionRegistry();
     // token -> live websocket, so upstream callbacks can be pushed to the browser
     private final ConcurrentHashMap<String, WsContext> sockets = new ConcurrentHashMap<>();
+    // token -> last log line sent; used to suppress consecutive duplicate log spam
+    private final ConcurrentHashMap<String, String> lastLogLine = new ConcurrentHashMap<>();
     private final ObjectMapper json = new ObjectMapper();
     // outbound HTTP client for server-side GitHub issue creation (report-a-problem)
     private final java.net.http.HttpClient http = java.net.http.HttpClient.newBuilder()
@@ -175,6 +177,7 @@ public class WebClientApp {
                 String token = ctx.queryParam("token");
                 if (token != null) {
                     sockets.remove(token);
+                    lastLogLine.remove(token);
                 }
             });
         });
@@ -976,9 +979,16 @@ public class WebClientApp {
     }
 
     private void pushLog(WsContext ctx, String text) {
+        String clean = text.replaceAll("<[^>]+>", ""); // strip server HTML markup
+        // suppress consecutive duplicate log lines (e.g. repeated "Waiting for X" spam)
+        String token = ctx.queryParam("token");
+        if (token != null) {
+            String prev = lastLogLine.put(token, clean);
+            if (clean.equals(prev)) return;
+        }
         Map<String, Object> msg = new LinkedHashMap<>();
         msg.put("type", "log");
-        msg.put("text", text.replaceAll("<[^>]+>", "")); // strip server HTML markup
+        msg.put("text", clean);
         pushMap(ctx, msg);
     }
 
