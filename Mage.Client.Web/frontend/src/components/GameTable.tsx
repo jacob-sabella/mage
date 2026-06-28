@@ -32,6 +32,13 @@ const SKIP_BUTTONS = [
 
 export function GameTable({ game, prompt, interactive, log = [], result, onRespond, onLeave }: Props) {
   const [preview, setPreview] = useState<CardType | null>(null)
+
+  // Hide the global topbar and nav while in-game to reclaim vertical space
+  useEffect(() => {
+    document.body.classList.add('in-game')
+    return () => document.body.classList.remove('in-game')
+  }, [])
+
   useEffect(() => {
     if (!interactive) return
     const onKey = (e: KeyboardEvent) => {
@@ -75,11 +82,11 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
     <div className="game-table">
       <div className="game-toolbar">
         <button className="btn ghost" onClick={onLeave}>
-          ← Back to lobby
+          ← Back
         </button>
         <span className="turn-label">
-          <b>Turn {game.turn}</b>
-          {game.activePlayer ? ` · ${game.activePlayer}'s turn` : ''}
+          <b>T{game.turn}</b>
+          {game.activePlayer ? ` · ${game.activePlayer}` : ''}
         </span>
         <PhaseTrack phase={game.phase} step={game.step} />
         <span className="spacer" />

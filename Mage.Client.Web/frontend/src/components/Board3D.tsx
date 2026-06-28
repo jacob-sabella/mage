@@ -248,26 +248,25 @@ function Card3D({
   const lift = hover ? 0.7 : 0
   const scale = hover ? 1.35 : 1
   const glow = highlight === 'play' ? '#21e6ff' : highlight === 'target' ? '#ff2e97' : '#ffffff'
-  const yFace = lift + (standing ? CARD_H / 2 : 0.02)
+  // Fixed y for hit detection — does not move when card lifts on hover.
+  // Keeping the interactive mesh stable prevents the feedback loop where lifting
+  // moves the geometry out from under the pointer, firing onPointerLeave, dropping
+  // the card, firing onPointerEnter again, etc. — which was flashing the preview.
+  const hitY = standing ? CARD_H / 2 : 0.02
 
   return (
     <group position={position}>
-      {/* glowing backing plate for highlighted (playable/targetable) or hovered cards */}
-      {(highlight || hover) && (
-        <mesh position={[0, lift + (standing ? CARD_H / 2 : 0.012), standing ? -0.01 : 0]} rotation={rot} scale={scale}>
-          <planeGeometry args={[CARD_W * 1.12, CARD_H * 1.1]} />
-          <meshBasicMaterial color={glow} transparent opacity={hover ? 0.85 : 0.55} toneMapped={false} />
-        </mesh>
-      )}
+      {/* Invisible stable hit area: stays at the original y regardless of hover state.
+          Pointer events are handled here; the visual content is a separate group. */}
       <mesh
-        position={[0, yFace, 0]}
+        position={[0, hitY, 0]}
         rotation={rot}
-        onPointerOver={(e) => {
+        onPointerEnter={(e) => {
           e.stopPropagation()
           setHover(true)
           onHoverCard?.(card)
         }}
-        onPointerOut={() => {
+        onPointerLeave={() => {
           setHover(false)
           onHoverCard?.(null)
         }}
@@ -279,52 +278,76 @@ function Card3D({
               }
             : undefined
         }
-        scale={scale}
       >
         <planeGeometry args={[CARD_W, CARD_H]} />
-        {/* unlit + toneMapped off → card art shows at full, vivid, readable colour
-            instead of being washed out by the scene lighting */}
-        <meshBasicMaterial map={tex} color="#ffffff" side={THREE.DoubleSide} toneMapped={false} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
       </mesh>
 
-      {/* crisp DOM indicators anchored to the card — readable at any zoom/angle */}
-      {isType(card, /creature/i) && card.power != null && card.toughness != null && (
-        <Html
-          position={[CARD_W * 0.34, lift + 0.14, CARD_H * 0.3]}
-          center
-          distanceFactor={9}
-          zIndexRange={[20, 0]}
-          className="c3d-badge c3d-pt"
+      {/* Visual group lifts and scales on hover independently of the hit area */}
+      <group position={[0, lift, 0]}>
+        {/* glowing backing plate for highlighted (playable/targetable) or hovered cards */}
+        {(highlight || hover) && (
+          <mesh
+            position={[0, standing ? CARD_H / 2 : 0.012, standing ? -0.01 : 0]}
+            rotation={rot}
+            scale={scale}
+            raycast={() => null}
+          >
+            <planeGeometry args={[CARD_W * 1.12, CARD_H * 1.1]} />
+            <meshBasicMaterial color={glow} transparent opacity={hover ? 0.85 : 0.55} toneMapped={false} />
+          </mesh>
+        )}
+        <mesh
+          position={[0, standing ? CARD_H / 2 : 0.02, 0]}
+          rotation={rot}
+          scale={scale}
+          raycast={() => null}
         >
-          {card.power}/{card.toughness}
-        </Html>
-      )}
-      {isType(card, /planeswalker/i) && card.loyalty != null && (
-        <Html
-          position={[CARD_W * 0.34, lift + 0.14, CARD_H * 0.3]}
-          center
-          distanceFactor={9}
-          zIndexRange={[20, 0]}
-          className="c3d-badge c3d-loy"
-        >
-          {card.loyalty}
-        </Html>
-      )}
-      {showCost && manaSymbols(card.manaCost).length > 0 && (
-        <Html
-          position={[-CARD_W * 0.18, lift + 0.14, -CARD_H * 0.34]}
-          center
-          distanceFactor={9}
-          zIndexRange={[20, 0]}
-          className="c3d-badge c3d-mana"
-        >
-          {manaSymbols(card.manaCost).map((s, i) => (
-            <span key={i} className="c3d-pip" style={{ background: MANA_PIP[s] ?? '#9aa0ad' }}>
-              {s}
-            </span>
-          ))}
-        </Html>
-      )}
+          <planeGeometry args={[CARD_W, CARD_H]} />
+          {/* unlit + toneMapped off → card art shows at full, vivid, readable colour
+              instead of being washed out by the scene lighting */}
+          <meshBasicMaterial map={tex} color="#ffffff" side={THREE.DoubleSide} toneMapped={false} />
+        </mesh>
+
+        {/* crisp DOM indicators anchored to the card — readable at any zoom/angle */}
+        {isType(card, /creature/i) && card.power != null && card.toughness != null && (
+          <Html
+            position={[CARD_W * 0.34, 0.14, CARD_H * 0.3]}
+            center
+            distanceFactor={9}
+            zIndexRange={[20, 0]}
+            className="c3d-badge c3d-pt"
+          >
+            {card.power}/{card.toughness}
+          </Html>
+        )}
+        {isType(card, /planeswalker/i) && card.loyalty != null && (
+          <Html
+            position={[CARD_W * 0.34, 0.14, CARD_H * 0.3]}
+            center
+            distanceFactor={9}
+            zIndexRange={[20, 0]}
+            className="c3d-badge c3d-loy"
+          >
+            {card.loyalty}
+          </Html>
+        )}
+        {showCost && manaSymbols(card.manaCost).length > 0 && (
+          <Html
+            position={[-CARD_W * 0.18, 0.14, -CARD_H * 0.34]}
+            center
+            distanceFactor={9}
+            zIndexRange={[20, 0]}
+            className="c3d-badge c3d-mana"
+          >
+            {manaSymbols(card.manaCost).map((s, i) => (
+              <span key={i} className="c3d-pip" style={{ background: MANA_PIP[s] ?? '#9aa0ad' }}>
+                {s}
+              </span>
+            ))}
+          </Html>
+        )}
+      </group>
     </group>
   )
 }
@@ -647,9 +670,8 @@ export function Board3D({
         dpr={[1, 2]}
         gl={{ antialias: true, preserveDrawingBuffer: true, alpha: true }}
       >
-        {/* transparent canvas so the page backdrop shows through seamlessly */}
-        <fog attach="fog" args={[scene.bg, 34, 96]} />
-        <FamilyBackdrop kind={backdrop} inGame />
+        {/* transparent canvas — the full-screen SceneBackground shows through,
+            merging the 3D game environment with the app backdrop */}
 
         <ambientLight intensity={0.85} />
         <directionalLight position={[4, 11, 6]} intensity={0.9} color={scene.key} castShadow />
