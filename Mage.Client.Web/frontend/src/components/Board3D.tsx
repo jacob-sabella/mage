@@ -24,6 +24,10 @@ const isType = (c: GameCard, re: RegExp) => (c.types ?? []).some((t) => re.test(
 
 const CARD_W = 1.2
 const CARD_H = 1.68
+/** Max width (in local units) a battlefield row may span before cards start overlapping.
+ *  Zone piles sit at x ≈ ±3.0, so this keeps cards comfortably between them and
+ *  prevents battlefield rows from overflowing into neighbouring players' zones. */
+const MAX_ROW_W = 4.8
 const COLOR_BG: Record<string, string> = { W: '#cfc9a8', U: '#3b6ea5', B: '#3a3340', R: '#a53b3b', G: '#3a7a52' }
 
 function bg(colors?: string | null) {
@@ -351,12 +355,18 @@ function Card3D({
   )
 }
 
-/** Lay a row of cards centered at (cx, cz) along X. */
+/** Lay a row of cards centered at (cx, cz) along X.
+ *  When the row would exceed MAX_ROW_W the gap shrinks so cards overlap
+ *  (Slay-the-Spire style) instead of spilling outside the player's zone. */
 function row(cards: GameCard[], cx: number, cz: number, gap = 1.45) {
-  const w = (cards.length - 1) * gap
+  const n = cards.length
+  if (n === 0) return []
+  // Cap the gap so the total row width never exceeds MAX_ROW_W.
+  const effectiveGap = n > 1 ? Math.min(gap, MAX_ROW_W / (n - 1)) : gap
+  const w = (n - 1) * effectiveGap
   // Tiny per-card y stagger prevents coplanar z-fighting when adjacent cards share
   // edge pixels under MSAA — visually imperceptible at this scale.
-  return cards.map((c, i) => ({ card: c, pos: [cx - w / 2 + i * gap, i * 0.0002, cz] as [number, number, number] }))
+  return cards.map((c, i) => ({ card: c, pos: [cx - w / 2 + i * effectiveGap, i * 0.0002, cz] as [number, number, number] }))
 }
 
 type Seat = { player: GamePlayer; x: number; z: number; yaw: number; isViewer: boolean }
