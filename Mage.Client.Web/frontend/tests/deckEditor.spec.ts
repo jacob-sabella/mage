@@ -26,7 +26,7 @@ test.describe('Deck editor', () => {
     await page.getByRole('button', { name: 'Open' }).click()
     await page.getByRole('button', { name: /Mono Red Aggro/ }).click()
 
-    await expect(page.getByRole('heading', { name: 'Mono Red Aggro' })).toBeVisible()
+    await expect(page.getByLabel('Deck name')).toHaveValue('Mono Red Aggro')
     await expect(page.locator('.deck-entry', { hasText: 'Mountain' })).toContainText('20×')
     await expect(page.getByText(/Sideboard/)).toBeVisible()
     await expect(page.locator('.deck-stats')).toBeVisible()

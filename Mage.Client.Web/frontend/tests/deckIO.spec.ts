@@ -23,6 +23,6 @@ test.describe('Deck import / upload', () => {
     })
     await expect(page.getByText(/Uploaded .*Imported Deck/)).toBeVisible()
     // it then loads the returned deck (decks/load is stubbed to Mono Red Aggro)
-    await expect(page.getByRole('heading', { name: 'Mono Red Aggro' })).toBeVisible()
+    await expect(page.getByLabel('Deck name')).toHaveValue('Mono Red Aggro')
   })
 })
