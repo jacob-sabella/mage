@@ -79,14 +79,17 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
     )
   }
 
-  // Decide how a card responds to clicks given the current decision.
+  // Decide how a card responds to clicks given the current decision. A pending
+  // target prompt takes precedence; otherwise any server-playable card (canPlay)
+  // glows and can be played by clicking it directly on the board — matching the
+  // "Play / activate" bar so playable cards are obvious in the 3D view too.
   function cardProps(card: CardType): { highlight?: 'play' | 'target'; onClick?: (c: CardType) => void } {
-    if (!interactive || !prompt) return {}
-    if (prompt.kind === 'select' && game!.canPlay.includes(card.id)) {
-      return { highlight: 'play', onClick: () => onRespond('uuid', card.id) }
-    }
-    if (prompt.kind === 'target') {
+    if (!interactive) return {}
+    if (prompt?.kind === 'target') {
       return { highlight: 'target', onClick: () => onRespond('uuid', card.id) }
+    }
+    if (game?.canPlay.includes(card.id)) {
+      return { highlight: 'play', onClick: () => onRespond('uuid', card.id) }
     }
     return {}
   }
