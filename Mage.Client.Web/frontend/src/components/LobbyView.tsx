@@ -281,6 +281,11 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
 
   return (
     <section className="view lobby-view">
+      {!online && activeGameId && (
+        <div className="reconnect-banner" role="status">
+          <span className="reconnect-spinner" aria-hidden /> Connection lost — reconnecting…
+        </div>
+      )}
       <div className="lobby-header">
         <h1 className="h1">
           {activeGameId ? (interactive ? 'Playing' : 'Spectating') : showHistory ? 'Match history' : 'Open tables'}

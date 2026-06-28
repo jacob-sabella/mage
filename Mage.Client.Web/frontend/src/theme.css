@@ -1504,3 +1504,17 @@ html, body { overflow-x: hidden; }
   padding: 10px 12px; font-size: 12px; color: var(--danger); margin: 14px 0;
 }
 .error-boundary-actions { display: flex; gap: 10px; justify-content: center; }
+
+/* reconnecting banner (shown when the game socket drops) */
+.reconnect-banner {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 8px 14px; margin-bottom: 10px; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 700; color: #ffd9a0;
+  background: rgba(70, 45, 10, 0.5); border: 1px solid color-mix(in srgb, #ffae3b 45%, var(--stroke));
+}
+.reconnect-spinner {
+  width: 13px; height: 13px; border-radius: 50%;
+  border: 2px solid rgba(255, 217, 160, 0.3); border-top-color: #ffd9a0;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
