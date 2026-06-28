@@ -106,11 +106,13 @@ export function DeckEditor() {
 
   const toggleColor = (c: string) => setFColors((p) => (p.includes(c) ? p.replace(c, '') : p + c))
 
-  // show some cards immediately instead of a blank table
+  // live search: results update as you type / change filters (debounced), and
+  // an immediate grid on first mount
   useEffect(() => {
-    runSearch()
+    const t = setTimeout(runSearch, 300)
+    return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [query, fColors, fType, fCmc])
 
   const addCard = useCallback((card: CardInfoDto) => {
     setDeck((prev) => {
