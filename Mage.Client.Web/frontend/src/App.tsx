@@ -157,6 +157,8 @@ interface DownloadProgress {
   done: number
   failed: number
   skipped: number
+  /** Images still missing after this run. -1 = not yet computed (run in progress). */
+  totalMissing: number
   current: string
   message: string
 }
@@ -263,16 +265,29 @@ function ImageCacheCard() {
               {prog.running && (
                 <div className="img-progress-bar">
                   <div
-                    className="img-progress-fill"
-                    style={{ width: `${prog.candidates ? Math.min(100, (prog.done / prog.candidates) * 100) : 4}%` }}
+                    className={`img-progress-fill${prog.message.includes('counting') ? ' img-progress-fill--pulse' : ''}`}
+                    style={{ width: prog.message.includes('counting') ? '100%' : `${prog.candidates ? Math.min(100, (prog.done / prog.candidates) * 100) : 4}%` }}
                   />
                 </div>
               )}
               <p className="muted setting-hint">
                 {prog.running ? (
+                  prog.message.includes('counting') ? (
+                    <>
+                      {prog.done.toLocaleString()} downloaded · counting remaining missing images…
+                    </>
+                  ) : (
+                    <>
+                      {prog.done} downloaded · {prog.failed} failed · {prog.skipped.toLocaleString()} already had ·{' '}
+                      {prog.current && <span>fetching {prog.current}</span>}
+                    </>
+                  )
+                ) : prog.totalMissing === 0 ? (
+                  <span className="img-all-done">All card images are downloaded!</span>
+                ) : prog.totalMissing > 0 ? (
                   <>
-                    {prog.done} downloaded · {prog.failed} failed · {prog.skipped.toLocaleString()} already had ·{' '}
-                    {prog.current && <span>fetching {prog.current}</span>}
+                    {prog.message} &mdash;{' '}
+                    <strong>{prog.totalMissing.toLocaleString()} images still missing</strong>, click &ldquo;Download missing art&rdquo; again for the next batch.
                   </>
                 ) : (
                   prog.message

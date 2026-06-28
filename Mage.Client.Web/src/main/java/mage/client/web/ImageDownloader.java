@@ -41,6 +41,8 @@ public class ImageDownloader {
         public final AtomicInteger done = new AtomicInteger();
         public final AtomicInteger failed = new AtomicInteger();
         public volatile int skipped = 0;    // already present
+        /** Total images still missing after this run (-1 = not yet computed). */
+        public volatile int totalMissing = -1;
         public volatile String current = "";
         public volatile String message = "idle";
     }
@@ -80,6 +82,7 @@ public class ImageDownloader {
         progress.skipped = 0;
         progress.done.set(0);
         progress.failed.set(0);
+        progress.totalMissing = -1;
         progress.current = "";
         progress.message = "scanning the card database…";
         worker = new Thread(() -> run(cap), "image-downloader");
@@ -102,6 +105,8 @@ public class ImageDownloader {
             // memory-tight host.
             List<String> setCodes = mage.cards.repository.ExpansionRepository.instance.getSetCodes();
             int got = 0;
+            int remaining = 0; // missing images not attempted because cap was hit
+            boolean hitCap = false;
             scan:
             for (String setCode : setCodes) {
                 if (progress.cancelled) {
@@ -126,32 +131,51 @@ public class ImageDownloader {
                         progress.skipped++;
                         continue;
                     }
-                    progress.candidates++;
-                    progress.current = name + " (" + set + ")";
-                    boolean ok = downloadOne(set, number, out);
-                    if (ok) {
-                        progress.done.incrementAndGet();
-                        got++;
+                    // image is missing
+                    if (!hitCap) {
+                        progress.candidates++;
+                        progress.current = name + " (" + set + ")";
+                        boolean ok = downloadOne(set, number, out);
+                        if (ok) {
+                            progress.done.incrementAndGet();
+                            got++;
+                        } else {
+                            progress.failed.incrementAndGet();
+                        }
+                        if (got >= cap) {
+                            hitCap = true;
+                            // continue the scan to count remaining missing (fast — file stats only, no downloads)
+                            progress.message = "downloaded " + cap + " — counting remaining missing images…";
+                        }
+                        try {
+                            Thread.sleep(RATE_MS);
+                        } catch (InterruptedException ie) {
+                            break scan;
+                        }
                     } else {
-                        progress.failed.incrementAndGet();
-                    }
-                    if (got >= cap) {
-                        progress.message = "stopped at the " + cap + "-image limit for this run — run again for more";
-                        break scan;
-                    }
-                    try {
-                        Thread.sleep(RATE_MS);
-                    } catch (InterruptedException ie) {
-                        break scan;
+                        remaining++; // count only — no download, no sleep
                     }
                 }
                 cards = null; // release this set's list before the next
             }
             index.invalidate(); // newly-downloaded art becomes visible
-            if (progress.message.startsWith("scanning") || progress.message.startsWith("cancelling")) {
-                progress.message = progress.cancelled
-                        ? "cancelled — " + progress.done.get() + " downloaded"
-                        : "done — " + progress.done.get() + " downloaded, " + progress.failed.get() + " failed";
+            // failed downloads are also still missing; remaining = not yet attempted
+            int totalMissing = progress.failed.get() + remaining;
+            progress.totalMissing = totalMissing;
+            if (progress.message.startsWith("scanning") || progress.message.startsWith("cancelling")
+                    || progress.message.startsWith("downloaded ")) {
+                if (progress.cancelled) {
+                    progress.message = "cancelled — " + progress.done.get() + " downloaded";
+                } else if (hitCap) {
+                    progress.message = totalMissing == 0
+                            ? "done — " + progress.done.get() + " downloaded, all images complete!"
+                            : "downloaded " + progress.done.get() + " — " + totalMissing + " images still missing";
+                } else {
+                    // exhausted the whole database
+                    progress.message = totalMissing == 0
+                            ? "done — " + progress.done.get() + " downloaded, all images complete!"
+                            : "done — " + progress.done.get() + " downloaded, " + progress.failed.get() + " failed";
+                }
             }
         } catch (Throwable t) {
             progress.message = "error: " + t.getClass().getSimpleName() + (t.getMessage() == null ? "" : " " + t.getMessage());

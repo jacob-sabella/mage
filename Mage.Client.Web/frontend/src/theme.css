@@ -1729,6 +1729,9 @@ html, body { overflow-x: hidden; }
 .img-progress { margin-top: 8px; }
 .img-progress-bar { height: 6px; border-radius: 999px; background: var(--bg-raised); overflow: hidden; margin-bottom: 6px; }
 .img-progress-fill { height: 100%; background: var(--accent-2); transition: width 0.3s ease; }
+.img-progress-fill--pulse { animation: img-pulse 1.4s ease-in-out infinite; }
+@keyframes img-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+.img-all-done { color: var(--accent-2); font-weight: 600; }
 
 /* mana cost pips on the Play/activate chips */
 .play-chip { display: inline-flex; align-items: center; gap: 6px; }

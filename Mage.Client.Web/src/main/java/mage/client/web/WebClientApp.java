@@ -788,6 +788,7 @@ public class WebClientApp {
         out.put("done", p.done.get());
         out.put("failed", p.failed.get());
         out.put("skipped", p.skipped);
+        out.put("totalMissing", p.totalMissing);
         out.put("current", p.current);
         out.put("message", p.message);
         ctx.json(out);
