@@ -6,6 +6,7 @@ import { LobbyView } from './components/LobbyView'
 import { DeckEditor } from './components/DeckEditor'
 import { ShortcutsOverlay } from './components/ShortcutsOverlay'
 import { TestClipsModal } from './components/TestClipsModal'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { Toaster } from './toast'
 import { resetTitle } from './notify'
 import { usePrefs, FAMILIES } from './prefs'
@@ -374,9 +375,11 @@ export default function App() {
   return (
     <>
       {!prefs.reduceMotion && (
-        <Suspense fallback={null}>
-          <SceneBackground />
-        </Suspense>
+        <ErrorBoundary fallback={null}>
+          <Suspense fallback={null}>
+            <SceneBackground />
+          </Suspense>
+        </ErrorBoundary>
       )}
       <TopBar online={session ? online : false} server={session?.server} view={view} />
       <nav className="app-nav">

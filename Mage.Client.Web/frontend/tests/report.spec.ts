@@ -79,7 +79,9 @@ test.describe('Report a problem', () => {
       })
     })
     await page.getByRole('button', { name: 'Report problem' }).click()
-    // Remove the screenshot (if auto-captured) or skip if not present
+    // Wait for modal to open (html2canvas capture happens first, can take several seconds)
+    await expect(page.getByRole('heading', { name: 'Report a problem' })).toBeVisible()
+    // Remove the screenshot if auto-captured; if capture failed there is already no screenshot
     const removeBtn = page.getByRole('button', { name: 'Remove' })
     if (await removeBtn.isVisible()) {
       await removeBtn.click()
@@ -103,12 +105,12 @@ test.describe('Report a problem', () => {
       })
     })
     await page.getByRole('button', { name: 'Report problem' }).click()
-    // Upload a fake 1x1 PNG
+    // Upload a fake 1x1 PNG via the Upload / Replace button
     const fakeImage = Buffer.from(
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwADhQGAWjR9awAAAABJRU5ErkJggg==',
       'base64',
     )
-    const attachBtn = page.getByRole('button', { name: /Attach screenshot|Replace/ })
+    const attachBtn = page.getByRole('button', { name: /Upload|Replace/ })
     await expect(attachBtn).toBeVisible()
     const fileInput = page.locator('.report-screenshot-input')
     await fileInput.setInputFiles({ name: 'screen.png', mimeType: 'image/png', buffer: fakeImage })
@@ -118,5 +120,36 @@ test.describe('Report a problem', () => {
     await expect(page.getByText('your report was filed', { exact: false })).toBeVisible()
     expect(typeof posted!.screenshot).toBe('string')
     expect(posted!.screenshot).toContain('data:image/')
+  })
+
+  test('capture-page button is present in the empty-screenshot state', async ({ page }) => {
+    await gotoScreen(page, 'lobby')
+    await page.getByRole('button', { name: 'Report problem' }).click()
+    // Wait for modal to open before checking screenshot state
+    await expect(page.getByRole('heading', { name: 'Report a problem' })).toBeVisible()
+    // Ensure we are in the no-screenshot state
+    const removeBtn = page.getByRole('button', { name: 'Remove' })
+    if (await removeBtn.isVisible()) {
+      await removeBtn.click()
+    }
+    await expect(page.getByText('No screenshot')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Capture page' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Upload' })).toBeVisible()
+  })
+
+  test('retake button is present when a screenshot is attached', async ({ page }) => {
+    await gotoScreen(page, 'lobby')
+    await page.getByRole('button', { name: 'Report problem' }).click()
+    // Upload a screenshot to reach the preview state
+    const fakeImage = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwADhQGAWjR9awAAAABJRU5ErkJggg==',
+      'base64',
+    )
+    const fileInput = page.locator('.report-screenshot-input')
+    await fileInput.setInputFiles({ name: 'screen.png', mimeType: 'image/png', buffer: fakeImage })
+    await expect(page.getByText('Screenshot attached')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Retake' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Replace' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Remove' })).toBeVisible()
   })
 })

@@ -16,6 +16,9 @@ export default defineConfig({
     // packages them into the app as a viewable gallery. Off for normal runs.
     video: process.env.CLIPS ? { mode: 'on', size: { width: 720, height: 450 } } : 'off',
   },
+  // html2canvas screenshot capture (async) can take several seconds before the
+  // report modal opens — use a generous assertion timeout to avoid flaky tests.
+  expect: { timeout: 15000 },
   projects: [
     {
       name: 'chromium',
@@ -23,6 +26,7 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         launchOptions: {
+          executablePath: '/opt/pw-browsers/chromium',
           // software WebGL so the three.js board renders headless
           args: ['--use-gl=angle', '--use-angle=swiftshader', '--ignore-gpu-blocklist', '--enable-webgl'],
         },

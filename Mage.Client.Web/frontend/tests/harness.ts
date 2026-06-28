@@ -310,6 +310,14 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
   await page.route('**/api/cardimg**', (route) =>
     route.fulfill({ contentType: 'image/jpeg', body: TINY_JPEG }),
   )
+  // Return a stub html2canvas that resolves immediately so screenshot capture
+  // doesn't add seconds of latency to every report-related test.
+  await page.route('**/html2canvas.esm-*.js', (route) =>
+    route.fulfill({
+      contentType: 'text/javascript; charset=utf-8',
+      body: `const c={toDataURL:()=>'data:image/jpeg;base64,/9j/'};export default async function(){return c}`,
+    }),
+  )
 }
 
 /** Navigate and land on the requested screen with minimal setup. */

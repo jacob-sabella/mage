@@ -2,6 +2,8 @@ import { Component, type ErrorInfo, type ReactNode } from 'react'
 
 interface Props {
   children: ReactNode
+  /** When set, renders this instead of the default error card. Pass null for a silent fallback. */
+  fallback?: ReactNode
 }
 interface State {
   error: Error | null
@@ -26,6 +28,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (!this.state.error) return this.props.children
+    if (this.props.fallback !== undefined) return this.props.fallback
     return (
       <div className="error-boundary">
         <div className="panel error-boundary-card">
