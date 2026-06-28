@@ -80,6 +80,12 @@ export function DeckEditor() {
   const [fCmc, setFCmc] = useState('')
   const [fSort, setFSort] = useState<'name' | 'cmc' | 'color'>('name')
   const [fRarity, setFRarity] = useState('')
+  const [fView, setFView] = useState<'gallery' | 'table'>(
+    () => (localStorage.getItem('mage.deckView') === 'table' ? 'table' : 'gallery'),
+  )
+  useEffect(() => {
+    localStorage.setItem('mage.deckView', fView)
+  }, [fView])
 
   // restore an in-progress deck from a previous session so a refresh never
   // discards your work-in-progress deck
@@ -343,6 +349,24 @@ export function DeckEditor() {
               {fRarity && results.length !== sortedResults.length ? ` of ${results.length}` : ''}
             </span>
             <span className="spacer" />
+            <div className="view-switch" role="group" aria-label="Result view">
+              <button
+                className={`view-switch-btn${fView === 'gallery' ? ' active' : ''}`}
+                onClick={() => setFView('gallery')}
+                title="Gallery view"
+                aria-pressed={fView === 'gallery'}
+              >
+                ▦ Gallery
+              </button>
+              <button
+                className={`view-switch-btn${fView === 'table' ? ' active' : ''}`}
+                onClick={() => setFView('table')}
+                title="Table view"
+                aria-pressed={fView === 'table'}
+              >
+                ☰ Table
+              </button>
+            </div>
             <label className="muted results-sort">
               Sort
               <select className="filter-select" value={fSort} onChange={(e) => setFSort(e.target.value as typeof fSort)}>
@@ -357,7 +381,7 @@ export function DeckEditor() {
           <p className="empty deck-grid-empty">
             {searched ? 'No cards found.' : 'Search the card database to start building a deck.'}
           </p>
-        ) : (
+        ) : fView === 'gallery' ? (
           <div className="card-grid">
             {sortedResults.map((card, i) => (
               <CardTile
@@ -369,6 +393,51 @@ export function DeckEditor() {
                 onHover={setPreview}
               />
             ))}
+          </div>
+        ) : (
+          <div className="table-wrap deck-table-wrap">
+            <table className="data-table deck-table">
+              <thead>
+                <tr>
+                  <th />
+                  <th>Name</th>
+                  <th>Cost</th>
+                  <th>Type</th>
+                  <th>Rarity</th>
+                  <th>Set</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedResults.map((card, i) => {
+                  const n = deckCount[card.name] ?? 0
+                  return (
+                    <tr
+                      key={`${card.name}-${card.set}-${i}`}
+                      className={n > 0 ? 'in-deck' : ''}
+                      onMouseEnter={() => setPreview(card)}
+                      onMouseLeave={() => setPreview(null)}
+                    >
+                      <td className="deck-table-add">
+                        <button className="btn ghost deck-mini-btn" aria-label={`Add ${card.name}`} onClick={() => addCard(card)}>
+                          +
+                        </button>
+                        {n > 0 && (
+                          <button className="btn ghost deck-mini-btn" aria-label={`Remove ${card.name}`} onClick={() => decName(card.name)}>
+                            −
+                          </button>
+                        )}
+                        {n > 0 && <span className="deck-table-count">{n}</span>}
+                      </td>
+                      <td className="deck-table-name">{card.name}</td>
+                      <td>{card.manaCost ? <ManaCost cost={card.manaCost} /> : '—'}</td>
+                      <td className="muted">{card.types.join(' ')}</td>
+                      <td className="muted">{card.rarity ?? '—'}</td>
+                      <td className="muted">{card.set ?? '—'}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </section>
@@ -619,6 +688,8 @@ function CardTile({
       <button className="card-tile-art" aria-label={`Add ${card.name}`} title={`Add ${card.name}`} onClick={() => onAdd(card)}>
         <img src={img} alt={card.name} loading="lazy" onError={(e) => (e.currentTarget.style.opacity = '0')} />
         <span className="card-tile-fallback">{card.name}</span>
+        {/* crisp DOM name so cards are readable even when the art's printed text isn't */}
+        <span className="card-tile-caption">{card.name}</span>
       </button>
       {count > 0 && (
         <>

@@ -1744,3 +1744,26 @@ html, body { overflow-x: hidden; }
   border: 2px solid var(--stroke); border-top-color: var(--accent);
   animation: spin 0.8s linear infinite;
 }
+
+/* crisp card-name caption on gallery tiles (readable even at small sizes) */
+.card-tile-caption {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+  padding: 12px 5px 3px; font-size: 10px; font-weight: 700; line-height: 1.1;
+  color: #fff; text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.88), rgba(0, 0, 0, 0.55) 55%, transparent);
+  text-shadow: 0 1px 2px #000; pointer-events: none;
+}
+
+/* gallery / table view switch */
+.view-switch { display: inline-flex; border: 1px solid var(--stroke); border-radius: 8px; overflow: hidden; }
+.view-switch-btn { padding: 4px 11px; font-size: 12px; font-weight: 700; background: transparent; border: 0; color: var(--text-dim); cursor: pointer; }
+.view-switch-btn:hover { color: var(--text); }
+.view-switch-btn.active { background: var(--accent); color: #0d1119; }
+
+/* text-centric table view */
+.deck-table-wrap { flex: 1; min-height: 0; overflow-y: auto; }
+.deck-table-add { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.deck-table-count { font-weight: 800; color: var(--accent-2); margin-left: 2px; }
+.deck-table-name { font-weight: 600; }
+.deck-table tr.in-deck .deck-table-name { color: var(--accent-2); }
