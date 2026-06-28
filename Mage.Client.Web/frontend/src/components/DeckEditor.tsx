@@ -172,6 +172,19 @@ export function DeckEditor() {
     }
   }, [])
 
+  // export the deck as MTGO/Moxfield-style text and copy it to the clipboard
+  const onCopyList = useCallback(async () => {
+    const lines = (entries: DeckCardEntry[]) => entries.map((e) => `${e.count} ${e.name}`).join('\n')
+    let text = lines(deck)
+    if (sideboard.length) text += `\n\n${lines(sideboard)}`
+    try {
+      await navigator.clipboard.writeText(text)
+      setSaveStatus('Decklist copied to clipboard')
+    } catch {
+      setSaveStatus('Copy failed — clipboard unavailable')
+    }
+  }, [deck, sideboard])
+
   const onSave = useCallback(async () => {
     if (deck.length === 0) return
     const name = window.prompt('Deck name', deckName)
@@ -349,6 +362,9 @@ export function DeckEditor() {
         <div className="deck-list-foot">
           <button className="btn primary block" onClick={onSave} disabled={saving || deck.length === 0}>
             {saving ? 'Saving…' : 'Save deck (.dck)'}
+          </button>
+          <button className="btn ghost block" onClick={onCopyList} disabled={deck.length === 0}>
+            Copy decklist
           </button>
           {saveStatus && <p className="deck-save-status muted">{saveStatus}</p>}
           {unresolved.length > 0 && <p className="deck-error">Not found: {unresolved.join(', ')}</p>}
