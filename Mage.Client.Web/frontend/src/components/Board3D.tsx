@@ -472,13 +472,56 @@ function seatToWorld(seat: Seat, local: [number, number, number], y = 0.35): THR
   return new THREE.Vector3(seat.x + (x * cos + z * sin), y, seat.z + (-x * sin + z * cos))
 }
 
+/** A rounded-rectangle shape (XY plane) for playmat backings. */
+function roundedRectShape(w: number, h: number, r: number): THREE.Shape {
+  const s = new THREE.Shape()
+  const x = -w / 2
+  const y = -h / 2
+  s.moveTo(x + r, y)
+  s.lineTo(x + w - r, y)
+  s.quadraticCurveTo(x + w, y, x + w, y + r)
+  s.lineTo(x + w, y + h - r)
+  s.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
+  s.lineTo(x + r, y + h)
+  s.quadraticCurveTo(x, y + h, x, y + h - r)
+  s.lineTo(x, y + r)
+  s.quadraticCurveTo(x, y, x + r, y)
+  return s
+}
+
+const MAT_W = 8.8
+const MAT_H = 4.3
+const MAT_Z = 0.35 // pushed slightly toward the player's back row
+
+/** A subtle playmat under a seat's zone: a dark fill + a thin coloured frame, so
+ *  each player's area reads as one tidy region instead of cards floating loose. */
+function SeatMat({ color, active }: { color: string; active: boolean }) {
+  const fill = useMemo(() => new THREE.ShapeGeometry(roundedRectShape(MAT_W, MAT_H, 0.5)), [])
+  const frame = useMemo(() => new THREE.ShapeGeometry(roundedRectShape(MAT_W + 0.18, MAT_H + 0.18, 0.56)), [])
+  useEffect(() => () => { fill.dispose(); frame.dispose() }, [fill, frame])
+  return (
+    <group rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.018, MAT_Z]}>
+      <mesh geometry={frame} position={[0, 0, -0.002]}>
+        <meshBasicMaterial color={color} transparent opacity={active ? 0.42 : 0.2} toneMapped={false} depthWrite={false} />
+      </mesh>
+      <mesh geometry={fill}>
+        <meshBasicMaterial color="#0a0c12" transparent opacity={0.5} toneMapped={false} depthWrite={false} />
+      </mesh>
+    </group>
+  )
+}
+
 function PlayerZone({
   seat,
+  active,
+  matColor,
   cardProps,
   onHoverCard,
   onPressCard,
 }: {
   seat: Seat
+  active: boolean
+  matColor: string
   cardProps: CardProps
   onHoverCard?: (c: GameCard | null) => void
   onPressCard?: (c: GameCard | null) => void
@@ -524,6 +567,7 @@ function PlayerZone({
 
   return (
     <group position={[seat.x, 0, seat.z]} rotation={[0, seat.yaw, 0]}>
+      <SeatMat color={matColor} active={active} />
       {placed.map(({ card, pos, stackCount }) => (
         <Card3D key={card.id} card={card} position={pos} stackCount={stackCount} cardProps={cardProps} onHoverCard={onHoverCard} onPressCard={onPressCard} />
       ))}
@@ -570,7 +614,7 @@ function seatPlayers(players: GamePlayer[], me?: string | null): { seats: Seat[]
   // when spectating, keep natural seat order; otherwise pull the viewer to the front
   const ordered = spectating ? players : [players[viewerIdx], ...players.filter((_, i) => i !== viewerIdx)]
   const n = ordered.length
-  const radius = Math.max(2.9, 2.2 + n * 0.42)
+  const radius = Math.max(3.3, 2.6 + n * 0.52)
   const seats = ordered.map((player, i) => {
     const theta = Math.PI / 2 + (i * 2 * Math.PI) / n // front seat at +z
     return {
@@ -996,15 +1040,23 @@ export function Board3D({
         </mesh>
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
           <ringGeometry args={[5.05, 5.2, 96]} />
-          <meshBasicMaterial color={scene.ring} transparent opacity={0.7} toneMapped={false} />
+          <meshBasicMaterial color={scene.ring} transparent opacity={0.38} toneMapped={false} />
         </mesh>
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.008, 0]}>
-          <ringGeometry args={[3.0, 3.08, 96]} />
-          <meshBasicMaterial color={scene.ring2} transparent opacity={0.45} toneMapped={false} />
+          <ringGeometry args={[2.55, 2.62, 96]} />
+          <meshBasicMaterial color={scene.ring2} transparent opacity={0.16} toneMapped={false} />
         </mesh>
 
         {seats.map((s) => (
-          <PlayerZone key={s.player.id} seat={s} cardProps={cardProps} onHoverCard={onHoverCard} onPressCard={onPressCard} />
+          <PlayerZone
+            key={s.player.id}
+            seat={s}
+            active={s.player.name === game.activePlayer}
+            matColor={s.isViewer ? scene.ring : scene.ring2}
+            cardProps={cardProps}
+            onHoverCard={onHoverCard}
+            onPressCard={onPressCard}
+          />
         ))}
 
         {/* highlight whose turn it is */}
