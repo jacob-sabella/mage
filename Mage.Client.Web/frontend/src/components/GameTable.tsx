@@ -57,15 +57,37 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
   useEffect(() => {
     if (!interactive) return
     const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
       const action = SKIP_KEYS[e.key]
       if (action) {
         e.preventDefault()
         onRespond('action', action)
+        return
+      }
+      // quick confirm/decline for the current decision
+      const k = e.key.toLowerCase()
+      if (prompt?.kind === 'select') {
+        if (e.key === ' ' || k === 'p') {
+          e.preventDefault()
+          onRespond('boolean', 'false') // pass / skip
+        } else if (k === 'd') {
+          e.preventDefault()
+          onRespond('boolean', 'true') // done / confirm
+        }
+      } else if (prompt?.kind === 'ask') {
+        if (k === 'y') {
+          e.preventDefault()
+          onRespond('boolean', 'true')
+        } else if (k === 'n') {
+          e.preventDefault()
+          onRespond('boolean', 'false')
+        }
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [interactive, onRespond])
+  }, [interactive, onRespond, prompt])
 
   useEffect(() => {
     const clear = () => setPressedCard(null)
@@ -431,10 +453,10 @@ function ActionBar({ prompt, onRespond }: { prompt: Prompt | null; onRespond: (k
       {prompt.kind === 'ask' && (
         <>
           <button className="btn primary" onClick={() => onRespond('boolean', 'true')}>
-            Yes
+            Yes <span className="skip-key">Y</span>
           </button>
           <button className="btn" onClick={() => onRespond('boolean', 'false')}>
-            No
+            No <span className="skip-key">N</span>
           </button>
         </>
       )}
@@ -445,10 +467,10 @@ function ActionBar({ prompt, onRespond }: { prompt: Prompt | null; onRespond: (k
           {/* Done = boolean true: confirms the current selection, e.g. declared
               attackers/blockers. Pass = boolean false: pass priority. */}
           <button className="btn" onClick={() => onRespond('boolean', 'true')}>
-            Done
+            Done <span className="skip-key">D</span>
           </button>
           <button className="btn primary" onClick={() => onRespond('boolean', 'false')}>
-            Pass
+            Pass <span className="skip-key">P</span>
           </button>
         </>
       )}
