@@ -13,6 +13,7 @@ import {
 import type { MatchDto, RespondKind } from '../api'
 import { useServerEvents } from '../useServerEvents'
 import { setReportSnapshot } from '../reportState'
+import { pushToast } from '../toast'
 import { ChatPanel } from './ChatPanel'
 import { DeckPicker } from './DeckPicker'
 import { ConstructView } from './ConstructView'
@@ -58,6 +59,8 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   // synchronous mirror of activeGameId so back-to-back gameStart+game frames in
   // one event-loop tick don't read a stale value (which clobbered interactive)
   const activeRef = useRef<string | null>(null)
+  // last active player we toasted for, so "Your turn" fires once per turn
+  const lastActiveRef = useRef<string | null>(null)
 
   const toggleHistory = useCallback(() => {
     setShowHistory((prev) => {
@@ -88,6 +91,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
     } else if (e.type === 'gameStart' && e.gameId) {
       // a match we joined has started - switch to the interactive board
       activeRef.current = e.gameId
+      lastActiveRef.current = null
       setActiveGameId(e.gameId)
       setInteractive(true)
       setPendingPlay(false)
@@ -96,6 +100,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
       setGameOver(null)
       setGame(null)
       setPrompt(null)
+      pushToast('Game started')
     } else if (e.type === 'game') {
       // adopt the game if we're expecting one but missed the gameStart frame
       if (!activeRef.current && e.gameId && pendingPlay) {
@@ -107,13 +112,23 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
       }
       // discard stale events for any game other than the one we're currently in
       if (!activeRef.current || (e.gameId && e.gameId !== activeRef.current)) return
-      if (e.game) setGame(e.game)
+      if (e.game) {
+        const g = e.game
+        // toast once when the turn passes to the viewer (not every priority pass)
+        if (g.activePlayer && g.me && g.activePlayer === g.me && lastActiveRef.current !== g.activePlayer) {
+          pushToast('Your turn', 'success')
+        }
+        lastActiveRef.current = g.activePlayer ?? null
+        setGame(g)
+      }
       setPrompt(e.prompt ?? null)
     } else if (e.type === 'gameOver') {
       if (!activeRef.current || (e.gameId && e.gameId !== activeRef.current)) return
       if (e.game) setGame(e.game)
       setPrompt(null)
-      setGameOver(e.text && e.text.trim() ? e.text : 'Game over')
+      const over = e.text && e.text.trim() ? e.text : 'Game over'
+      setGameOver(over)
+      pushToast(over, /win|won/i.test(over) ? 'success' : 'info')
     } else if (e.type === 'log' && e.text) {
       if (!activeRef.current || (e.gameId && e.gameId !== activeRef.current)) return
       setGameLog((prev) => [...prev.slice(-299), e.text as string])

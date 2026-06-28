@@ -5,6 +5,7 @@ import { LoginView } from './components/LoginView'
 import { LobbyView } from './components/LobbyView'
 import { DeckEditor } from './components/DeckEditor'
 import { ShortcutsOverlay } from './components/ShortcutsOverlay'
+import { Toaster } from './toast'
 import { usePrefs, FAMILIES } from './prefs'
 import type { Session } from './types'
 import './theme.css'
@@ -227,6 +228,7 @@ export default function App() {
         ?
       </button>
       {showHelp && <ShortcutsOverlay onClose={() => setShowHelp(false)} />}
+      <Toaster />
     </>
   )
 }
