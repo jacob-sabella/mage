@@ -32,6 +32,8 @@ export function DeckEditor() {
   const [deckName, setDeckName] = useState('My Deck')
   const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<string | null>(null)
+  // hover a card (search result or deck entry) to preview its art
+  const [preview, setPreview] = useState<PreviewCard | null>(null)
 
   const total = deck.reduce((s, e) => s + e.count, 0)
 
@@ -222,7 +224,11 @@ export function DeckEditor() {
             </thead>
             <tbody>
               {results.map((card, i) => (
-                <tr key={`${card.name}-${card.set}-${i}`}>
+                <tr
+                  key={`${card.name}-${card.set}-${i}`}
+                  onMouseEnter={() => setPreview(card)}
+                  onMouseLeave={() => setPreview(null)}
+                >
                   <td>{card.name}</td>
                   <td className="cost-cell">{card.manaCost ? <ManaCost cost={card.manaCost} /> : '—'}</td>
                   <td className="muted">{card.types.join(' ')}</td>
@@ -271,7 +277,12 @@ export function DeckEditor() {
           ) : (
             <ul className="deck-entries">
               {deck.map((e) => (
-                <li key={e.name} className="deck-entry">
+                <li
+                  key={e.name}
+                  className="deck-entry"
+                  onMouseEnter={() => setPreview(e)}
+                  onMouseLeave={() => setPreview(null)}
+                >
                   <span className="deck-entry-count">{e.count}×</span>
                   <span className="deck-entry-name">{e.name}</span>
                   {e.manaCost && <ManaCost cost={e.manaCost} className="deck-entry-cost" />}
@@ -314,6 +325,8 @@ export function DeckEditor() {
         </div>
       </section>
 
+      <DeckCardPreview card={preview} />
+
       {pickerOpen && (
         <DeckPicker title="Open a deck" onPick={(d) => doLoad(d.path)} onClose={() => setPickerOpen(false)} />
       )}
@@ -355,6 +368,34 @@ export function DeckEditor() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+type PreviewCard = { name: string; set?: string | null; num?: string | null; manaCost?: string | null; types?: string[] }
+const PIP_COLOR: Record<string, string> = { W: '#e9e3c0', U: '#4a90e2', B: '#6b5b73', R: '#e0555f', G: '#3aa55f', C: '#9aa0ad' }
+
+/** Floating card-art preview for the deck editor (mirrors the in-game preview). */
+function DeckCardPreview({ card }: { card: PreviewCard | null }) {
+  if (!card) return null
+  const cost = (card.manaCost?.match(/\{([^}]+)\}/g) ?? []).map((s) => s.slice(1, -1))
+  const img = `/api/cardimg?set=${encodeURIComponent(card.set ?? '')}&num=${encodeURIComponent(card.num ?? '')}&name=${encodeURIComponent(card.name)}`
+  return (
+    <div className="card-preview" role="dialog" aria-label={`Card: ${card.name}`}>
+      <img className="card-preview-img" src={img} alt={card.name} onError={(e) => (e.currentTarget.style.visibility = 'hidden')} />
+      <div className="card-preview-info">
+        <div className="card-preview-head">
+          <span className="card-preview-name">{card.name}</span>
+          <span className="card-preview-cost">
+            {cost.map((s, i) => (
+              <span key={i} className="mana-pip" style={{ background: PIP_COLOR[s] ?? '#9aa0ad' }}>
+                {s}
+              </span>
+            ))}
+          </span>
+        </div>
+        <div className="card-preview-type muted">{(card.types ?? []).join(' ')}</div>
+      </div>
     </div>
   )
 }

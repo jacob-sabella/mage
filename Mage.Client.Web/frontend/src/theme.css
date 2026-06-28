@@ -1027,7 +1027,7 @@ input:focus {
 /* the one control dock — always present, same place every turn */
 .control-dock {
   display: flex; align-items: center; gap: 10px 12px; flex-wrap: wrap;
-  padding: 10px 14px; flex-shrink: 0; overflow: hidden;
+  padding: 10px 14px; flex-shrink: 0; overflow: visible;
   border-color: color-mix(in srgb, var(--accent) 45%, var(--stroke));
   box-shadow: 0 -10px 34px color-mix(in srgb, var(--accent) 16%, transparent);
 }
@@ -1035,11 +1035,14 @@ input:focus {
 .dock-skips .btn { padding: 8px 11px; }
 .control-dock .playable-bar {
   background: transparent; border: none; box-shadow: none; padding: 0;
-  flex: 1; min-width: 0; overflow-x: auto; max-width: 46%;
+  flex: 1 1 auto; min-width: 0; overflow-x: auto; max-width: 46%;
 }
-.control-dock .action-bar { background: transparent; border: none; box-shadow: none; padding: 0; display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
-.action-bar { display: flex; align-items: center; gap: 8px; }
-.action-message { white-space: normal; overflow: visible; min-width: 120px; }
+/* a min flex-basis so a cramped action-bar wraps to its OWN full-width line
+   (keeping Done/Pass visible) instead of shrinking + clipping the buttons */
+.control-dock .action-bar { background: transparent; border: none; box-shadow: none; padding: 0; flex: 1 1 340px; min-width: 300px; }
+.action-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.action-bar .btn { flex-shrink: 0; }
+.action-message { white-space: normal; overflow: visible; min-width: 0; flex: 1 1 140px; }
 
 /* ===== thematic display font (per-theme via --font-display) ===== */
 .brand-name {
