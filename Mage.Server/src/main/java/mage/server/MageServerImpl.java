@@ -201,7 +201,7 @@ public class MageServerImpl implements MageServer {
             if (!sitePassword.isEmpty()) {
                 Optional<Session> session = managerFactory.sessionManager().getSession(sessionId);
                 if (!session.isPresent() || !session.get().isSiteVerified()) {
-                    Thread.sleep(3000);
+                    try { Thread.sleep(3000); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
                     sendErrorMessageToClient(sessionId, "Site password required. Call verifySitePassword first.");
                     return false;
                 }
