@@ -216,6 +216,7 @@ function Card3D({
   cardProps,
   onHoverCard,
   onPressCard,
+  onLongPressCard,
 }: {
   card: GameCard
   position: [number, number, number]
@@ -225,6 +226,7 @@ function Card3D({
   cardProps: CardProps
   onHoverCard?: (c: GameCard | null) => void
   onPressCard?: (c: GameCard | null) => void
+  onLongPressCard?: (c: GameCard) => void
 }) {
   const [art, setArt] = useState<THREE.Texture | null>(null)
   const [hover, setHover] = useState(false)
@@ -316,12 +318,12 @@ function Card3D({
           if (pressTimer.current) clearTimeout(pressTimer.current)
         }}
         onPointerDown={(e) => {
-          // touch only: hold to preview, quick tap falls through to onClick (play)
+          // touch only: hold to open action sheet, quick tap falls through to onClick (play)
           if (e.pointerType !== 'touch') return
           longPressed.current = false
           pressTimer.current = setTimeout(() => {
             longPressed.current = true
-            onPressCard?.(card)
+            onLongPressCard?.(card)
           }, 450)
         }}
         onPointerUp={() => {
@@ -545,6 +547,7 @@ function PlayerZone({
   cardProps,
   onHoverCard,
   onPressCard,
+  onLongPressCard,
 }: {
   seat: Seat
   active: boolean
@@ -552,6 +555,7 @@ function PlayerZone({
   cardProps: CardProps
   onHoverCard?: (c: GameCard | null) => void
   onPressCard?: (c: GameCard | null) => void
+  onLongPressCard?: (c: GameCard) => void
 }) {
   const [expanded, setExpanded] = useState(false)
 
@@ -596,7 +600,7 @@ function PlayerZone({
     <group position={[seat.x, 0, seat.z]} rotation={[0, seat.yaw, 0]}>
       <SeatMat color={matColor} active={active} />
       {placed.map(({ card, pos, stackCount }) => (
-        <Card3D key={card.id} card={card} position={pos} stackCount={stackCount} cardProps={cardProps} onHoverCard={onHoverCard} onPressCard={onPressCard} />
+        <Card3D key={card.id} card={card} position={pos} stackCount={stackCount} cardProps={cardProps} onHoverCard={onHoverCard} onPressCard={onPressCard} onLongPressCard={onLongPressCard} />
       ))}
       {/* overflow badges: show +N when a row is clipped */}
       {!expanded && creatureOverflow > 0 && (
@@ -943,12 +947,14 @@ export function Board3D({
   cardProps,
   onHoverCard,
   onPressCard,
+  onLongPressCard,
   targets,
 }: {
   game: GameState
   cardProps: CardProps
   onHoverCard?: (c: GameCard | null) => void
   onPressCard?: (c: GameCard | null) => void
+  onLongPressCard?: (c: GameCard) => void
   targets?: string[]
 }) {
   const { prefs } = usePrefs()
@@ -1092,6 +1098,7 @@ export function Board3D({
             cardProps={cardProps}
             onHoverCard={onHoverCard}
             onPressCard={onPressCard}
+            onLongPressCard={onLongPressCard}
           />
         ))}
 
@@ -1107,13 +1114,13 @@ export function Board3D({
         {/* stack (standing, center) — Billboard keeps each card facing the camera */}
         {stack.map(({ card, pos }) => (
           <Billboard key={card.id} lockX lockZ position={[pos[0], 0, 0]}>
-            <Card3D card={card} position={[0, 0, 0]} standing showCost cardProps={cardProps} onHoverCard={onHoverCard} onPressCard={onPressCard} />
+            <Card3D card={card} position={[0, 0, 0]} standing showCost cardProps={cardProps} onHoverCard={onHoverCard} onPressCard={onPressCard} onLongPressCard={onLongPressCard} />
           </Billboard>
         ))}
 
         {/* my hand: laid flat in front of the viewer, slightly raised */}
         {hand.map(({ card, pos }) => (
-          <Card3D key={card.id} card={card} position={[pos[0], 0.06, pos[2]]} showCost cardProps={cardProps} onHoverCard={onHoverCard} onPressCard={onPressCard} />
+          <Card3D key={card.id} card={card} position={[pos[0], 0.06, pos[2]]} showCost cardProps={cardProps} onHoverCard={onHoverCard} onPressCard={onPressCard} onLongPressCard={onLongPressCard} />
         ))}
 
         {/* free cam → user orbits/pans; otherwise the camera is driven to the
