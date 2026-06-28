@@ -242,6 +242,12 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
           <ActionBar prompt={prompt} onRespond={onRespond} />
         </div>
       )}
+      {!interactive && !result && game.me && (
+        <div className="control-dock waiting-dock panel">
+          <span className="waiting-spinner" aria-hidden />
+          Waiting for {game.activePlayer && game.activePlayer !== game.me ? game.activePlayer : 'opponent'}…
+        </div>
+      )}
     </div>
   )
 }
