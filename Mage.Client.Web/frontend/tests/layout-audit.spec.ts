@@ -12,6 +12,9 @@ import { gotoScreen } from './harness'
 const AUDIT = !!process.env.AUDIT
 
 const VIEWPORTS = [
+  { name: 'galaxy-fold', w: 280, h: 653 },
+  { name: 'iphone-se1', w: 320, h: 568 },
+  { name: 'small-android', w: 360, h: 640 },
   { name: 'iphone-se', w: 375, h: 667 },
   { name: 'iphone-14', w: 390, h: 844 },
   { name: 'pixel-7', w: 412, h: 915 },
@@ -68,8 +71,8 @@ const SCREENS: Screen[] = [
       await p.waitForTimeout(900)
     },
     controls: (p) => [
-      { label: 'Pass', loc: p.getByRole('button', { name: 'Pass', exact: true }) },
-      { label: 'Done', loc: p.getByRole('button', { name: 'Done', exact: true }) },
+      { label: 'Pass', loc: p.getByRole('button', { name: /^Pass/ }) },
+      { label: 'Done', loc: p.getByRole('button', { name: /^Done/ }) },
       { label: 'playable chip', loc: p.locator('.play-chip').first() },
       { label: 'view-fab', loc: p.locator('.view-fab') },
     ],

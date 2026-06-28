@@ -36,7 +36,11 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // mobile "focus board" mode: hide chat + strips for a full-screen table
-  const [boardFocus, setBoardFocus] = useState(false)
+  // tiny screens can't fit the strips + chat + board, so start focused (board
+  // fills the screen, strips/chat hidden) — still toggleable with the ⛶ button
+  const [boardFocus, setBoardFocus] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 360px)').matches,
+  )
   useEffect(() => {
     const root = document.documentElement
     root.classList.toggle('board-focus', boardFocus)

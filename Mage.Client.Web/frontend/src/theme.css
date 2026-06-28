@@ -1789,3 +1789,21 @@ html, body { overflow-x: hidden; }
 
 .img-batch { display: inline-flex; align-items: center; gap: 6px; }
 .img-batch .filter-select { padding: 5px 8px; }
+
+/* ===== very small phones (<= 400px): compact the game chrome ===== */
+@media (max-width: 400px) {
+  .lobby-header { margin-bottom: 2px; }
+  .lobby-header .h1 { font-size: 18px; }
+  .app-nav .nav-tab { padding: 7px 9px; font-size: 13px; }
+  /* player strips: keep name + life, drop the verbose Hand/Lib/Grave counts */
+  .pstat { padding: 6px 9px; }
+  .pstat-counts { display: none; }
+  /* control dock: tighter so it doesn't dominate / push the board off-screen */
+  .control-dock { padding: 6px 8px; gap: 5px 6px; }
+  .skip-btn, .play-chip { padding: 5px 8px; font-size: 11px; }
+  .skip-key { display: none; }
+  .action-bar .hint, .control-dock .hint { display: none; }
+  /* a touch more board so the camera button clears the dock */
+  .board-wrap, .board3d { min-height: 52vh; }
+  .view-fab { width: 34px; height: 34px; font-size: 15px; }
+}
