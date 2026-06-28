@@ -958,27 +958,37 @@ input::placeholder { color: var(--text-dim); }
 .view-btn.active { background: var(--accent); color: #0d1119; border-color: transparent; font-weight: 700; }
 
 /* ----- radial view menu ----- */
-.view-menu { position: absolute; top: 16px; left: 16px; z-index: 4; width: 0; height: 0; }
+.view-menu { position: absolute; top: 14px; left: 14px; z-index: 5; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 .view-fab {
-  position: absolute; top: 0; left: 0; width: 42px; height: 42px;
+  width: 40px; height: 40px;
   display: flex; align-items: center; justify-content: center;
   font-size: 18px; line-height: 1; border-radius: 50%; cursor: pointer;
   color: var(--text); border: 1px solid var(--stroke);
   background: rgba(14, 16, 22, 0.7); backdrop-filter: blur(6px);
   box-shadow: 0 0 calc(12px * var(--glow-strength, 1)) color-mix(in srgb, var(--accent) 55%, transparent);
-  transition: transform 0.18s ease, background 0.18s ease; z-index: 1;
+  transition: transform 0.18s ease, background 0.18s ease;
 }
 .view-fab:hover { transform: scale(1.06); }
 .view-menu.open .view-fab { background: var(--accent); color: #0d1119; }
-.view-radial {
-  position: absolute; top: 4px; left: 4px;
-  white-space: nowrap; transform-origin: center;
-  background: rgba(14, 16, 22, 0.82); backdrop-filter: blur(6px);
-  transition: transform 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.2), opacity 0.16s ease;
+.view-panel {
+  padding: 11px 12px; border-radius: 13px; display: flex; flex-direction: column; gap: 11px;
+  min-width: 168px; max-width: 240px; animation: view-panel-in 0.16s ease;
 }
-.view-radial.mode { font-weight: 700; border-color: color-mix(in srgb, var(--accent-2) 50%, var(--stroke)); }
-.view-radial.active { background: var(--accent); color: #0d1119; border-color: transparent; font-weight: 700; }
-/* hide the zoom bar while the radial menu is open so it doesn't block menu items */
+@keyframes view-panel-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.view-group { display: flex; flex-direction: column; gap: 6px; }
+.view-group-label { font-size: 10px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; color: var(--text-dim); }
+.view-row { display: flex; gap: 6px; }
+.view-row.wrap { flex-wrap: wrap; }
+.view-btn.view-radial {
+  flex: 1 1 auto; padding: 6px 10px; font-size: 12px; font-weight: 700; border-radius: 9px;
+  white-space: nowrap; cursor: pointer; color: var(--text);
+  background: rgba(255, 255, 255, 0.05); border: 1px solid var(--stroke);
+  transition: background 0.14s ease, border-color 0.14s ease;
+}
+.view-row.wrap .view-btn.view-radial { flex: 0 1 auto; }
+.view-btn.view-radial:hover { background: rgba(255, 255, 255, 0.1); border-color: color-mix(in srgb, var(--accent) 45%, var(--stroke)); }
+.view-radial.active { background: var(--accent); color: #0d1119; border-color: transparent; }
+/* hide the zoom bar while the menu is open so it doesn't overlap the panel */
 .view-menu.open ~ .zoom-bar { display: none; }
 .zoom-bar {
   position: absolute; top: 68px; left: 16px; z-index: 4;

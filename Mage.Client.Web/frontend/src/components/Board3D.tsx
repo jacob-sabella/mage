@@ -803,8 +803,8 @@ function ZoomBar({ zoom, onZoom }: { zoom: number; onZoom: (z: number) => void }
   )
 }
 
-/** Radial fan menu for camera control: a mode ring (Auto/2D/3D/Free) plus, in
- *  3D, a focus ring (Overview + each seat). Collapsed to a button by default. */
+/** Camera control: a small glass panel that expands from a corner button, with a
+ *  Camera row (Auto/3D/2D/Free) and, in 3D, a Focus row (Overview + each seat). */
 function ViewMenu({
   mode,
   setMode,
@@ -831,42 +831,38 @@ function ViewMenu({
     mode === '3d'
       ? views.map((v, i) => ({ key: 'f-' + i, label: v.name, active: view === i, cat: 'focus', onClick: () => setView(i) }))
       : []
-  // Fan into the board's down-right quadrant only (keeps items on-screen).
-  // a1 is capped at 88° so cos(angle) stays positive — past 90° items would
-  // translate leftward and disappear off the left edge of the screen.
-  const a0 = 8
-  const a1 = 88
-  const rings = [
-    { items: modeItems, R: 74 },
-    { items: focusItems, R: 110 + focusItems.length * 10 },
-  ].filter((g) => g.items.length)
-  const placed = rings.flatMap((g) =>
-    g.items.map((it, i) => {
-      const t = g.items.length > 1 ? i / (g.items.length - 1) : 0.5
-      const ang = ((a0 + (a1 - a0) * t) * Math.PI) / 180
-      return { it, x: Math.cos(ang) * g.R, y: Math.sin(ang) * g.R }
-    }),
-  )
 
   return (
     <div className={`view-menu${open ? ' open' : ''}`}>
       <button className="view-fab" onClick={() => setOpen((o) => !o)} title="View options" aria-label="View options">
         {open ? '✕' : '⊙'}
       </button>
-      {placed.map(({ it, x, y }) => (
-        <button
-          key={it.key}
-          className={`btn view-btn view-radial ${it.cat}${it.active ? ' active' : ''}`}
-          style={{
-            transform: open ? `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)` : 'translate(0,0) scale(0.4)',
-            opacity: open ? 1 : 0,
-            pointerEvents: open ? 'auto' : 'none',
-          }}
-          onClick={it.onClick}
-        >
-          {it.label}
-        </button>
-      ))}
+      {open && (
+        <div className="view-panel panel">
+          <div className="view-group">
+            <span className="view-group-label">Camera</span>
+            <div className="view-row">
+              {modeItems.map((it) => (
+                <button key={it.key} className={`view-btn view-radial ${it.cat}${it.active ? ' active' : ''}`} onClick={it.onClick}>
+                  {it.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {focusItems.length > 0 && (
+            <div className="view-group">
+              <span className="view-group-label">Focus</span>
+              <div className="view-row wrap">
+                {focusItems.map((it) => (
+                  <button key={it.key} className={`view-btn view-radial ${it.cat}${it.active ? ' active' : ''}`} onClick={it.onClick}>
+                    {it.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
