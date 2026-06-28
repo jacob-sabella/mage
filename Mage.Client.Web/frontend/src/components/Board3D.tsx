@@ -311,18 +311,17 @@ function Card3D({
           setHover(false)
           onHoverCard?.(null)
         }}
-        onPointerDown={(e) => {
+        onClick={(e) => {
           e.stopPropagation()
+          onClick?.(card) // left-click plays / declares — no preview in the way
+        }}
+        onContextMenu={(e) => {
+          // right-click previews the card (big zoom) instead of left-click, so
+          // clicking to play a card is never hijacked by the preview
+          e.stopPropagation()
+          e.nativeEvent.preventDefault()
           onPressCard?.(card)
         }}
-        onClick={
-          onClick
-            ? (e) => {
-                e.stopPropagation()
-                onClick(card)
-              }
-            : undefined
-        }
       >
         <planeGeometry args={[CARD_W, CARD_H]} />
         <meshBasicMaterial transparent opacity={0} depthWrite={false} />
@@ -379,10 +378,10 @@ function Card3D({
         )}
         {showCost && manaSymbols(card.manaCost).length > 0 && (
           <Html
-            position={[-CARD_W * 0.18, 0.14, -CARD_H * 0.34]}
+            position={[-CARD_W * 0.34, 0.16, -CARD_H * 0.44]}
             center
-            distanceFactor={9}
-            zIndexRange={[20, 0]}
+            distanceFactor={8}
+            zIndexRange={[16, 0]}
             className="c3d-badge c3d-mana"
           >
             {manaSymbols(card.manaCost).map((s, i) => (
@@ -411,11 +410,11 @@ function Card3D({
 /** Lay a row of cards/stacks centered at (cx, cz) along X.
  *  When the row would exceed MAX_ROW_W the gap shrinks so cards overlap
  *  (Slay-the-Spire style) instead of spilling outside the player's zone. */
-function row(items: RowItem[], cx: number, cz: number, gap = 1.45) {
+function row(items: RowItem[], cx: number, cz: number, gap = 1.45, maxW = MAX_ROW_W) {
   const n = items.length
   if (n === 0) return []
-  // Cap the gap so the total row width never exceeds MAX_ROW_W.
-  const effectiveGap = n > 1 ? Math.min(gap, MAX_ROW_W / (n - 1)) : gap
+  // Cap the gap so the total row width never exceeds maxW.
+  const effectiveGap = n > 1 ? Math.min(gap, maxW / (n - 1)) : gap
   const w = (n - 1) * effectiveGap
   // Tiny per-card y stagger prevents coplanar z-fighting when adjacent cards share
   // edge pixels under MSAA — visually imperceptible at this scale.
@@ -500,12 +499,20 @@ function SeatMat({ color, active }: { color: string; active: boolean }) {
   const frame = useMemo(() => new THREE.ShapeGeometry(roundedRectShape(MAT_W + 0.18, MAT_H + 0.18, 0.56)), [])
   useEffect(() => () => { fill.dispose(); frame.dispose() }, [fill, frame])
   return (
-    <group rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.018, MAT_Z]}>
-      <mesh geometry={frame} position={[0, 0, -0.002]}>
-        <meshBasicMaterial color={color} transparent opacity={active ? 0.42 : 0.2} toneMapped={false} depthWrite={false} />
+    <group rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.012, MAT_Z]}>
+      {/* polygonOffset gives each layer a stable depth bias so the near-coplanar
+          mat / frame / table don't z-fight (which caused the flicker) */}
+      <mesh geometry={frame}>
+        <meshBasicMaterial
+          color={color} transparent opacity={active ? 0.42 : 0.2} toneMapped={false}
+          depthWrite={false} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1}
+        />
       </mesh>
       <mesh geometry={fill}>
-        <meshBasicMaterial color="#0a0c12" transparent opacity={0.5} toneMapped={false} depthWrite={false} />
+        <meshBasicMaterial
+          color="#0a0c12" transparent opacity={0.5} toneMapped={false}
+          depthWrite={false} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2}
+        />
       </mesh>
     </group>
   )
@@ -995,7 +1002,9 @@ export function Board3D({
   // free mode uses OrbitControls scroll-wheel zoom; for 3d/2d we scale the camera distance
   const target = mode === 'free' ? rawTarget : applyZoom(rawTarget, zoom)
 
-  const hand = useMemo(() => row(game.myHand.map((c) => ({ card: c })), 0, 5.9, 1.42), [game.myHand])
+  // the hand sits out front with room to spread, so give it a much wider cap than
+  // the battlefield rows — a full hand shouldn't compress into an unreadable pile
+  const hand = useMemo(() => row(game.myHand.map((c) => ({ card: c })), 0, 6.1, 1.55, 11), [game.myHand])
   const stack = useMemo(() => row(game.stack.map((c) => ({ card: c })), 0, 0.6, 1.4), [game.stack])
 
   return (

@@ -1814,3 +1814,9 @@ html, body { overflow-x: hidden; }
   .board-wrap, .board3d { min-height: 52vh; }
   .view-fab { width: 34px; height: 34px; font-size: 15px; }
 }
+
+/* game log: above the floating card badges, and collapsible */
+.board-wrap .game-log { z-index: 50; }
+.game-log-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; background: transparent; border: 0; cursor: pointer; color: inherit; padding: 0; }
+.game-log-toggle { font-size: 11px; color: var(--text-dim); }
+.game-log.collapsed .game-log-body { display: none; }

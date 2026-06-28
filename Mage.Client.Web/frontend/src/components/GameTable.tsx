@@ -420,20 +420,26 @@ function CardZoomOverlay({ card }: { card: CardType | null }) {
 
 function GameLog({ lines }: { lines: string[] }) {
   const ref = useRef<HTMLDivElement>(null)
+  const [collapsed, setCollapsed] = useState(false)
   useEffect(() => {
     const el = ref.current
-    if (el) el.scrollTop = el.scrollHeight
-  }, [lines])
+    if (el && !collapsed) el.scrollTop = el.scrollHeight
+  }, [lines, collapsed])
   return (
-    <div className="game-log panel">
-      <div className="stack-title">Game log</div>
-      <div className="game-log-body" ref={ref}>
-        {lines.map((l, i) => (
-          <div className="game-log-line" key={i}>
-            {plain(l)}
-          </div>
-        ))}
-      </div>
+    <div className={`game-log panel${collapsed ? ' collapsed' : ''}`}>
+      <button className="game-log-head" onClick={() => setCollapsed((c) => !c)} title={collapsed ? 'Expand log' : 'Collapse log'}>
+        <span className="stack-title">Game log</span>
+        <span className="game-log-toggle" aria-hidden>{collapsed ? '▸' : '▾'}</span>
+      </button>
+      {!collapsed && (
+        <div className="game-log-body" ref={ref}>
+          {lines.map((l, i) => (
+            <div className="game-log-line" key={i}>
+              {plain(l)}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
