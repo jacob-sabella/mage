@@ -1335,8 +1335,9 @@ html, body { overflow-x: hidden; }
 .game-table, .board-wrap, .chat-col { min-width: 0; max-width: 100%; }
 .deck-editor { min-width: 0; } /* width capped + centred above, not 100% */
 .lobby-view { flex: 1; }
-.lobby-main { overflow: hidden; }          /* shrink past the table's natural width */
-.lobby-main .table-wrap, .deck-search .table-wrap { min-width: 0; overflow-x: auto; }
+.lobby-main { overflow: hidden; display: flex; flex-direction: column; } /* shrink past the table's natural width */
+.lobby-main .table-wrap { min-width: 0; flex: 1; min-height: 0; overflow: auto; }
+.deck-search .table-wrap { min-width: 0; overflow-x: auto; }
 .data-table { min-width: 0; }
 .table-wrap { overflow: auto; }
 /* chat is a fixed, non-shrinking column; the board/tables take the rest */
