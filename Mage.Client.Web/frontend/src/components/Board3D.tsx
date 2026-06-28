@@ -560,11 +560,12 @@ function ViewMenu({
       : []
   // fan into the board's down-right quadrant only (keeps items on-screen). Modes
   // sit on an inner ring, focus targets on an outer ring, so neither crowds.
+  // The arc and radius both scale with player count so names never overlap.
   const a0 = 8
-  const a1 = 90
+  const a1 = focusItems.length > 1 ? Math.min(160, 90 + focusItems.length * 12) : 90
   const rings = [
     { items: modeItems, R: 74 },
-    { items: focusItems, R: 124 + focusItems.length * 14 },
+    { items: focusItems, R: 130 + focusItems.length * 16 },
   ].filter((g) => g.items.length)
   const placed = rings.flatMap((g) =>
     g.items.map((it, i) => {
@@ -629,14 +630,15 @@ export function Board3D({
         const len = Math.hypot(s.x, s.z) || 1
         const ux = s.x / len
         const uz = s.z / len
-        // a steeper view (higher camera, closer in) keeps the flat cards much
-        // closer to face-on → far sharper textures than a grazing angle
-        const out = radius + 4.6
+        // Angle the camera so the full player zone (lands in the back row) stays
+        // in frame. Look toward the inner part of the zone rather than past
+        // centre, which would clip the near cards at the bottom of the frustum.
+        const out = radius + 4.2
         return {
           name: s.isViewer ? 'You' : s.player.name,
           target: {
-            pos: new THREE.Vector3(ux * out, 8.6, uz * out),
-            look: new THREE.Vector3(-ux * 0.5, 0, -uz * 0.5),
+            pos: new THREE.Vector3(ux * out, 7.2, uz * out),
+            look: new THREE.Vector3(ux * radius * 0.35, 0.5, uz * radius * 0.35),
           },
         }
       }),
