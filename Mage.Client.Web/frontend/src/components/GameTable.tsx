@@ -318,6 +318,18 @@ function PlayableBar({
           onMouseDown={() => onPressCard?.(c)}
         >
           {c.name}
+          {c.manaCost && (
+            <span className="play-chip-cost">
+              {(c.manaCost.match(/\{([^}]+)\}/g) ?? []).map((s, i) => {
+                const sym = s.slice(1, -1)
+                return (
+                  <span key={i} className="mana-pip" style={{ background: MANA_COLOR[sym] ?? '#6b7280' }}>
+                    {sym}
+                  </span>
+                )
+              })}
+            </span>
+          )}
         </button>
       ))}
     </div>
