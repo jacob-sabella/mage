@@ -9,16 +9,13 @@ async function openDeckEditor(page: import('@playwright/test').Page) {
 test.describe('Deck editor', () => {
   test('auto-loads cards into the search results', async ({ page }) => {
     await openDeckEditor(page)
-    await expect(page.getByRole('cell', { name: 'Lightning Bolt' })).toBeVisible()
-    await expect(page.getByRole('cell', { name: 'Serra Angel' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Add Lightning Bolt' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Add Serra Angel' })).toBeVisible()
   })
 
   test('adding a card puts it in the deck with a quantity', async ({ page }) => {
     await openDeckEditor(page)
-    await page
-      .getByRole('row', { name: /Lightning Bolt/ })
-      .getByRole('button', { name: '+ Add' })
-      .click()
+    await page.getByRole('button', { name: 'Add Lightning Bolt' }).click()
     const entry = page.locator('.deck-entry', { hasText: 'Lightning Bolt' })
     await expect(entry).toBeVisible()
     await expect(entry).toContainText('1×')

@@ -18,6 +18,27 @@ function isLand(e: DeckCardEntry) {
   return (e.types ?? []).some((t) => t.toLowerCase() === 'land')
 }
 
+const TYPE_LABEL: Record<string, string> = {
+  Creature: 'Creatures', Planeswalker: 'Planeswalkers', Instant: 'Instants', Sorcery: 'Sorceries',
+  Artifact: 'Artifacts', Enchantment: 'Enchantments', Battle: 'Battles', Land: 'Lands', Other: 'Other',
+}
+
+/** Group deck entries by primary card type, in play order, sorted by mana value. */
+function groupDeck(deck: DeckCardEntry[]): { type: string; entries: DeckCardEntry[]; count: number }[] {
+  const buckets: Record<string, DeckCardEntry[]> = {}
+  for (const e of deck) {
+    const t = TYPE_ORDER.find((x) => (e.types ?? []).some((y) => y.toLowerCase() === x.toLowerCase())) ?? 'Other'
+    ;(buckets[t] ??= []).push(e)
+  }
+  return [...TYPE_ORDER, 'Other']
+    .filter((t) => buckets[t]?.length)
+    .map((t) => ({
+      type: t,
+      count: buckets[t].reduce((s, e) => s + e.count, 0),
+      entries: buckets[t].sort((a, b) => (a.manaValue ?? 0) - (b.manaValue ?? 0) || a.name.localeCompare(b.name)),
+    }))
+}
+
 // auto-saved work-in-progress deck (survives reloads)
 const DRAFT_KEY = 'mage.deck.draft'
 interface DeckDraft {
@@ -56,6 +77,7 @@ export function DeckEditor() {
   const [preview, setPreview] = useState<PreviewCard | null>(null)
 
   const total = deck.reduce((s, e) => s + e.count, 0)
+  const deckCount = useMemo(() => Object.fromEntries(deck.map((e) => [e.name, e.count])), [deck])
 
   // persist the in-progress deck on every change
   useEffect(() => {
@@ -207,6 +229,7 @@ export function DeckEditor() {
   }, [deck, deckName])
 
   const stats = useMemo(() => computeStats(deck), [deck])
+  const groups = useMemo(() => groupDeck(deck), [deck])
 
   return (
     <div className="deck-editor">
@@ -253,45 +276,24 @@ export function DeckEditor() {
           />
         </div>
         {searchError && <p className="deck-error">{searchError}</p>}
-        <div className="table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Cost</th>
-                <th>Type</th>
-                <th>Set</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {results.map((card, i) => (
-                <tr
-                  key={`${card.name}-${card.set}-${i}`}
-                  onMouseEnter={() => setPreview(card)}
-                  onMouseLeave={() => setPreview(null)}
-                >
-                  <td>{card.name}</td>
-                  <td className="cost-cell">{card.manaCost ? <ManaCost cost={card.manaCost} /> : '—'}</td>
-                  <td className="muted">{card.types.join(' ')}</td>
-                  <td className="muted">{card.set}</td>
-                  <td className="row-actions">
-                    <button className="btn watch-btn" onClick={() => addCard(card)}>
-                      + Add
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {results.length === 0 && (
-                <tr>
-                  <td className="empty" colSpan={5}>
-                    {searched ? 'No cards found.' : 'Search the card database to start building a deck.'}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        {results.length === 0 ? (
+          <p className="empty deck-grid-empty">
+            {searched ? 'No cards found.' : 'Search the card database to start building a deck.'}
+          </p>
+        ) : (
+          <div className="card-grid">
+            {results.map((card, i) => (
+              <CardTile
+                key={`${card.name}-${card.set}-${i}`}
+                card={card}
+                count={deckCount[card.name] ?? 0}
+                onAdd={addCard}
+                onRemove={decName}
+                onHover={setPreview}
+              />
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="panel deck-list">
@@ -316,30 +318,39 @@ export function DeckEditor() {
 
         <div className="deck-list-body">
           {deck.length === 0 ? (
-            <p className="empty">No cards yet. Add from search, or Open a .dck.</p>
+            <p className="empty">No cards yet. Click a card on the left, or Import / Open a deck.</p>
           ) : (
-            <ul className="deck-entries">
-              {deck.map((e) => (
-                <li
-                  key={e.name}
-                  className="deck-entry"
-                  onMouseEnter={() => setPreview(e)}
-                  onMouseLeave={() => setPreview(null)}
-                >
-                  <span className="deck-entry-count">{e.count}×</span>
-                  <span className="deck-entry-name">{e.name}</span>
-                  {e.manaCost && <ManaCost cost={e.manaCost} className="deck-entry-cost" />}
-                  <span className="deck-entry-actions">
-                    <button className="btn ghost deck-mini-btn" onClick={() => decName(e.name)}>
-                      −
-                    </button>
-                    <button className="btn ghost deck-mini-btn" onClick={() => incName(e.name)}>
-                      +
-                    </button>
-                  </span>
-                </li>
+            <div className="deck-groups">
+              {groups.map((g) => (
+                <div className="deck-group" key={g.type}>
+                  <div className="deck-group-title">
+                    {TYPE_LABEL[g.type] ?? g.type} <span className="muted">{g.count}</span>
+                  </div>
+                  <ul className="deck-entries">
+                    {g.entries.map((e) => (
+                      <li
+                        key={e.name}
+                        className="deck-entry"
+                        onMouseEnter={() => setPreview(e)}
+                        onMouseLeave={() => setPreview(null)}
+                      >
+                        <span className="deck-entry-count">{e.count}×</span>
+                        <span className="deck-entry-name">{e.name}</span>
+                        {e.manaCost && <ManaCost cost={e.manaCost} className="deck-entry-cost" />}
+                        <span className="deck-entry-actions">
+                          <button className="btn ghost deck-mini-btn" aria-label={`Decrease ${e.name}`} onClick={() => decName(e.name)}>
+                            −
+                          </button>
+                          <button className="btn ghost deck-mini-btn" aria-label={`Increase ${e.name}`} onClick={() => incName(e.name)}>
+                            +
+                          </button>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
 
           {sideboard.length > 0 && (
@@ -418,6 +429,44 @@ export function DeckEditor() {
 
 type PreviewCard = { name: string; set?: string | null; num?: string | null; manaCost?: string | null; types?: string[] }
 const PIP_COLOR: Record<string, string> = { W: '#e9e3c0', U: '#4a90e2', B: '#6b5b73', R: '#e0555f', G: '#3aa55f', C: '#9aa0ad' }
+
+/** A clickable card-art tile in the search grid: click the art to add a copy,
+ *  shows a copies-in-deck badge + a remove button, and drives the hover preview. */
+function CardTile({
+  card,
+  count,
+  onAdd,
+  onRemove,
+  onHover,
+}: {
+  card: CardInfoDto
+  count: number
+  onAdd: (c: CardInfoDto) => void
+  onRemove: (name: string) => void
+  onHover: (c: PreviewCard | null) => void
+}) {
+  const img = `/api/cardimg?set=${encodeURIComponent(card.set ?? '')}&num=${encodeURIComponent((card as { num?: string }).num ?? '')}&name=${encodeURIComponent(card.name)}`
+  return (
+    <div
+      className={`card-tile${count > 0 ? ' in-deck' : ''}`}
+      onMouseEnter={() => onHover(card)}
+      onMouseLeave={() => onHover(null)}
+    >
+      <button className="card-tile-art" aria-label={`Add ${card.name}`} title={`Add ${card.name}`} onClick={() => onAdd(card)}>
+        <img src={img} alt={card.name} loading="lazy" onError={(e) => (e.currentTarget.style.opacity = '0')} />
+        <span className="card-tile-fallback">{card.name}</span>
+      </button>
+      {count > 0 && (
+        <>
+          <span className="card-tile-count" aria-label={`${count} in deck`}>{count}</span>
+          <button className="card-tile-remove" aria-label={`Remove ${card.name}`} title={`Remove ${card.name}`} onClick={() => onRemove(card.name)}>
+            −
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
 
 /** Inline card-art preview pinned at the top of the deck list panel. */
 function DeckCardPreview({ card }: { card: PreviewCard | null }) {

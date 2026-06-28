@@ -4,7 +4,7 @@ import { gotoScreen } from './harness'
 test('deck editor auto-saves the in-progress deck across a reload', async ({ page }) => {
   await gotoScreen(page, 'lobby')
   await page.getByRole('button', { name: 'Deck Editor' }).click()
-  await page.locator('tr', { hasText: 'Lightning Bolt' }).getByRole('button', { name: '+ Add' }).click()
+  await page.getByRole('button', { name: 'Add Lightning Bolt' }).click()
   await expect(page.locator('.deck-entry', { hasText: 'Lightning Bolt' })).toBeVisible()
   await page.reload()
   await page.getByRole('button', { name: 'Deck Editor' }).click()
