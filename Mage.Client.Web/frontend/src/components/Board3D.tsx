@@ -765,7 +765,17 @@ export function Board3D({
   const chroma = CHROMA_FAMILY[prefs.theme]
   const backdrop = chroma?.backdrop ?? 'vapor'
   const baseScene = SCENE[backdrop] ?? SCENE.vapor
-  const scene = { ...baseScene, ring: chroma?.a ?? baseScene.ring, ring2: chroma?.b ?? baseScene.ring2, gridB: chroma?.a ?? baseScene.gridB, key: chroma?.a ?? baseScene.key, fill: chroma?.b ?? baseScene.fill }
+  const scene = {
+    ...baseScene,
+    bg:    chroma?.bg      ?? baseScene.bg,
+    table: chroma?.surface ?? baseScene.table,
+    gridA: chroma?.surface ?? baseScene.gridA,
+    ring:  chroma?.a       ?? baseScene.ring,
+    ring2: chroma?.b       ?? baseScene.ring2,
+    gridB: chroma?.a       ?? baseScene.gridB,
+    key:   chroma?.a       ?? baseScene.key,
+    fill:  chroma?.b       ?? baseScene.fill,
+  }
 
   // seat all players radially around the table (supports 2..N)
   const { seats, radius, spectating } = useMemo(() => seatPlayers(game.players, game.me), [game.players, game.me])
