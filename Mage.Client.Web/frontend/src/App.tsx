@@ -329,7 +329,14 @@ export default function App() {
   const { prefs } = usePrefs()
   const [session, setSessionState] = useState<Session | null>(null)
   const [online, setOnline] = useState(false)
-  const [view, setView] = useState<View>('play')
+  // remember the active tab across reloads
+  const [view, setView] = useState<View>(() => {
+    const v = localStorage.getItem('mage.view')
+    return v === 'decks' || v === 'settings' ? v : 'play'
+  })
+  useEffect(() => {
+    localStorage.setItem('mage.view', view)
+  }, [view])
 
   // global "?" toggles the keyboard-shortcuts overlay (ignored while typing);
   // typing the secret word "clips" opens the test-recording gallery.
