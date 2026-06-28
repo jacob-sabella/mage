@@ -1,6 +1,8 @@
 import { createPortal } from 'react-dom'
+import { useEscapeClose } from '../useEscapeClose'
 
 export function ChangelogModal({ onClose }: { onClose: () => void }) {
+  useEscapeClose(onClose)
   const entries = __APP_CHANGELOG__
 
   return createPortal(

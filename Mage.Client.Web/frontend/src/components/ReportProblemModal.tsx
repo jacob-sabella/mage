@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { reportProblem } from '../api'
 import { captureScreenshot, reportState } from '../reportState'
+import { useEscapeClose } from '../useEscapeClose'
 
 export type ReportKind = 'bug' | 'feature'
 
@@ -39,6 +40,7 @@ export function ReportProblemModal({
   screenshot?: string | null
   onClose: () => void
 }) {
+  useEscapeClose(onClose)
   const copy = COPY[kind]
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')

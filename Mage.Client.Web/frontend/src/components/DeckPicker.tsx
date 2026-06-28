@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { listDecks } from '../api'
 import type { DeckListItem } from '../api'
+import { useEscapeClose } from '../useEscapeClose'
 
 interface Props {
   title?: string
@@ -11,6 +12,7 @@ interface Props {
 
 /** Modal browser for prebuilt / saved .dck files — no file paths needed. */
 export function DeckPicker({ title = 'Choose a deck', onPick, onClose, showOpponents = false }: Props) {
+  useEscapeClose(onClose)
   const [decks, setDecks] = useState<DeckListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

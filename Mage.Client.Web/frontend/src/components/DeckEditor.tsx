@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { importDeck, loadDeck, saveDeck, searchCards, uploadDeck } from '../api'
+import { useEscapeClose } from '../useEscapeClose'
 import { DeckPicker } from './DeckPicker'
 import { ManaCost } from './ManaCost'
 import type { CardInfoDto, DeckCardEntry } from '../types'
@@ -135,6 +136,7 @@ export function DeckEditor() {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [sampleOpen, setSampleOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  useEscapeClose(useCallback(() => setImportOpen(false), []))
   const [importText, setImportText] = useState('')
   const [importUrl, setImportUrl] = useState('')
   const [importing, setImporting] = useState(false)
@@ -493,6 +495,7 @@ function shuffle<T>(a: T[]): T[] {
 
 /** Draw a random opening hand from the deck (weighted by copies) to test it. */
 function SampleHandModal({ deck, onClose }: { deck: DeckCardEntry[]; onClose: () => void }) {
+  useEscapeClose(onClose)
   const pool = useMemo(() => deck.flatMap((e) => Array(e.count).fill(e) as DeckCardEntry[]), [deck])
   const [hand, setHand] = useState<DeckCardEntry[]>(() => shuffle(pool).slice(0, 7))
   return createPortal(
