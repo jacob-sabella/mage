@@ -864,8 +864,8 @@ export function Board3D({
   // free mode uses OrbitControls scroll-wheel zoom; for 3d/2d we scale the camera distance
   const target = mode === 'free' ? rawTarget : applyZoom(rawTarget, zoom)
 
-  const hand = useMemo(() => row(game.myHand, 0, 5.9, 1.42), [game.myHand])
-  const stack = useMemo(() => row(game.stack, 0, 0.6, 1.4), [game.stack])
+  const hand = useMemo(() => row(game.myHand.map((c) => ({ card: c })), 0, 5.9, 1.42), [game.myHand])
+  const stack = useMemo(() => row(game.stack.map((c) => ({ card: c })), 0, 0.6, 1.4), [game.stack])
 
   return (
     <div className="board3d">
