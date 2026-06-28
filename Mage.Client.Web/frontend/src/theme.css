@@ -14,7 +14,7 @@
 [data-family="cutesy"]    { --font-display: "Baloo 2", "Segoe UI", sans-serif; --font-body: "Baloo 2", "Segoe UI", sans-serif; --glow-strength: 0.7; }
 [data-family="space"]     { --font-display: "Orbitron", sans-serif; --font-body: "Segoe UI", Roboto, system-ui, sans-serif; --glow-strength: 0.9; }
 
-/* ---- Vaporwave chromas (neon) ---- */
+/* ---- Vaporwave chromas (neon, dark purple/blue base) ---- */
 :root,
 [data-theme="synthwave"] {
   --bg-deep: #0a0118; --bg: #160a2eDD; --bg-raised: #1f1142; --bg-hover: #2c1a5c; --stroke: #3a2168;
@@ -40,8 +40,38 @@
   --text: #f6ecff; --text-dim: #c2a9e0; --danger: #ff6a8a; --success: #26d9c3;
   --grad-a: #1a1242; --grad-b: #5a2a8a; --grad-c: #ff6ad5;
 }
+[data-theme="sunset"] {
+  --bg-deep: #0e0604; --bg: #1a0e08DD; --bg-raised: #261408; --bg-hover: #341c12; --stroke: #4c2a1a;
+  --accent: #ff5e62; --accent-2: #ffb347; --accent-press: #e04a50;
+  --text: #ffe8d0; --text-dim: #d09066; --danger: #ff6a3f; --success: #ffb347;
+  --grad-a: #1a0e08; --grad-b: #4a1e12; --grad-c: #ff5e62;
+}
+[data-theme="miami"] {
+  --bg-deep: #020d0c; --bg: #061816DD; --bg-raised: #0a2422; --bg-hover: #0e302e; --stroke: #164038;
+  --accent: #00e0c0; --accent-2: #ff5db1; --accent-press: #00baa6;
+  --text: #e0fff8; --text-dim: #78beb6; --danger: #ff4d8c; --success: #00e0c0;
+  --grad-a: #041a16; --grad-b: #0c3834; --grad-c: #00e0c0;
+}
+[data-theme="vhs"] {
+  --bg-deep: #080518; --bg: #100c26DD; --bg-raised: #1a1234; --bg-hover: #241840; --stroke: #36204e;
+  --accent: #b14bff; --accent-2: #4bd6ff; --accent-press: #9438e8;
+  --text: #ecdeff; --text-dim: #9878cc; --danger: #ff476f; --success: #4bd6ff;
+  --grad-a: #0c0620; --grad-b: #2a1454; --grad-c: #b14bff;
+}
+[data-theme="laser"] {
+  --bg-deep: #0e0410; --bg: #1a0818DD; --bg-raised: #26102c; --bg-hover: #32183a; --stroke: #46204a;
+  --accent: #ff1f6b; --accent-2: #ffe14b; --accent-press: #e0105a;
+  --text: #ffe0f0; --text-dim: #cc88aa; --danger: #ff476f; --success: #ffe14b;
+  --grad-a: #160818; --grad-b: #380f46; --grad-c: #ff1f6b;
+}
+[data-theme="hologram"] {
+  --bg-deep: #030610; --bg: #080e1eDD; --bg-raised: #0e1628; --bg-hover: #162036; --stroke: #202e4a;
+  --accent: #80e8ff; --accent-2: #e880ff; --accent-press: #60d0f0;
+  --text: #eaf6ff; --text-dim: #88b8d8; --danger: #ff6080; --success: #80ffcc;
+  --grad-a: #040810; --grad-b: #101c38; --grad-c: #80e8ff;
+}
 
-/* ---- Mythic chromas (candlelit, blackletter) ---- */
+/* ---- Mythic chromas (candlelit, blackletter — each with its own atmospheric tint) ---- */
 [data-theme="mythic"] {
   --bg-deep: #0c0a06; --bg: #17120ade; --bg-raised: #211a0f; --bg-hover: #2e2415; --stroke: #4a3a1e;
   --accent: #e8c35a; --accent-2: #4fbf86; --accent-press: #c9a23f;
@@ -54,8 +84,32 @@
   --text: #e6f3e2; --text-dim: #93b8a0; --danger: #d2562f; --success: #6fd49a;
   --grad-a: #0a1810; --grad-b: #163a26; --grad-c: #2a6b45;
 }
+[data-theme="mythic-crimson"] {
+  --bg-deep: #0e0504; --bg: #1c0c08de; --bg-raised: #2a1008; --bg-hover: #3c1a12; --stroke: #541e16;
+  --accent: #e0563a; --accent-2: #e8c35a; --accent-press: #c44030;
+  --text: #f5e4dc; --text-dim: #c48878; --danger: #e0563a; --success: #e8c35a;
+  --grad-a: #180a06; --grad-b: #401412; --grad-c: #7e1e10;
+}
+[data-theme="mythic-azure"] {
+  --bg-deep: #060a10; --bg: #0e1422de; --bg-raised: #141e30; --bg-hover: #1c2a3e; --stroke: #263650;
+  --accent: #5a9fe8; --accent-2: #e8c35a; --accent-press: #4888d0;
+  --text: #deeaf8; --text-dim: #7898bc; --danger: #e05030; --success: #e8c35a;
+  --grad-a: #080e18; --grad-b: #101e38; --grad-c: #162e52;
+}
+[data-theme="mythic-royal"] {
+  --bg-deep: #07040e; --bg: #100c1ede; --bg-raised: #18122c; --bg-hover: #221a3a; --stroke: #30224e;
+  --accent: #b48ce8; --accent-2: #e8c35a; --accent-press: #9878d0;
+  --text: #eee0f8; --text-dim: #9c78c4; --danger: #e05040; --success: #e8c35a;
+  --grad-a: #0e0818; --grad-b: #201038; --grad-c: #4a2280;
+}
+[data-theme="mythic-silver"] {
+  --bg-deep: #080a0e; --bg: #10141ede; --bg-raised: #181e2a; --bg-hover: #20283a; --stroke: #2c3850;
+  --accent: #c0d0e8; --accent-2: #e8d4a0; --accent-press: #a0b8d8;
+  --text: #eef2f8; --text-dim: #889ab4; --danger: #e05040; --success: #e8d4a0;
+  --grad-a: #0a0e14; --grad-b: #141e2e; --grad-c: #243044;
+}
 
-/* ---- Noir chromas (monochrome + one accent) ---- */
+/* ---- Noir chromas (near-black base, single accent colour) ---- */
 [data-theme="noir"] {
   --bg-deep: #050506; --bg: #0e0f12e6; --bg-raised: #16181c; --bg-hover: #20242a; --stroke: #33383f;
   --accent: #e23c3c; --accent-2: #c9ccd2; --accent-press: #b62f2f;
@@ -68,8 +122,26 @@
   --text: #f1e8d6; --text-dim: #a8997e; --danger: #c5562f; --success: #e8dcc4;
   --grad-a: #100c08; --grad-b: #20180f; --grad-c: #3a2c1a;
 }
+[data-theme="noir-ice"] {
+  --bg-deep: #040608; --bg: #080e14e6; --bg-raised: #101820; --bg-hover: #18242e; --stroke: #223040;
+  --accent: #5ab0e8; --accent-2: #c9ccd2; --accent-press: #4898d0;
+  --text: #d8eaf8; --text-dim: #6888a8; --danger: #e85a70; --success: #c9ccd2;
+  --grad-a: #060810; --grad-b: #0e1828; --grad-c: #1a2e40;
+}
+[data-theme="noir-emerald"] {
+  --bg-deep: #040608; --bg: #080e0ce6; --bg-raised: #0e1812; --bg-hover: #162418; --stroke: #1e3422;
+  --accent: #3fbf86; --accent-2: #c9ccd2; --accent-press: #30a872;
+  --text: #d8f0e4; --text-dim: #5e9872; --danger: #e85a60; --success: #c9ccd2;
+  --grad-a: #060e08; --grad-b: #0c2014; --grad-c: #183626;
+}
+[data-theme="noir-violet"] {
+  --bg-deep: #050408; --bg: #0c0812e6; --bg-raised: #14101c; --bg-hover: #1c1828; --stroke: #2a2240;
+  --accent: #b06cd6; --accent-2: #c9ccd2; --accent-press: #9858c0;
+  --text: #f0ecf8; --text-dim: #8878a8; --danger: #e85a60; --success: #c9ccd2;
+  --grad-a: #080610; --grad-b: #14102a; --grad-c: #261e44;
+}
 
-/* ---- Cutesy chromas (soft pastels) ---- */
+/* ---- Cutesy chromas (soft pastels, each with its own background hue) ---- */
 [data-theme="cutesy"] {
   --bg-deep: #2a1430; --bg: #3a1c45e6; --bg-raised: #4a2658; --bg-hover: #5c3170; --stroke: #6b4080;
   --accent: #ff9ed2; --accent-2: #9be8d8; --accent-press: #ff84c6;
@@ -81,6 +153,68 @@
   --accent: #9be8d8; --accent-2: #ffc6e6; --accent-press: #7fd4c2;
   --text: #effffa; --text-dim: #b0e0d4; --danger: #ff8ab0; --success: #9be8d8;
   --grad-a: #142a28; --grad-b: #2a6b5e; --grad-c: #6fe0c8;
+}
+[data-theme="cutesy-lavender"] {
+  --bg-deep: #1a1028; --bg: #241838e6; --bg-raised: #30244c; --bg-hover: #3e3062; --stroke: #503e78;
+  --accent: #c6a9ff; --accent-2: #ffc6e6; --accent-press: #b096f0;
+  --text: #f4f0ff; --text-dim: #b8a8e0; --danger: #ff7aac; --success: #ffc6e6;
+  --grad-a: #201536; --grad-b: #3a286c; --grad-c: #c6a9ff;
+}
+[data-theme="cutesy-peach"] {
+  --bg-deep: #2a1612; --bg: #3c2018e6; --bg-raised: #4e2c20; --bg-hover: #643a2a; --stroke: #7a4832;
+  --accent: #ffb38a; --accent-2: #ffd6a0; --accent-press: #ee9c6a;
+  --text: #fff6ec; --text-dim: #e0b898; --danger: #ff7aac; --success: #ffd6a0;
+  --grad-a: #30201a; --grad-b: #5e3826; --grad-c: #ffb38a;
+}
+[data-theme="cutesy-sky"] {
+  --bg-deep: #0e1a2a; --bg: #14263ce6; --bg-raised: #1c3450; --bg-hover: #24426a; --stroke: #2c5480;
+  --accent: #8ad0ff; --accent-2: #ffc6e6; --accent-press: #6ab8f0;
+  --text: #ecf8ff; --text-dim: #88b8de; --danger: #ff7ab0; --success: #ffc6e6;
+  --grad-a: #0e2030; --grad-b: #164060; --grad-c: #8ad0ff;
+}
+[data-theme="cutesy-candy"] {
+  --bg-deep: #280d1a; --bg: #3a1428e6; --bg-raised: #4c1c36; --bg-hover: #602448; --stroke: #782e5c;
+  --accent: #ff4d8c; --accent-2: #ffcce0; --accent-press: #e83a78;
+  --text: #fff0f6; --text-dim: #e898b8; --danger: #ff4d70; --success: #ffcce0;
+  --grad-a: #2e1020; --grad-b: #581e40; --grad-c: #ff4d8c;
+}
+
+/* ---- Space chromas (deep cosmic, each tinted to the chroma palette) ---- */
+[data-theme="space-nebula"] {
+  --bg-deep: #02030a; --bg: #060a18DD; --bg-raised: #0c1230; --bg-hover: #121a42; --stroke: #182454;
+  --accent: #b14bff; --accent-2: #4bd6ff; --accent-press: #9838e8;
+  --text: #dce4ff; --text-dim: #7888cc; --danger: #ff5db1; --success: #4bd6ff;
+  --grad-a: #04060e; --grad-b: #0a1030; --grad-c: #200a4a;
+}
+[data-theme="space-nova"] {
+  --bg-deep: #030608; --bg: #070c14DD; --bg-raised: #0c1820; --bg-hover: #12222c; --stroke: #182e3c;
+  --accent: #2de2e6; --accent-2: #ff5db1; --accent-press: #20c8cc;
+  --text: #d8f8ff; --text-dim: #5ab0c0; --danger: #ff5db1; --success: #2de2e6;
+  --grad-a: #040810; --grad-b: #0c2030; --grad-c: #0d3040;
+}
+[data-theme="space-mars"] {
+  --bg-deep: #0e0604; --bg: #180e08DD; --bg-raised: #261610; --bg-hover: #341e18; --stroke: #46281e;
+  --accent: #ff6a3d; --accent-2: #ffb347; --accent-press: #e85528;
+  --text: #ffe8d8; --text-dim: #c89070; --danger: #ff4a40; --success: #ffb347;
+  --grad-a: #160c08; --grad-b: #381e10; --grad-c: #5a2c14;
+}
+[data-theme="space-aurora"] {
+  --bg-deep: #030a06; --bg: #06140eDD; --bg-raised: #0c1e14; --bg-hover: #122a1c; --stroke: #1a3826;
+  --accent: #5affc4; --accent-2: #6b8cff; --accent-press: #44e0aa;
+  --text: #d8ffee; --text-dim: #68b888; --danger: #ff6b8a; --success: #5affc4;
+  --grad-a: #040e08; --grad-b: #0c2618; --grad-c: #144a2a;
+}
+[data-theme="space-pulsar"] {
+  --bg-deep: #04030e; --bg: #080618DD; --bg-raised: #10102a; --bg-hover: #18163c; --stroke: #221e50;
+  --accent: #6b8cff; --accent-2: #ff5db1; --accent-press: #5478ee;
+  --text: #dce0ff; --text-dim: #7878c4; --danger: #ff5db1; --success: #6b8cff;
+  --grad-a: #06040e; --grad-b: #10103a; --grad-c: #1a0f50;
+}
+[data-theme="space-quasar"] {
+  --bg-deep: #080410; --bg: #100820DD; --bg-raised: #1c1030; --bg-hover: #28183e; --stroke: #34204c;
+  --accent: #ffd23f; --accent-2: #7b5bff; --accent-press: #e8b82e;
+  --text: #fff8e0; --text-dim: #c0a868; --danger: #ff5db1; --success: #ffd23f;
+  --grad-a: #0c0618; --grad-b: #1e0e40; --grad-c: #2e1060;
 }
 
 :root {
@@ -1071,10 +1205,8 @@ input:focus {
   text-shadow: 0 0 6px rgba(0,0,0,0.5);
 }
 .theme-swatch.active { border-color: #fff; box-shadow: 0 0 14px currentColor; }
-.theme-swatch.t-synthwave { background: linear-gradient(120deg, #ff2e97, #21e6ff); }
-.theme-swatch.t-outrun { background: linear-gradient(120deg, #ff7a18, #af4bff); }
-.theme-swatch.t-cyber { background: linear-gradient(120deg, #39ff9e, #00e5ff); color: #04221a; }
-.theme-swatch.t-vapor { background: linear-gradient(120deg, #ff6ad5, #26d9c3); }
+/* Cyber is a very light gradient — dark text keeps it legible */
+.theme-swatch.t-cyber { color: #04221a; }
 
 /* ===== stable in-game layout: board fills, controls in a fixed bottom dock ===== */
 .board-wrap { position: relative; flex: 1; min-height: 0; display: flex; }
@@ -1155,20 +1287,36 @@ html, body { overflow-x: hidden; }
 /* labels sit on top of arbitrary gradients → a subtle dark halo keeps them legible */
 .theme-swatch-label { position: relative; color: #0c0e14; font-weight: 800; text-shadow: 0 1px 2px rgba(255, 255, 255, 0.35); }
 .theme-swatch.active .theme-swatch-label { color: #07090e; }
-.theme-swatch.t-mythic { background: linear-gradient(120deg, #e8c35a, #4fbf86); color: #14110a; font-family: "Cinzel Decorative", serif; }
-.theme-swatch.t-noir { background: linear-gradient(120deg, #16181c, #e23c3c); font-family: "Special Elite", monospace; }
-.theme-swatch.t-cutesy { background: linear-gradient(120deg, #ff9ed2, #9be8d8); color: #3a1c45; font-family: "Baloo 2", sans-serif; }
+/* Mythic family — Cinzel Decorative display font, warm dark text on bright-gold gradients */
+.theme-swatch.t-mythic         { color: #14110a; font-family: "Cinzel Decorative", serif; }
+.theme-swatch.t-mythic-verdant { color: #0a1810; font-family: "Cinzel Decorative", serif; }
+.theme-swatch.t-mythic-crimson { color: #14110a; font-family: "Cinzel Decorative", serif; }
+.theme-swatch.t-mythic-azure   { color: #060c18; font-family: "Cinzel Decorative", serif; }
+.theme-swatch.t-mythic-royal   { color: #080418; font-family: "Cinzel Decorative", serif; }
+.theme-swatch.t-mythic-silver  { color: #0a0e16; font-family: "Cinzel Decorative", serif; }
+
+/* Noir family — Special Elite, dark text (shadow creates legibility on dark gradients) */
+.theme-swatch.t-noir         { font-family: "Special Elite", monospace; }
+.theme-swatch.t-noir-sepia   { font-family: "Special Elite", monospace; }
+.theme-swatch.t-noir-ice     { font-family: "Special Elite", monospace; }
+.theme-swatch.t-noir-emerald { font-family: "Special Elite", monospace; }
+.theme-swatch.t-noir-violet  { font-family: "Special Elite", monospace; }
+
+/* Cutesy family — Baloo 2, dark warm text on pastel gradients */
+.theme-swatch.t-cutesy          { color: #3a1c45; font-family: "Baloo 2", sans-serif; }
+.theme-swatch.t-cutesy-mint     { color: #142a28; font-family: "Baloo 2", sans-serif; }
+.theme-swatch.t-cutesy-lavender { color: #1a1028; font-family: "Baloo 2", sans-serif; }
+.theme-swatch.t-cutesy-peach    { color: #2a1612; font-family: "Baloo 2", sans-serif; }
+.theme-swatch.t-cutesy-sky      { color: #0e1a2a; font-family: "Baloo 2", sans-serif; }
+.theme-swatch.t-cutesy-candy    { color: #280d1a; font-family: "Baloo 2", sans-serif; }
 
 /* glow intensity scales per theme (noir barely glows, cutesy soft, neon strong) */
 .btn.primary { box-shadow: 0 0 calc(14px * var(--glow-strength, 1)) color-mix(in srgb, var(--accent) 65%, transparent), inset 0 1px 0 rgba(255,255,255,0.25); }
 .h1, .brand-name { text-shadow: 0 0 calc(16px * var(--glow-strength, 1)) color-mix(in srgb, var(--accent) 60%, transparent); }
 
-/* ----- theme picker: family heads + new chroma swatches ----- */
+/* ----- theme picker: family heads ----- */
 .theme-family-head { display: flex; align-items: baseline; gap: 8px; }
 .theme-family-blurb { font-size: 11px; }
-.theme-swatch.t-mythic-verdant { background: linear-gradient(120deg, #6fd49a, #e8c35a); color: #0a1810; font-family: "Cinzel Decorative", serif; }
-.theme-swatch.t-noir-sepia { background: linear-gradient(120deg, #2a2318, #d9a441); color: #100c08; font-family: "Special Elite", monospace; }
-.theme-swatch.t-cutesy-mint { background: linear-gradient(120deg, #9be8d8, #ffc6e6); color: #142a28; font-family: "Baloo 2", sans-serif; }
 
 /* ----- modals: report + deck import ----- */
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; }

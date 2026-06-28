@@ -2,6 +2,7 @@ import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { BackdropKind } from '../prefs'
+import { usePrefs, CHROMAS } from '../prefs'
 import { SynthSun, SynthStars } from './SceneBackground'
 
 /** Shared drifting-particle system. `dir` = +1 rise, -1 fall. */
@@ -137,28 +138,37 @@ function Orb({ position, size, color, opacity = 0.5 }: { position: [number, numb
   )
 }
 
-/** Per-family 3D environment. `inGame` nudges placement for the board camera. */
+/** Per-family 3D environment. `inGame` nudges placement for the board camera.
+ *  Reads the active chroma so particle/planet colours follow the selected palette. */
 export function FamilyBackdrop({ kind, inGame = false }: { kind: BackdropKind; inGame?: boolean }) {
+  const { prefs } = usePrefs()
+  const chroma = CHROMAS[prefs.theme] ?? CHROMAS.synthwave
+  const a = chroma.a
+  const b = chroma.b
+
   switch (kind) {
     case 'mythic':
       return (
         <>
           <Orb position={inGame ? [10, 14, -40] : [9, 7, -22]} size={inGame ? 6 : 4} color="#f0e2b0" opacity={0.5} />
-          <Drift count={420} colors={['#e8c35a', '#ff8a3d', '#c9762a']} size={0.16} speed={1.3} dir={1} sway={0.25} />
+          {/* ember colour follows the active chroma — crimson burns red, azure drifts blue */}
+          <Drift key={`mythic-${chroma.id}`} count={420} colors={[a, '#ff8a3d', b]} size={0.16} speed={1.3} dir={1} sway={0.25} />
         </>
       )
     case 'noir':
       return (
         <>
-          <Orb position={inGame ? [-14, 16, -42] : [-9, 8, -22]} size={inGame ? 5 : 3.4} color="#c9ccd2" opacity={0.32} />
+          {/* searchlight tint takes the chroma accent — red classic, blue ice, etc. */}
+          <Orb position={inGame ? [-14, 16, -42] : [-9, 8, -22]} size={inGame ? 5 : 3.4} color={a} opacity={0.28} />
           <Drift count={900} colors={['#aeb4c2', '#c9ccd2', '#8b9099']} size={0.07} speed={9} dir={-1} sway={0.04} opacity={0.5} additive={false} />
         </>
       )
     case 'cutesy':
       return (
         <>
-          <Orb position={inGame ? [11, 13, -40] : [9, 6, -22]} size={inGame ? 6 : 4} color="#ffd6ee" opacity={0.4} />
-          <Drift count={260} colors={['#ff9ed2', '#9be8d8', '#ffc6e6']} size={0.4} speed={0.7} dir={1} sway={0.5} opacity={0.55} additive={false} />
+          {/* orb + bubbles match the active pastel palette */}
+          <Orb position={inGame ? [11, 13, -40] : [9, 6, -22]} size={inGame ? 6 : 4} color={a} opacity={0.42} />
+          <Drift key={`cutesy-${chroma.id}`} count={260} colors={[a, b, '#ffc6e6']} size={0.4} speed={0.7} dir={1} sway={0.5} opacity={0.55} additive={false} />
           <Drift count={120} colors={['#ffffff']} size={0.18} speed={0.5} dir={1} sway={0.6} opacity={0.5} />
         </>
       )
@@ -167,12 +177,12 @@ export function FamilyBackdrop({ kind, inGame = false }: { kind: BackdropKind; i
         <>
           {/* deep starfield */}
           <SynthStars count={inGame ? 1600 : 2200} />
-          {/* planets at varying depths */}
-          <Planet position={inGame ? [-16, 11, -44] : [-10, 6, -26]} size={inGame ? 4.6 : 3} color="#6b8cff" ring ringColor="#b9c6ff" />
-          <Planet position={inGame ? [15, 15, -52] : [10, 9, -30]} size={inGame ? 2.6 : 1.8} color="#ff6a3d" />
-          <Planet position={inGame ? [6, -4, -40] : [4, -3, -22]} size={inGame ? 1.4 : 1} color="#5affc4" />
-          {/* drifting nebula dust */}
-          <Drift count={500} colors={['#b14bff', '#4bd6ff', '#7b5bff']} size={0.6} speed={0.25} dir={1} sway={0.3} opacity={0.22} />
+          {/* planet colours follow the active chroma — Nebula gets purple, Mars gets orange */}
+          <Planet key={`${chroma.id}-p1`} position={inGame ? [-16, 11, -44] : [-10, 6, -26]} size={inGame ? 4.6 : 3} color={a} ring ringColor={b} />
+          <Planet key={`${chroma.id}-p2`} position={inGame ? [15, 15, -52] : [10, 9, -30]} size={inGame ? 2.6 : 1.8} color={b} />
+          <Planet key={`${chroma.id}-p3`} position={inGame ? [6, -4, -40] : [4, -3, -22]} size={inGame ? 1.4 : 1} color={a} />
+          {/* nebula dust in chroma colours */}
+          <Drift key={`${chroma.id}-dust`} count={500} colors={[a, b]} size={0.6} speed={0.25} dir={1} sway={0.3} opacity={0.22} />
         </>
       )
     case 'vapor':
