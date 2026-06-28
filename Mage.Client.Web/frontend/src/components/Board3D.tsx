@@ -645,10 +645,9 @@ export function Board3D({
         shadows
         camera={{ position: [0, 5.4, 10 ], fov: 46 }}
         dpr={[1, 2]}
-        gl={{ antialias: true, preserveDrawingBuffer: true }}
+        gl={{ antialias: true, preserveDrawingBuffer: true, alpha: true }}
       >
-        {/* the world is the active family's environment */}
-        <color attach="background" args={[scene.bg]} />
+        {/* transparent canvas so the page backdrop shows through seamlessly */}
         <fog attach="fog" args={[scene.bg, 34, 96]} />
         <FamilyBackdrop kind={backdrop} inGame />
 
