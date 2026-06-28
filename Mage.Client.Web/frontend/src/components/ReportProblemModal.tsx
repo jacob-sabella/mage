@@ -31,10 +31,12 @@ const COPY: Record<ReportKind, { heading: string; blurb: string; titlePh: string
 export function ReportProblemModal({
   view,
   kind = 'bug',
+  screenshot: preCapture,
   onClose,
 }: {
   view: string
   kind?: ReportKind
+  screenshot?: string | null
   onClose: () => void
 }) {
   const copy = COPY[kind]
@@ -49,8 +51,9 @@ export function ReportProblemModal({
     setStatus('sending')
     setErrMsg('')
     try {
-      // grab a screenshot + the live game snapshot for triage context
-      const screenshot = await captureScreenshot()
+      // Use pre-captured screenshot (taken before modal opened) so the dialog
+      // doesn't appear in the capture; fall back to capturing now if unavailable
+      const screenshot = preCapture !== undefined ? preCapture : await captureScreenshot()
       const res = await reportProblem(
         title.trim(),
         body.trim(),
