@@ -614,6 +614,7 @@ function DeckCardPreview({ card }: { card: PreviewCard | null }) {
 interface Stats {
   lands: number
   spells: number
+  avgCmc: number // average mana value of nonland cards
   curve: number[] // index 0..7 (7 = 7+), nonland
   colors: Record<string, number>
   types: Record<string, number>
@@ -625,11 +626,13 @@ function computeStats(deck: DeckCardEntry[]): Stats {
   const types: Record<string, number> = {}
   let lands = 0
   let spells = 0
+  let cmcSum = 0
   for (const e of deck) {
     const land = isLand(e)
     if (land) lands += e.count
     else {
       spells += e.count
+      cmcSum += (e.manaValue ?? 0) * e.count
       curve[Math.min(e.manaValue ?? 0, 7)] += e.count
       const cs = e.colors ?? ''
       if (cs) for (const c of cs) colors[c] = (colors[c] ?? 0) + e.count
@@ -640,7 +643,7 @@ function computeStats(deck: DeckCardEntry[]): Stats {
       types[key] = (types[key] ?? 0) + e.count
     }
   }
-  return { lands, spells, curve, colors, types }
+  return { lands, spells, avgCmc: spells ? cmcSum / spells : 0, curve, colors, types }
 }
 
 function DeckStats({ stats }: { stats: Stats }) {
@@ -648,7 +651,9 @@ function DeckStats({ stats }: { stats: Stats }) {
   return (
     <div className="deck-stats">
       <div className="deck-stats-row">
-        <span className="muted">{stats.spells} spells · {stats.lands} lands</span>
+        <span className="muted">
+          {stats.spells} spells · {stats.lands} lands{stats.spells ? ` · avg ${stats.avgCmc.toFixed(1)} MV` : ''}
+        </span>
         <span className="spacer" />
         <span className="pips">
           {(['W', 'U', 'B', 'R', 'G', 'C'] as const).map((c) =>
