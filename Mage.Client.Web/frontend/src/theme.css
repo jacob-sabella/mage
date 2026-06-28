@@ -1780,3 +1780,6 @@ html, body { overflow-x: hidden; }
 .deck-title-input:hover { border-bottom-color: var(--stroke); }
 .deck-title-input:focus { outline: none; border-bottom-color: var(--accent); background: rgba(255, 255, 255, 0.05); }
 .deck-title-pencil { color: var(--text-dim); font-size: 12px; opacity: 0.55; margin-left: -2px; }
+
+.img-batch { display: inline-flex; align-items: center; gap: 6px; }
+.img-batch .filter-select { padding: 5px 8px; }

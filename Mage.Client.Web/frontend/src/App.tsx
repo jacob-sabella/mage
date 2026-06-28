@@ -195,17 +195,18 @@ function ImageCacheCard() {
     return () => clearInterval(t)
   }, [prog?.running, refreshStats])
 
+  const [batch, setBatch] = useState(250)
   const startDownload = useCallback(() => {
     fetch('/api/images/download', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ limit: 250 }),
+      body: JSON.stringify({ limit: batch }),
     })
       .then(() => fetch('/api/images/download/progress'))
       .then((r) => r.json())
       .then((p: DownloadProgress) => setProg(p))
       .catch(() => undefined)
-  }, [])
+  }, [batch])
   const cancelDownload = useCallback(() => {
     fetch('/api/images/download/cancel', { method: 'POST' }).catch(() => undefined)
   }, [])
@@ -254,12 +255,29 @@ function ImageCacheCard() {
             >
               {prog?.running ? 'Downloading…' : 'Download missing art'}
             </button>
+            <label className="muted img-batch">
+              Batch
+              <select
+                className="filter-select"
+                value={batch}
+                disabled={prog?.running}
+                onChange={(e) => setBatch(Number(e.target.value))}
+              >
+                <option value={250}>250</option>
+                <option value={1000}>1,000</option>
+                <option value={5000}>5,000</option>
+                <option value={1000000}>All missing</option>
+              </select>
+            </label>
             {prog?.running && (
               <button className="btn ghost" onClick={cancelDownload}>
                 Cancel
               </button>
             )}
-            <span className="muted setting-hint">Fetches up to 250 missing card images per run from Scryfall.</span>
+            <span className="muted setting-hint">
+              Fetches missing card art from Scryfall, ~8/sec (rate-limited). Skips art you already have, so it’s
+              resumable — and cancellable any time.
+            </span>
           </div>
           {prog && (
             <div className="img-progress">
