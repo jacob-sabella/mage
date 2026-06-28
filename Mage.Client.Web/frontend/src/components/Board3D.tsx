@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Grid, Html, OrbitControls } from '@react-three/drei'
-import { FamilyBackdrop } from './backdrops'
 import { usePrefs, CHROMA_FAMILY } from '../prefs'
 
 // per-family in-game scene tint (background, fog, table, grid on/off)
