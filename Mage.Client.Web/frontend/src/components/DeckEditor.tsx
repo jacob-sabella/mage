@@ -67,6 +67,7 @@ export function DeckEditor() {
   const [fType, setFType] = useState('')
   const [fCmc, setFCmc] = useState('')
   const [fSort, setFSort] = useState<'name' | 'cmc' | 'color'>('name')
+  const [fRarity, setFRarity] = useState('')
 
   // restore an in-progress deck from a previous session so a refresh never
   // discards your work-in-progress deck
@@ -248,12 +249,12 @@ export function DeckEditor() {
   const stats = useMemo(() => computeStats(deck), [deck])
   const groups = useMemo(() => groupDeck(deck), [deck])
   const sortedResults = useMemo(() => {
-    const arr = [...results]
+    const arr = fRarity ? results.filter((c) => (c.rarity ?? '').toLowerCase().includes(fRarity.toLowerCase())) : [...results]
     if (fSort === 'cmc') arr.sort((a, b) => (a.manaValue ?? 0) - (b.manaValue ?? 0) || a.name.localeCompare(b.name))
     else if (fSort === 'color') arr.sort((a, b) => (a.colors ?? 'Z').localeCompare(b.colors ?? 'Z') || a.name.localeCompare(b.name))
     else arr.sort((a, b) => a.name.localeCompare(b.name))
     return arr
-  }, [results, fSort])
+  }, [results, fSort, fRarity])
 
   return (
     <div className="deck-editor">
@@ -298,11 +299,21 @@ export function DeckEditor() {
             value={fCmc}
             onChange={(e) => setFCmc(e.target.value)}
           />
+          <select className="filter-select" value={fRarity} onChange={(e) => setFRarity(e.target.value)} title="Rarity">
+            <option value="">Any rarity</option>
+            <option value="common">Common</option>
+            <option value="uncommon">Uncommon</option>
+            <option value="rare">Rare</option>
+            <option value="mythic">Mythic</option>
+          </select>
         </div>
         {searchError && <p className="deck-error">{searchError}</p>}
         {results.length > 0 && (
           <div className="deck-results-bar">
-            <span className="muted">{results.length} card{results.length === 1 ? '' : 's'}</span>
+            <span className="muted">
+              {sortedResults.length} card{sortedResults.length === 1 ? '' : 's'}
+              {fRarity && results.length !== sortedResults.length ? ` of ${results.length}` : ''}
+            </span>
             <span className="spacer" />
             <label className="muted results-sort">
               Sort
@@ -314,7 +325,7 @@ export function DeckEditor() {
             </label>
           </div>
         )}
-        {results.length === 0 ? (
+        {sortedResults.length === 0 ? (
           <p className="empty deck-grid-empty">
             {searched ? 'No cards found.' : 'Search the card database to start building a deck.'}
           </p>
