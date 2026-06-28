@@ -19,11 +19,27 @@ function readGlow(): number {
 }
 
 /**
- * When `enabled`, request the default audio input (mic) and drive `audioLevel`
- * from a Web Audio AnalyserNode each frame. Tears everything down on disable /
- * unmount. `onError` fires (e.g. permission denied) so the caller can flip the
- * pref back off. The effect re-runs only on `enabled`; onError is read via a ref
- * so a fresh callback identity never restarts the mic.
+ * Capture the device's audio output via getDisplayMedia (tab / system audio).
+ * A minimal video track is requested because most browsers require it, then
+ * dropped immediately — only the audio track is used for analysis.
+ * Throws if the browser doesn't support getDisplayMedia or if the user didn't
+ * enable audio sharing in the picker.
+ */
+async function getAudioOutputStream(): Promise<MediaStream> {
+  const s = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: { width: 1, height: 1 } })
+  s.getVideoTracks().forEach((t) => t.stop())
+  if (!s.getAudioTracks().length) {
+    throw new DOMException('No audio track — make sure to check "Share tab audio" in the picker', 'NotFoundError')
+  }
+  return s
+}
+
+/**
+ * When `enabled`, capture audio output (tab / system audio via getDisplayMedia)
+ * and drive `audioLevel` from a Web Audio AnalyserNode each frame. Tears
+ * everything down on disable / unmount. `onError` fires so the caller can flip
+ * the pref back off. The effect re-runs only on `enabled`; onError is read via
+ * a ref so a fresh callback identity never restarts the capture.
  */
 export function useAudioReactive(enabled: boolean, onError?: (e: unknown) => void) {
   const errRef = useRef(onError)
@@ -42,8 +58,7 @@ export function useAudioReactive(enabled: boolean, onError?: (e: unknown) => voi
     let frame = 0
     audioLevel.glow = readGlow()
 
-    navigator.mediaDevices
-      .getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } })
+    getAudioOutputStream()
       .then((s) => {
         if (cancelled) {
           s.getTracks().forEach((t) => t.stop())

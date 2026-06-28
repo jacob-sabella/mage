@@ -80,7 +80,7 @@ function SettingsView() {
         <label className="setting-row">
           <span>
             <strong>Audio-reactive backdrop</strong>
-            <span className="muted setting-hint">Pulse the 3D scene to your mic / default input — asks for permission</span>
+            <span className="muted setting-hint">Pulse the 3D scene to your audio output — pick a tab/window when prompted, and enable "Share tab audio"</span>
           </span>
           <input
             type="checkbox"
@@ -144,7 +144,7 @@ export default function App() {
   const [online, setOnline] = useState(false)
   const [view, setView] = useState<View>('play')
 
-  // audio-reactive backdrop (opt-in): if the mic is denied, flip the pref back off
+  // audio-reactive backdrop (opt-in): if capture fails or user cancels, flip the pref back off
   const { prefs, setPref } = usePrefs()
   const onAudioError = useCallback(() => setPref('audioReactive', false), [setPref])
   useAudioReactive(prefs.audioReactive, onAudioError)
