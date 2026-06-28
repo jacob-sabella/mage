@@ -64,6 +64,7 @@ export function DeckEditor() {
   const [fColors, setFColors] = useState('')
   const [fType, setFType] = useState('')
   const [fCmc, setFCmc] = useState('')
+  const [fSort, setFSort] = useState<'name' | 'cmc' | 'color'>('name')
 
   // restore an in-progress deck from a previous session so a refresh never
   // discards your work-in-progress deck
@@ -230,6 +231,13 @@ export function DeckEditor() {
 
   const stats = useMemo(() => computeStats(deck), [deck])
   const groups = useMemo(() => groupDeck(deck), [deck])
+  const sortedResults = useMemo(() => {
+    const arr = [...results]
+    if (fSort === 'cmc') arr.sort((a, b) => (a.manaValue ?? 0) - (b.manaValue ?? 0) || a.name.localeCompare(b.name))
+    else if (fSort === 'color') arr.sort((a, b) => (a.colors ?? 'Z').localeCompare(b.colors ?? 'Z') || a.name.localeCompare(b.name))
+    else arr.sort((a, b) => a.name.localeCompare(b.name))
+    return arr
+  }, [results, fSort])
 
   return (
     <div className="deck-editor">
@@ -276,13 +284,27 @@ export function DeckEditor() {
           />
         </div>
         {searchError && <p className="deck-error">{searchError}</p>}
+        {results.length > 0 && (
+          <div className="deck-results-bar">
+            <span className="muted">{results.length} card{results.length === 1 ? '' : 's'}</span>
+            <span className="spacer" />
+            <label className="muted results-sort">
+              Sort
+              <select className="filter-select" value={fSort} onChange={(e) => setFSort(e.target.value as typeof fSort)}>
+                <option value="name">Name</option>
+                <option value="cmc">Mana value</option>
+                <option value="color">Color</option>
+              </select>
+            </label>
+          </div>
+        )}
         {results.length === 0 ? (
           <p className="empty deck-grid-empty">
             {searched ? 'No cards found.' : 'Search the card database to start building a deck.'}
           </p>
         ) : (
           <div className="card-grid">
-            {results.map((card, i) => (
+            {sortedResults.map((card, i) => (
               <CardTile
                 key={`${card.name}-${card.set}-${i}`}
                 card={card}
