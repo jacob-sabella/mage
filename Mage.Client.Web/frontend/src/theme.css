@@ -1286,10 +1286,6 @@ input:focus {
 .game-over-title { font-family: var(--font-display); letter-spacing: 1.5px; }
 .prio-chip, .conn-pill { font-family: var(--font-display); letter-spacing: 0.5px; }
 
-/* ===== immersive in-game mode: hide chrome, use all vertical space ===== */
-body.in-game .topbar,
-body.in-game .app-nav { display: none; }
-body.in-game #app { padding: 6px 10px; }
 
 /* ===== snug layout + collapsible chat ===== */
 #app { padding: 14px 16px; }
