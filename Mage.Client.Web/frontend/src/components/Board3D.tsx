@@ -13,6 +13,7 @@ const SCENE: Record<string, { bg: string; table: string; ring: string; ring2: st
   space:  { bg: '#02030a', table: '#0a1024', ring: '#b14bff', ring2: '#4bd6ff', grid: false, gridA: '#1a2348', gridB: '#4bd6ff', key: '#cdd6ff', fill: '#6b8cff' },
 }
 import * as THREE from 'three'
+import { FamilyBackdrop } from './backdrops'
 import type { GameCard, GamePlayer, GameState } from '../types'
 
 /** Parse a mana-cost string like "{2}{R}{R}" into symbol tokens. */
@@ -1005,11 +1006,14 @@ export function Board3D({
         shadows
         camera={{ position: isMobile ? [0, 16, 0.01] : [0, 5.4, 10], fov: 46 }}
         dpr={[1, 2]}
-        gl={{ antialias: true, preserveDrawingBuffer: true, alpha: true }}
+        gl={{ antialias: true, preserveDrawingBuffer: true }}
       >
-        {/* Transparent canvas — the full-screen SceneBackground (the same 3D scene
-            as the lobby) shows through, so the game board lives inside the app
-            backdrop instead of a separate scene. */}
+        {/* The same backdrop as the lobby, rendered INSIDE the board canvas so it
+            shares the board camera and the depth buffer — the table + cards occlude
+            it correctly (no see-through clipping) while still feeling like one scene. */}
+        <color attach="background" args={[scene.bg]} />
+        <fog attach="fog" args={[scene.bg, 42, 85]} />
+        <FamilyBackdrop kind={backdrop} inGame />
 
         <ambientLight intensity={0.85} />
         <directionalLight position={[4, 11, 6]} intensity={0.9} color={scene.key} castShadow />
