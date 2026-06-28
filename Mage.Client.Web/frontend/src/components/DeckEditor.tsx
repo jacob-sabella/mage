@@ -19,6 +19,15 @@ const BASICS: { c: string; name: string }[] = [
   { c: 'W', name: 'Plains' }, { c: 'U', name: 'Island' }, { c: 'B', name: 'Swamp' }, { c: 'R', name: 'Mountain' }, { c: 'G', name: 'Forest' },
 ]
 
+const BASIC_LANDS = new Set(['plains', 'island', 'swamp', 'mountain', 'forest', 'wastes'])
+function isBasic(e: DeckCardEntry) {
+  return BASIC_LANDS.has(e.name.toLowerCase()) || (e.types ?? []).some((t) => t.toLowerCase() === 'basic')
+}
+/** A non-basic card past the 4-copy constructed limit. */
+function overLimit(e: DeckCardEntry) {
+  return e.count > 4 && !isBasic(e)
+}
+
 function isLand(e: DeckCardEntry) {
   return (e.types ?? []).some((t) => t.toLowerCase() === 'land')
 }
@@ -85,6 +94,7 @@ export function DeckEditor() {
 
   const total = deck.reduce((s, e) => s + e.count, 0)
   const deckCount = useMemo(() => Object.fromEntries(deck.map((e) => [e.name, e.count])), [deck])
+  const overLimitNames = useMemo(() => deck.filter(overLimit).map((e) => e.name), [deck])
 
   // persist the in-progress deck on every change
   useEffect(() => {
@@ -395,6 +405,11 @@ export function DeckEditor() {
             </span>
           </div>
         )}
+        {overLimitNames.length > 0 && (
+          <p className="deck-limit-warn" title="Constructed decks allow at most 4 copies of a card (basic lands are exempt)">
+            ⚠ Over the 4-copy limit: {overLimitNames.join(', ')}
+          </p>
+        )}
 
         {deck.length > 0 && <DeckStats stats={stats} />}
 
@@ -412,7 +427,7 @@ export function DeckEditor() {
                     {g.entries.map((e) => (
                       <li
                         key={e.name}
-                        className="deck-entry"
+                        className={`deck-entry${overLimit(e) ? ' over-limit' : ''}`}
                         onMouseEnter={() => setPreview(e)}
                         onMouseLeave={() => setPreview(null)}
                       >

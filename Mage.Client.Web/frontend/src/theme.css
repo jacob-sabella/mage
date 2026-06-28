@@ -1675,3 +1675,7 @@ html, body { overflow-x: hidden; }
   .board-focus .chat-col, .board-focus .player-strip { display: none; }
   .board-focus .lobby-main { min-height: 74vh; }
 }
+
+/* deck 4-copy-limit warning */
+.deck-limit-warn { font-size: 12px; color: #ffb13b; font-weight: 600; margin: 2px 0 0; }
+.deck-entry.over-limit .deck-entry-count { color: #ffb13b; font-weight: 800; }
