@@ -3,6 +3,7 @@ import { importDeck, loadDeck, saveDeck, searchCards, uploadDeck } from '../api'
 import { DeckPicker } from './DeckPicker'
 import { ManaCost } from './ManaCost'
 import type { CardInfoDto, DeckCardEntry } from '../types'
+import { getCachedUrl, preloadImage } from '../imageCache'
 const COLOR_HEX: Record<string, string> = {
   W: '#e9e3c8',
   U: '#4a90d9',
@@ -376,12 +377,31 @@ const PIP_COLOR: Record<string, string> = { W: '#e9e3c0', U: '#4a90e2', B: '#6b5
 
 /** Inline card-art preview pinned at the top of the deck list panel. */
 function DeckCardPreview({ card }: { card: PreviewCard | null }) {
+  const [imgSrc, setImgSrc] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!card) {
+      setImgSrc(null)
+      return
+    }
+    const apiUrl = `/api/cardimg?set=${encodeURIComponent(card.set ?? '')}&num=${encodeURIComponent(card.num ?? '')}&name=${encodeURIComponent(card.name)}`
+    setImgSrc(getCachedUrl(apiUrl))
+    let alive = true
+    preloadImage(apiUrl).then((url) => {
+      if (alive) setImgSrc(url)
+    })
+    return () => {
+      alive = false
+    }
+  }, [card?.name, card?.set, card?.num])
+
   if (!card) return <div className="card-preview card-preview-empty muted">Hover a card to preview</div>
   const cost = (card.manaCost?.match(/\{([^}]+)\}/g) ?? []).map((s) => s.slice(1, -1))
-  const img = `/api/cardimg?set=${encodeURIComponent(card.set ?? '')}&num=${encodeURIComponent(card.num ?? '')}&name=${encodeURIComponent(card.name)}`
   return (
     <div className="card-preview" role="dialog" aria-label={`Card: ${card.name}`}>
-      <img className="card-preview-img" src={img} alt={card.name} onError={(e) => (e.currentTarget.style.visibility = 'hidden')} />
+      {imgSrc && (
+        <img className="card-preview-img" src={imgSrc} alt={card.name} onError={(e) => (e.currentTarget.style.visibility = 'hidden')} />
+      )}
       <div className="card-preview-info">
         <div className="card-preview-head">
           <span className="card-preview-name">{card.name}</span>

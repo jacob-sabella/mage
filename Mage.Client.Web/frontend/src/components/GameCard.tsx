@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { usePrefs } from '../prefs'
 import { useCardPreview } from '../cardPreview'
 import type { GameCard as CardType } from '../types'
+import { getCachedUrl, preloadImage } from '../imageCache'
 
 // Tint a card by its WUBRG color string.
 const COLOR_BG: Record<string, string> = {
@@ -37,6 +39,21 @@ export function GameCard({ card, highlight, onClick }: Props) {
   const isPlaneswalker = card.types?.includes('Planeswalker')
   const clickable = !!onClick
 
+  const rawUrl = card.name ? imgUrl(card) : null
+  const [artSrc, setArtSrc] = useState<string | null>(() => (rawUrl ? getCachedUrl(rawUrl) : null))
+
+  useEffect(() => {
+    if (!rawUrl || !prefs.cardImages) return
+    setArtSrc(getCachedUrl(rawUrl))
+    let alive = true
+    preloadImage(rawUrl).then((url) => {
+      if (alive) setArtSrc(url)
+    })
+    return () => {
+      alive = false
+    }
+  }, [rawUrl, prefs.cardImages])
+
   return (
     <motion.div
       // shared-element id: when this card moves between zones, it flies there
@@ -59,11 +76,10 @@ export function GameCard({ card, highlight, onClick }: Props) {
       onMouseEnter={() => card.name && setPreview({ src: imgUrl(card), name: card.name })}
       onMouseLeave={() => setPreview(null)}
     >
-      {prefs.cardImages && card.name && (
+      {prefs.cardImages && artSrc && (
         <img
           className="gc-art"
-          loading="lazy"
-          src={imgUrl(card)}
+          src={artSrc}
           alt=""
           onError={(e) => {
             ;(e.currentTarget as HTMLImageElement).style.display = 'none'
