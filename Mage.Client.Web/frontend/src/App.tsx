@@ -177,28 +177,28 @@ export default function App() {
         <SceneBackground />
       </Suspense>
       <TopBar online={session ? online : false} server={session?.server} view={view} />
-      {session && (
-        <nav className="app-nav">
-          <button
-            className={`nav-tab ${view === 'play' ? 'active' : ''}`}
-            onClick={() => setView('play')}
-          >
-            Play
-          </button>
+      <nav className="app-nav">
+        <button
+          className={`nav-tab ${view === 'play' ? 'active' : ''}`}
+          onClick={() => setView('play')}
+        >
+          Play
+        </button>
+        {session && (
           <button
             className={`nav-tab ${view === 'decks' ? 'active' : ''}`}
             onClick={() => setView('decks')}
           >
             Deck Editor
           </button>
-          <button
-            className={`nav-tab ${view === 'settings' ? 'active' : ''}`}
-            onClick={() => setView('settings')}
-          >
-            Settings
-          </button>
-        </nav>
-      )}
+        )}
+        <button
+          className={`nav-tab ${view === 'settings' ? 'active' : ''}`}
+          onClick={() => setView('settings')}
+        >
+          Settings
+        </button>
+      </nav>
       <main id="app">
         {session ? (
           <>
@@ -216,6 +216,8 @@ export default function App() {
             {view === 'decks' && <DeckEditor />}
             {view === 'settings' && <SettingsView />}
           </>
+        ) : view === 'settings' ? (
+          <SettingsView />
         ) : (
           <LoginView onConnected={setSession} />
         )}
