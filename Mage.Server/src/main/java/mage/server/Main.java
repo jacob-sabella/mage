@@ -265,6 +265,8 @@ public final class Main {
         logger.info("Config - second.bind port: " + config.getSecondaryBindPort());
         logger.info("Config - users registr.:   " + (config.isAuthenticationActivated() ? "true" : "false"));
         logger.info("Config - users anon:       " + (!config.isAuthenticationActivated() ? "true" : "false"));
+        String sitePasswordEnv = System.getenv("SITE_PASSWORD");
+        logger.info("Config - site password    : " + (sitePasswordEnv != null && !sitePasswordEnv.isEmpty() ? "enabled" : "disabled"));
         logger.info("Config - mailgun api key : " + config.getMailgunApiKey());
         logger.info("Config - mailgun domain  : " + config.getMailgunDomain());
         logger.info("Config - mail smtp Host  : " + config.getMailSmtpHost());

@@ -70,6 +70,7 @@ public class Session {
     private boolean isAdmin = false;
     private final AsynchInvokerCallbackHandler callbackHandler;
     private boolean valid = true;
+    private boolean siteVerified = false;
 
     private final ReentrantLock lock;
     private final ReentrantLock callBackLock;
@@ -480,6 +481,14 @@ public class Session {
 
     public boolean isAdmin() {
         return isAdmin;
+    }
+
+    public boolean isSiteVerified() {
+        return siteVerified;
+    }
+
+    public void setSiteVerified(boolean siteVerified) {
+        this.siteVerified = siteVerified;
     }
 
     public String getHost() {
