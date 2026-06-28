@@ -97,42 +97,55 @@ public class ImageDownloader {
 
     private void run(int cap) {
         try {
-            List<CardInfo> cards = CardRepository.instance.findCards(new CardCriteria());
+            // Scan one set at a time instead of materialising the whole (~50k card)
+            // database in memory at once — keeps the gateway's footprint small on a
+            // memory-tight host.
+            List<String> setCodes = mage.cards.repository.ExpansionRepository.instance.getSetCodes();
             int got = 0;
-            for (CardInfo ci : cards) {
+            scan:
+            for (String setCode : setCodes) {
                 if (progress.cancelled) {
                     break;
                 }
-                progress.scanned++;
-                String set = ci.getSetCode();
-                String name = ci.getName();
-                String number = ci.getCardNumber();
-                if (set == null || set.isEmpty() || name == null || name.isEmpty()) {
-                    continue;
+                CardCriteria crit = new CardCriteria();
+                crit.setCodes(setCode);
+                List<CardInfo> cards = CardRepository.instance.findCards(crit);
+                for (CardInfo ci : cards) {
+                    if (progress.cancelled) {
+                        break scan;
+                    }
+                    progress.scanned++;
+                    String set = ci.getSetCode();
+                    String name = ci.getName();
+                    String number = ci.getCardNumber();
+                    if (set == null || set.isEmpty() || name == null || name.isEmpty()) {
+                        continue;
+                    }
+                    File out = targetFile(set, name);
+                    if (out.exists() && out.length() > 1000) {
+                        progress.skipped++;
+                        continue;
+                    }
+                    progress.candidates++;
+                    progress.current = name + " (" + set + ")";
+                    boolean ok = downloadOne(set, number, out);
+                    if (ok) {
+                        progress.done.incrementAndGet();
+                        got++;
+                    } else {
+                        progress.failed.incrementAndGet();
+                    }
+                    if (got >= cap) {
+                        progress.message = "stopped at the " + cap + "-image limit for this run — run again for more";
+                        break scan;
+                    }
+                    try {
+                        Thread.sleep(RATE_MS);
+                    } catch (InterruptedException ie) {
+                        break scan;
+                    }
                 }
-                File out = targetFile(set, name);
-                if (out.exists() && out.length() > 1000) {
-                    progress.skipped++;
-                    continue;
-                }
-                progress.candidates++;
-                progress.current = name + " (" + set + ")";
-                boolean ok = downloadOne(set, number, out);
-                if (ok) {
-                    progress.done.incrementAndGet();
-                    got++;
-                } else {
-                    progress.failed.incrementAndGet();
-                }
-                if (got >= cap) {
-                    progress.message = "stopped at the " + cap + "-image limit for this run — run again for more";
-                    break;
-                }
-                try {
-                    Thread.sleep(RATE_MS);
-                } catch (InterruptedException ie) {
-                    break;
-                }
+                cards = null; // release this set's list before the next
             }
             index.invalidate(); // newly-downloaded art becomes visible
             if (progress.message.startsWith("scanning") || progress.message.startsWith("cancelling")) {
