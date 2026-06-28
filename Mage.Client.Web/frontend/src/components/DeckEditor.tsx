@@ -232,17 +232,34 @@ export function DeckEditor() {
   }, [])
 
   // export the deck as MTGO/Moxfield-style text and copy it to the clipboard
-  const onCopyList = useCallback(async () => {
+  const decklistText = useCallback(() => {
     const lines = (entries: DeckCardEntry[]) => entries.map((e) => `${e.count} ${e.name}`).join('\n')
     let text = lines(deck)
     if (sideboard.length) text += `\n\n${lines(sideboard)}`
+    return text
+  }, [deck, sideboard])
+
+  const onCopyList = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(text)
+      await navigator.clipboard.writeText(decklistText())
       setSaveStatus('Decklist copied to clipboard')
     } catch {
       setSaveStatus('Copy failed — clipboard unavailable')
     }
-  }, [deck, sideboard])
+  }, [decklistText])
+
+  const onDownloadTxt = useCallback(() => {
+    const blob = new Blob([decklistText()], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${(deckName || 'deck').replace(/[^a-z0-9-_ ]/gi, '_').trim() || 'deck'}.txt`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+    setSaveStatus('Decklist downloaded')
+  }, [decklistText, deckName])
 
   const onSave = useCallback(async () => {
     if (deck.length === 0) return
@@ -565,6 +582,9 @@ export function DeckEditor() {
           </button>
           <button className="btn ghost block" onClick={onCopyList} disabled={deck.length === 0}>
             Copy decklist
+          </button>
+          <button className="btn ghost block" onClick={onDownloadTxt} disabled={deck.length === 0}>
+            Download .txt
           </button>
           <button className="btn ghost block" onClick={() => setSampleOpen(true)} disabled={total < 7}>
             Sample hand
