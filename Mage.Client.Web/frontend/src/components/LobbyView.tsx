@@ -189,6 +189,8 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
 
   // deck picker drives both Join and New-game-vs-AI; remember which
   const [deckIntent, setDeckIntent] = useState<{ mode: 'join' | 'create'; tableId?: string } | null>(null)
+  // the last vs-AI setup, so "Play again" can rematch without re-picking a deck
+  const [lastCreate, setLastCreate] = useState<{ path: string; opponents: number } | null>(null)
 
   const handleJoin = useCallback((tableId: string) => setDeckIntent({ mode: 'join', tableId }), [])
 
@@ -199,6 +201,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
       if (!intent) return
       setPendingPlay(true)
       if (intent.mode === 'create') {
+        setLastCreate({ path, opponents })
         setPlayStatus(opponents > 1 ? `Starting free-for-all (${opponents + 1} players)…` : 'Starting game…')
         createGameVsAi(session.token, path, opponents)
           .then((r) => {
@@ -239,6 +242,25 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
     setPlayStatus(null)
     setGameOver(null)
   }, [])
+
+  // rematch: tear down the finished game and start a fresh one with the same deck + AI count
+  const handlePlayAgain = useCallback(() => {
+    if (!lastCreate) return
+    activeRef.current = null
+    setActiveGameId(null)
+    setInteractive(false)
+    setGame(null)
+    setPrompt(null)
+    setGameLog([])
+    setGameOver(null)
+    setPendingPlay(true)
+    setPlayStatus('Starting rematch…')
+    createGameVsAi(session.token, lastCreate.path, lastCreate.opponents)
+      .then((r) => {
+        if (!r.ok) setPlayStatus('Could not start the rematch (deck still valid?)')
+      })
+      .catch((err) => setPlayStatus(`Could not start: ${err instanceof Error ? err.message : 'error'}`))
+  }, [lastCreate, session.token])
 
   const handleSendChat = useCallback(
     (message: string) => {
@@ -336,6 +358,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
               result={gameOver}
               onRespond={handleRespond}
               onLeave={handleLeaveGame}
+              onPlayAgain={lastCreate ? handlePlayAgain : undefined}
             />
           ) : showHistory ? (
             <div className="panel table-wrap">

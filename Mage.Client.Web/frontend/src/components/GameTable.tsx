@@ -12,6 +12,7 @@ interface Props {
   result?: string | null
   onRespond: (kind: RespondKind, value?: string) => void
   onLeave: () => void
+  onPlayAgain?: () => void
 }
 
 // F-key skip shortcuts -> PlayerAction names sent via /api/game/respond (action).
@@ -30,7 +31,7 @@ const SKIP_BUTTONS = [
   { label: 'Cancel skips', key: 'F6', action: 'PASS_PRIORITY_CANCEL_ALL_ACTIONS' },
 ]
 
-export function GameTable({ game, prompt, interactive, log = [], result, onRespond, onLeave }: Props) {
+export function GameTable({ game, prompt, interactive, log = [], result, onRespond, onLeave, onPlayAgain }: Props) {
   const [preview, setPreview] = useState<CardType | null>(null)
   const [pressedCard, setPressedCard] = useState<CardType | null>(null)
   const [actionSheetCard, setActionSheetCard] = useState<CardType | null>(null)
@@ -257,9 +258,16 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
             <div className="game-over-card panel">
               <div className="game-over-title">{/won|win/i.test(result) ? '🏆 ' : ''}Game over</div>
               <div className="game-over-msg">{plain(result)}</div>
-              <button className="btn primary" onClick={onLeave}>
-                Back to lobby
-              </button>
+              <div className="game-over-actions">
+                {onPlayAgain && (
+                  <button className="btn primary" onClick={onPlayAgain}>
+                    Play again
+                  </button>
+                )}
+                <button className={`btn${onPlayAgain ? ' ghost' : ' primary'}`} onClick={onLeave}>
+                  Back to lobby
+                </button>
+              </div>
             </div>
           </div>
         )}
