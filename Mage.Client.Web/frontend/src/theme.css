@@ -1643,6 +1643,10 @@ html, body { overflow-x: hidden; }
   .control-dock { padding: 8px 10px; gap: 6px 8px; }
   .control-dock .playable-bar { max-width: 100%; flex: 1 1 100%; }
   .control-dock .action-bar { min-width: 0; flex: 1 1 100%; }
+  /* hide keyboard shortcut hints — useless on touch devices */
+  .skip-key { display: none; }
+  /* bigger tap targets for play chips */
+  .play-chip { padding: 10px 16px; font-size: 14px; min-height: 44px; }
 
   /* deck editor: single column, search above the deck list */
   .deck-editor { flex-direction: column; }
@@ -1820,3 +1824,36 @@ html, body { overflow-x: hidden; }
 .game-log-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; background: transparent; border: 0; cursor: pointer; color: inherit; padding: 0; }
 .game-log-toggle { font-size: 11px; color: var(--text-dim); }
 .game-log.collapsed .game-log-body { display: none; }
+
+/* ----- card action sheet (hold on touch / right-click on desktop) ----- */
+.card-action-backdrop {
+  position: fixed; inset: 0; z-index: 9990;
+  background: rgba(0, 0, 0, 0.68); backdrop-filter: blur(4px);
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.card-action-sheet {
+  width: 100%; max-width: 540px; padding: 18px 18px 24px;
+  border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+  animation: sheet-rise 0.24s cubic-bezier(0.2, 0.9, 0.3, 1.08);
+}
+@keyframes sheet-rise {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+.card-action-content { display: flex; gap: 14px; margin-bottom: 14px; align-items: flex-start; }
+.card-action-art {
+  width: 110px; flex-shrink: 0; border-radius: 10px; display: block;
+  background: #11141b; min-height: 154px; object-fit: cover;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+}
+.card-action-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.card-action-name { font-size: 17px; font-weight: 800; line-height: 1.2; }
+.card-action-cost { display: flex; flex-wrap: wrap; gap: 3px; }
+.card-action-type { font-size: 13px; }
+.card-action-pt { font-size: 15px; font-weight: 800; color: var(--accent-2); }
+.card-action-status { font-size: 12px; }
+.card-action-buttons {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  border-top: 1px solid var(--stroke); padding-top: 14px;
+}
+.card-action-buttons .btn { flex: 1; min-width: 90px; padding: 13px 16px; font-size: 15px; font-weight: 700; }

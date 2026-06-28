@@ -33,6 +33,7 @@ const SKIP_BUTTONS = [
 export function GameTable({ game, prompt, interactive, log = [], result, onRespond, onLeave }: Props) {
   const [preview, setPreview] = useState<CardType | null>(null)
   const [pressedCard, setPressedCard] = useState<CardType | null>(null)
+  const [actionSheetCard, setActionSheetCard] = useState<CardType | null>(null)
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // mobile "focus board" mode: hide chat + strips for a full-screen table
@@ -46,6 +47,11 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
     root.classList.toggle('board-focus', boardFocus)
     return () => root.classList.remove('board-focus')
   }, [boardFocus])
+
+  const handleLongPress = useCallback((card: CardType) => {
+    if (navigator.vibrate) navigator.vibrate(30)
+    setActionSheetCard(card)
+  }, [])
 
   // Debounce clearing the preview so rapid enter/leave events (from 3D raycasting)
   // don't cause a 1-frame flash of null between cards.
@@ -194,10 +200,21 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
           cardProps={cardProps}
           onHoverCard={handleHoverCard}
           onPressCard={setPressedCard}
+          onLongPressCard={handleLongPress}
           targets={prompt?.kind === 'target' ? prompt.targets : undefined}
         />
         <CardPreview card={preview} />
         <CardZoomOverlay card={pressedCard} />
+        {actionSheetCard && (
+          <CardActionSheet
+            card={actionSheetCard}
+            game={game}
+            prompt={prompt}
+            interactive={interactive}
+            onRespond={onRespond}
+            onClose={() => setActionSheetCard(null)}
+          />
+        )}
 
         {(game.stack.length > 0 || game.combat.length > 0) && (
           <div className="overlay-tr board-overlays">
@@ -414,6 +431,78 @@ function CardZoomOverlay({ card }: { card: CardType | null }) {
   return (
     <div className="card-zoom-overlay">
       <img className="card-zoom-img" src={img} alt={card.name} />
+    </div>
+  )
+}
+
+function CardActionSheet({
+  card,
+  game,
+  prompt,
+  interactive,
+  onRespond,
+  onClose,
+}: {
+  card: CardType
+  game: GameState | null
+  prompt: Prompt | null
+  interactive: boolean
+  onRespond: (kind: RespondKind, value?: string) => void
+  onClose: () => void
+}) {
+  const img = `/api/cardimg?set=${encodeURIComponent(card.set ?? '')}&num=${encodeURIComponent(
+    card.num ?? '',
+  )}&name=${encodeURIComponent(card.name)}`
+  const cost = (card.manaCost?.match(/\{([^}]+)\}/g) ?? []).map((s) => s.slice(1, -1))
+  const canPlay = interactive && (game?.canPlay.includes(card.id) ?? false)
+  const canTarget = interactive && prompt?.kind === 'target'
+  const isCreature = card.types?.includes('Creature')
+
+  return (
+    <div className="card-action-backdrop" onClick={onClose}>
+      <div className="card-action-sheet panel" onClick={(e) => e.stopPropagation()}>
+        <div className="card-action-content">
+          <img
+            className="card-action-art"
+            src={img}
+            alt={card.name}
+            onError={(e) => ((e.currentTarget.style.visibility = 'hidden'))}
+          />
+          <div className="card-action-info">
+            <div className="card-action-name">{card.name}</div>
+            {cost.length > 0 && (
+              <div className="card-action-cost">
+                {cost.map((s, i) => (
+                  <span key={i} className="mana-pip" style={{ background: MANA_COLOR[s] ?? '#9aa0ad' }}>
+                    {s}
+                  </span>
+                ))}
+              </div>
+            )}
+            {card.types && <div className="card-action-type muted">{card.types.join(' ')}</div>}
+            {isCreature && card.power != null && card.toughness != null && (
+              <div className="card-action-pt">
+                {card.power}/{card.toughness}
+                {card.damage > 0 && <span style={{ color: 'var(--danger)' }}> −{card.damage}</span>}
+              </div>
+            )}
+            {card.tapped && <div className="card-action-status muted">Tapped</div>}
+          </div>
+        </div>
+        <div className="card-action-buttons">
+          {canPlay && (
+            <button className="btn primary" onClick={() => { onRespond('uuid', card.id); onClose() }}>
+              Play
+            </button>
+          )}
+          {canTarget && (
+            <button className="btn primary" onClick={() => { onRespond('uuid', card.id); onClose() }}>
+              Target
+            </button>
+          )}
+          <button className="btn ghost" onClick={onClose}>Close</button>
+        </div>
+      </div>
     </div>
   )
 }
