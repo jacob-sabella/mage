@@ -512,7 +512,11 @@ function PhaseTrack({ phase, step }: { phase?: string | null; step?: string | nu
   return (
     <div className="phase-track" aria-label="turn phase">
       {PHASE_SEGMENTS.map((label, i) => (
-        <div key={label} className={`phase-seg${i === idx ? ' active' : i < idx ? ' past' : ''}`}>
+        <div
+          key={label}
+          className={`phase-seg${i === idx ? ' active' : i < idx ? ' past' : ''}`}
+          title={i === idx && step ? `${label} — ${step}` : label}
+        >
           {label}
         </div>
       ))}
