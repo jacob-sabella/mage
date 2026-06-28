@@ -6,7 +6,7 @@
 # Stage 1 — build the React/Vite frontend. Vite's outDir is
 # ../src/main/resources/web, so the SPA lands in the module resources.
 ##########################################################################
-FROM node:20-bookworm AS frontend
+FROM public.ecr.aws/docker/library/node:20-bookworm AS frontend
 WORKDIR /src/Mage.Client.Web/frontend
 COPY Mage.Client.Web/frontend/package.json Mage.Client.Web/frontend/package-lock.json ./
 RUN npm ci
@@ -19,7 +19,7 @@ RUN npm run build
 # Stage 2 — build the Java gateway (web-client profile) and collect a
 # self-contained runtime classpath (module jar + all runtime deps).
 ##########################################################################
-FROM maven:3.9-eclipse-temurin-17 AS build
+FROM public.ecr.aws/docker/library/maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /src
 COPY . .
 # overlay the freshly built SPA over whatever was committed in resources/web
@@ -35,7 +35,7 @@ RUN --mount=type=cache,target=/root/.m2 \
 ##########################################################################
 # Stage 3 — minimal JRE 17 runtime.
 ##########################################################################
-FROM eclipse-temurin:17-jre
+FROM public.ecr.aws/docker/library/eclipse-temurin:17-jre
 WORKDIR /app
 COPY --from=build /src/Mage.Client.Web/target/mage-client-web.jar /app/mage-client-web.jar
 COPY --from=build /src/Mage.Client.Web/target/lib/                /app/lib/

@@ -4,7 +4,7 @@
 #   docker build -f Mage.Server/Dockerfile -t ghcr.io/jacob-sabella/mage-server .
 # NOTE: heavy build — pulls in Mage.Sets (the bulk of XMage).
 
-FROM maven:3.9-eclipse-temurin-17 AS build
+FROM public.ecr.aws/docker/library/maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /src
 COPY . .
 # Build + install the whole reactor, THEN run assembly:single on Mage.Server only
@@ -16,7 +16,7 @@ RUN --mount=type=cache,target=/root/.m2 \
     mkdir -p /dist && cd /dist && \
     jar xf /src/Mage.Server/target/mage-server.zip   # jar (JDK) avoids needing unzip
 
-FROM eclipse-temurin:17-jre
+FROM public.ecr.aws/docker/library/eclipse-temurin:17-jre
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends fontconfig && rm -rf /var/lib/apt/lists/*
 COPY --from=build /dist/ /app/
