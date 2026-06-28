@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { importDeck, loadDeck, saveDeck, searchCards, uploadDeck } from '../api'
 import { DeckPicker } from './DeckPicker'
 import { ManaCost } from './ManaCost'
@@ -130,6 +131,7 @@ export function DeckEditor() {
   }, [])
 
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [sampleOpen, setSampleOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [importText, setImportText] = useState('')
   const [importUrl, setImportUrl] = useState('')
@@ -423,6 +425,9 @@ export function DeckEditor() {
           <button className="btn ghost block" onClick={onCopyList} disabled={deck.length === 0}>
             Copy decklist
           </button>
+          <button className="btn ghost block" onClick={() => setSampleOpen(true)} disabled={total < 7}>
+            Sample hand
+          </button>
           {saveStatus && <p className="deck-save-status muted">{saveStatus}</p>}
           {unresolved.length > 0 && <p className="deck-error">Not found: {unresolved.join(', ')}</p>}
         </div>
@@ -431,6 +436,8 @@ export function DeckEditor() {
       {pickerOpen && (
         <DeckPicker title="Open a deck" onPick={(d) => doLoad(d.path)} onClose={() => setPickerOpen(false)} />
       )}
+
+      {sampleOpen && <SampleHandModal deck={deck} onClose={() => setSampleOpen(false)} />}
 
       {importOpen && (
         <div className="modal-backdrop" onClick={() => setImportOpen(false)}>
@@ -470,6 +477,52 @@ export function DeckEditor() {
         </div>
       )}
     </div>
+  )
+}
+
+function shuffle<T>(a: T[]): T[] {
+  const r = [...a]
+  for (let i = r.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[r[i], r[j]] = [r[j], r[i]]
+  }
+  return r
+}
+
+/** Draw a random opening hand from the deck (weighted by copies) to test it. */
+function SampleHandModal({ deck, onClose }: { deck: DeckCardEntry[]; onClose: () => void }) {
+  const pool = useMemo(() => deck.flatMap((e) => Array(e.count).fill(e) as DeckCardEntry[]), [deck])
+  const [hand, setHand] = useState<DeckCardEntry[]>(() => shuffle(pool).slice(0, 7))
+  return createPortal(
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal panel sample-hand-modal" role="dialog" aria-label="Sample hand" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <h2 className="h1">Sample hand</h2>
+        </div>
+        <div className="sample-hand">
+          {hand.map((c, i) => (
+            <img
+              key={i}
+              className="sample-card"
+              loading="lazy"
+              src={`/api/cardimg?set=&num=&name=${encodeURIComponent(c.name)}`}
+              alt={c.name}
+              title={c.name}
+              onError={(e) => (e.currentTarget.style.visibility = 'hidden')}
+            />
+          ))}
+        </div>
+        <div className="modal-actions">
+          <button className="btn ghost" onClick={onClose}>
+            Close
+          </button>
+          <button className="btn primary" onClick={() => setHand(shuffle(pool).slice(0, 7))}>
+            New hand
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
   )
 }
 

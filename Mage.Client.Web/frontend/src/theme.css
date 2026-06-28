@@ -1518,3 +1518,9 @@ html, body { overflow-x: hidden; }
   animation: spin 0.8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* sample-hand modal */
+.sample-hand-modal { width: 760px; max-width: 100%; }
+.sample-hand { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin: 6px 0 4px; }
+.sample-card { width: 100%; aspect-ratio: 488 / 680; object-fit: cover; border-radius: 7px; background: #11141b; box-shadow: 0 3px 10px rgba(0,0,0,0.5); }
+@media (max-width: 720px) { .sample-hand { grid-template-columns: repeat(4, 1fr); } }
