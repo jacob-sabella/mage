@@ -6,6 +6,7 @@ import { LobbyView } from './components/LobbyView'
 import { DeckEditor } from './components/DeckEditor'
 import { ShortcutsOverlay } from './components/ShortcutsOverlay'
 import { Toaster } from './toast'
+import { resetTitle } from './notify'
 import { usePrefs, FAMILIES } from './prefs'
 import type { Session } from './types'
 import './theme.css'
@@ -149,6 +150,19 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  // clear any flashed tab-title attention once the player looks back at the tab
+  useEffect(() => {
+    const reset = () => {
+      if (document.visibilityState === 'visible') resetTitle()
+    }
+    window.addEventListener('focus', reset)
+    document.addEventListener('visibilitychange', reset)
+    return () => {
+      window.removeEventListener('focus', reset)
+      document.removeEventListener('visibilitychange', reset)
+    }
   }, [])
 
   // setSession also persists, so a refresh can resume the same gateway session

@@ -14,6 +14,7 @@ import type { MatchDto, RespondKind } from '../api'
 import { useServerEvents } from '../useServerEvents'
 import { setReportSnapshot } from '../reportState'
 import { pushToast } from '../toast'
+import { notifyIfHidden } from '../notify'
 import { ChatPanel } from './ChatPanel'
 import { DeckPicker } from './DeckPicker'
 import { ConstructView } from './ConstructView'
@@ -117,6 +118,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
         // toast once when the turn passes to the viewer (not every priority pass)
         if (g.activePlayer && g.me && g.activePlayer === g.me && lastActiveRef.current !== g.activePlayer) {
           pushToast('Your turn', 'success')
+          notifyIfHidden('Your turn')
         }
         lastActiveRef.current = g.activePlayer ?? null
         setGame(g)
@@ -129,6 +131,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
       const over = e.text && e.text.trim() ? e.text : 'Game over'
       setGameOver(over)
       pushToast(over, /win|won/i.test(over) ? 'success' : 'info')
+      notifyIfHidden(over)
     } else if (e.type === 'log' && e.text) {
       if (!activeRef.current || (e.gameId && e.gameId !== activeRef.current)) return
       setGameLog((prev) => [...prev.slice(-299), e.text as string])
