@@ -228,6 +228,9 @@ function Card3D({
 }) {
   const [art, setArt] = useState<THREE.Texture | null>(null)
   const [hover, setHover] = useState(false)
+  // touch long-press → preview (right-click does it on desktop); a quick tap plays
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressed = useRef(false)
   const { highlight, onClick } = cardProps(card)
   const { gl } = useThree()
   const maxAniso = useMemo(() => gl.capabilities.getMaxAnisotropy?.() ?? 8, [gl])
@@ -310,14 +313,31 @@ function Card3D({
         onPointerLeave={() => {
           setHover(false)
           onHoverCard?.(null)
+          if (pressTimer.current) clearTimeout(pressTimer.current)
+        }}
+        onPointerDown={(e) => {
+          // touch only: hold to preview, quick tap falls through to onClick (play)
+          if (e.pointerType !== 'touch') return
+          longPressed.current = false
+          pressTimer.current = setTimeout(() => {
+            longPressed.current = true
+            onPressCard?.(card)
+          }, 450)
+        }}
+        onPointerUp={() => {
+          if (pressTimer.current) clearTimeout(pressTimer.current)
         }}
         onClick={(e) => {
           e.stopPropagation()
-          onClick?.(card) // left-click plays / declares — no preview in the way
+          if (pressTimer.current) clearTimeout(pressTimer.current)
+          if (longPressed.current) {
+            longPressed.current = false // a touch long-press previewed — don't also play
+            return
+          }
+          onClick?.(card) // tap / left-click plays — preview never hijacks it
         }}
         onContextMenu={(e) => {
-          // right-click previews the card (big zoom) instead of left-click, so
-          // clicking to play a card is never hijacked by the preview
+          // desktop: right-click previews the card (big zoom)
           e.stopPropagation()
           e.nativeEvent.preventDefault()
           onPressCard?.(card)
