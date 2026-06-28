@@ -156,21 +156,37 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
         <CardPreview card={preview} />
         <CardZoomOverlay card={pressedCard} />
 
-        {game.combat.length > 0 && (
-          <div className="combat-panel panel overlay-tr">
-            <div className="stack-title">Combat</div>
-            {game.combat.map((cg, i) => (
-              <div className="combat-group" key={i}>
-                <span className="combat-attackers">{cg.attackers.join(', ') || '—'}</span>
-                <span className="combat-arrow">→</span>
-                <span className="combat-defender">{cg.defender}</span>
-                {cg.blockers.length > 0 ? (
-                  <span className="combat-blockers muted">blocked by {cg.blockers.join(', ')}</span>
-                ) : (
-                  <span className="combat-unblocked">unblocked</span>
-                )}
+        {(game.stack.length > 0 || game.combat.length > 0) && (
+          <div className="overlay-tr board-overlays">
+            {game.stack.length > 0 && (
+              <div className="stack-panel panel">
+                <div className="stack-title">Stack ({game.stack.length})</div>
+                {/* top of the stack resolves first (LIFO) */}
+                {[...game.stack].reverse().map((c, i) => (
+                  <div className={`stack-item${i === 0 ? ' next' : ''}`} key={c.id}>
+                    {i === 0 && <span className="stack-next-tag">next</span>}
+                    <span className="stack-item-name">{c.name}</span>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
+            {game.combat.length > 0 && (
+              <div className="combat-panel panel">
+                <div className="stack-title">Combat</div>
+                {game.combat.map((cg, i) => (
+                  <div className="combat-group" key={i}>
+                    <span className="combat-attackers">{cg.attackers.join(', ') || '—'}</span>
+                    <span className="combat-arrow">→</span>
+                    <span className="combat-defender">{cg.defender}</span>
+                    {cg.blockers.length > 0 ? (
+                      <span className="combat-blockers muted">blocked by {cg.blockers.join(', ')}</span>
+                    ) : (
+                      <span className="combat-unblocked">unblocked</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

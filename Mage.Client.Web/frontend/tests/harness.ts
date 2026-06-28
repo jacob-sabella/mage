@@ -114,6 +114,7 @@ export type Scenario =
   | 'gameOver'
   | 'multiplayer'
   | 'arrows'
+  | 'stack'
 
 const DRAFT = {
   booster: [
@@ -164,6 +165,12 @@ GAME_MULTI.players = [
   },
 ] as typeof SAMPLE.game.players
 
+const GAME_STACK = JSON.parse(JSON.stringify(SAMPLE.game)) as typeof SAMPLE.game
+GAME_STACK.stack = [
+  card('st1', 'Lightning Bolt', ['Instant'], { manaCost: '{R}', colors: 'R' }),
+  card('st2', 'Counterspell', ['Instant'], { manaCost: '{U}{U}', colors: 'U' }),
+] as typeof SAMPLE.game.stack
+
 // a 1x1 jpeg so the 3D board's card textures resolve deterministically
 const TINY_JPEG = Buffer.from(
   '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACP/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AvwD/2Q==',
@@ -198,7 +205,8 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
               ? 'multiAmount'
               : 'select'
   const second = scenario === 'ptUpdate' ? GAME_BUFFED : null
-  const gameState = scenario === 'multiplayer' ? GAME_MULTI : scenario === 'arrows' ? GAME_ARROWS : SAMPLE.game
+  const gameState =
+    scenario === 'multiplayer' ? GAME_MULTI : scenario === 'arrows' ? GAME_ARROWS : scenario === 'stack' ? GAME_STACK : SAMPLE.game
   const isDraft = scenario === 'draft'
   const isConstruct = scenario === 'construct'
   // a small drafted pool for the construct screen
