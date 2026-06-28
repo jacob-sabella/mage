@@ -181,6 +181,16 @@ export function DeckEditor() {
     }
   }, [])
 
+  // start a fresh deck (clears the auto-saved draft)
+  const onNewDeck = useCallback(() => {
+    if (deck.length && !window.confirm('Clear the current deck and start a new one?')) return
+    setDeck([])
+    setSideboard([])
+    setDeckName('My Deck')
+    setUnresolved([])
+    setSaveStatus(null)
+  }, [deck.length])
+
   const doLoad = useCallback(async (path: string) => {
     setPickerOpen(false)
     setSaveStatus(null)
@@ -332,6 +342,9 @@ export function DeckEditor() {
           </button>
           <button className="btn watch-btn" onClick={() => setPickerOpen(true)}>
             Open
+          </button>
+          <button className="btn ghost watch-btn" onClick={onNewDeck} disabled={deck.length === 0 && sideboard.length === 0}>
+            New
           </button>
           <input ref={fileInputRef} type="file" accept=".dck" style={{ display: 'none' }} onChange={onUpload} />
         </div>
