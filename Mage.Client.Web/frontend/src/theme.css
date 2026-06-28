@@ -1710,3 +1710,16 @@ html, body { overflow-x: hidden; }
   .lobby-header { margin-bottom: 2px; }
   .lobby-header .h1 { font-size: 20px; }
 }
+
+/* lite mode (Reduce motion): kill UI animation + give a static themed backdrop
+   since the animated 3D scene is gated off in App */
+.reduce-motion *, .reduce-motion *::before, .reduce-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+.reduce-motion body {
+  background:
+    radial-gradient(130% 100% at 50% -10%, color-mix(in srgb, var(--accent) 16%, var(--bg-deep)) 0%, var(--bg-deep) 62%) fixed,
+    var(--bg-deep);
+}

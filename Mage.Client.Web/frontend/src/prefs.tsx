@@ -108,9 +108,10 @@ export interface Prefs {
   theme: ThemeName // colour palette
   manaIcons: boolean // render mana costs as symbols instead of {3}{B}{B} text
   panelOpacity: number // 0.35–1: how solid menus/panels are over the backdrop
+  reduceMotion: boolean // lite mode: drop the animated 3D backdrop + UI motion
 }
 
-const DEFAULTS: Prefs = { cardImages: true, avatarId: 0, flagName: '', theme: 'synthwave', manaIcons: true, panelOpacity: 0.72 }
+const DEFAULTS: Prefs = { cardImages: true, avatarId: 0, flagName: '', theme: 'synthwave', manaIcons: true, panelOpacity: 0.72, reduceMotion: false }
 const KEY = 'mage.prefs'
 
 function load(): Prefs {
@@ -147,6 +148,11 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.style.setProperty('--panel-alpha', String(prefs.panelOpacity))
   }, [prefs.panelOpacity])
+  // lite mode → a class CSS uses to disable DOM animations (the 3D backdrop is
+  // gated separately in App)
+  useEffect(() => {
+    document.documentElement.classList.toggle('reduce-motion', prefs.reduceMotion)
+  }, [prefs.reduceMotion])
   const value = useMemo<PrefsCtx>(
     () => ({
       prefs,

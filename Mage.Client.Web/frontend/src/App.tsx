@@ -82,6 +82,17 @@ function SettingsView() {
         </label>
         <label className="setting-row">
           <span>
+            <strong>Reduce motion</strong>
+            <span className="muted setting-hint">Lite mode — drop the animated 3D background (saves battery)</span>
+          </span>
+          <input
+            type="checkbox"
+            checked={prefs.reduceMotion}
+            onChange={(e) => setPref('reduceMotion', e.target.checked)}
+          />
+        </label>
+        <label className="setting-row">
+          <span>
             <strong>Menu opacity</strong>
             <span className="muted setting-hint">How solid menus are — lower lets the backdrop show through</span>
           </span>
@@ -203,6 +214,7 @@ function saveSession(s: Session | null) {
 }
 
 export default function App() {
+  const { prefs } = usePrefs()
   const [session, setSessionState] = useState<Session | null>(null)
   const [online, setOnline] = useState(false)
   const [view, setView] = useState<View>('play')
@@ -268,9 +280,11 @@ export default function App() {
 
   return (
     <>
-      <Suspense fallback={null}>
-        <SceneBackground />
-      </Suspense>
+      {!prefs.reduceMotion && (
+        <Suspense fallback={null}>
+          <SceneBackground />
+        </Suspense>
+      )}
       <TopBar online={session ? online : false} server={session?.server} view={view} />
       <nav className="app-nav">
         <button
