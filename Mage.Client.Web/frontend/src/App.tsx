@@ -1,11 +1,10 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { checkSession } from './api'
 import { TopBar } from './components/TopBar'
 import { LoginView } from './components/LoginView'
 import { LobbyView } from './components/LobbyView'
 import { DeckEditor } from './components/DeckEditor'
 import { usePrefs, FAMILIES } from './prefs'
-import { useAudioReactive } from './audioReactive'
 import type { Session } from './types'
 import './theme.css'
 
@@ -79,17 +78,6 @@ function SettingsView() {
         </label>
         <label className="setting-row">
           <span>
-            <strong>Audio-reactive backdrop</strong>
-            <span className="muted setting-hint">Pulse the 3D scene to your audio output — pick a tab/window when prompted, and enable "Share tab audio"</span>
-          </span>
-          <input
-            type="checkbox"
-            checked={prefs.audioReactive}
-            onChange={(e) => setPref('audioReactive', e.target.checked)}
-          />
-        </label>
-        <label className="setting-row">
-          <span>
             <strong>Menu opacity</strong>
             <span className="muted setting-hint">How solid menus are — lower lets the backdrop show through</span>
           </span>
@@ -143,11 +131,6 @@ export default function App() {
   const [session, setSessionState] = useState<Session | null>(null)
   const [online, setOnline] = useState(false)
   const [view, setView] = useState<View>('play')
-
-  // audio-reactive backdrop (opt-in): if capture fails or user cancels, flip the pref back off
-  const { prefs, setPref } = usePrefs()
-  const onAudioError = useCallback(() => setPref('audioReactive', false), [setPref])
-  useAudioReactive(prefs.audioReactive, onAudioError)
 
   // setSession also persists, so a refresh can resume the same gateway session
   const setSession = (s: Session | null) => {
