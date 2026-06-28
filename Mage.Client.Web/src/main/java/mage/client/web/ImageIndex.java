@@ -86,4 +86,41 @@ public class ImageIndex {
     private static String norm(String s) {
         return s == null ? "" : s.trim().toLowerCase(Locale.ROOT);
     }
+
+    /** Live counts for the served image cache (for the Settings "images" panel). */
+    public static class Stats {
+        public boolean available;
+        public String dir;
+        public int files;
+        public int sets;
+        public long bytes;
+    }
+
+    public Stats stats() {
+        Stats st = new Stats();
+        st.available = isAvailable();
+        st.dir = root == null ? null : root.getAbsolutePath();
+        if (!st.available) {
+            return st;
+        }
+        java.util.Set<String> sets = new java.util.HashSet<>();
+        try (Stream<Path> walk = Files.walk(root.toPath(), 3)) {
+            walk.filter(Files::isRegularFile)
+                .filter(p -> p.getFileName().toString().endsWith(".full.jpg"))
+                .forEach(p -> {
+                    st.files++;
+                    try {
+                        st.bytes += Files.size(p);
+                    } catch (Exception ignored) {
+                    }
+                    Path parent = p.getParent();
+                    if (parent != null) {
+                        sets.add(parent.getFileName().toString());
+                    }
+                });
+        } catch (Exception ignored) {
+        }
+        st.sets = sets.size();
+        return st;
+    }
 }

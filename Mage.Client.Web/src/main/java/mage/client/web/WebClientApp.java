@@ -138,6 +138,7 @@ public class WebClientApp {
         app.post("/api/game/respond", this::handleRespond);
         app.get("/api/cards/search", this::handleCardSearch);
         app.get("/api/cardimg", this::handleCardImage);
+        app.get("/api/images/stats", this::handleImageStats);
         app.get("/api/decks/list", this::handleDecksList);
         app.get("/api/decks/load", this::handleDeckLoad);
         app.post("/api/decks/save", this::handleDeckSave);
@@ -729,6 +730,22 @@ public class WebClientApp {
         } catch (Exception e) {
             ctx.status(404);
         }
+    }
+
+    /** Exposes the server-side card/token image cache (what XMage downloads into):
+     *  how many card-art files are present, across how many sets, total size, the
+     *  directory, and the image sources XMage pulls from. */
+    private void handleImageStats(Context ctx) {
+        ImageIndex.Stats st = images.stats();
+        java.util.Map<String, Object> out = new java.util.LinkedHashMap<>();
+        out.put("available", st.available);
+        out.put("dir", st.dir);
+        out.put("files", st.files);
+        out.put("sets", st.sets);
+        out.put("bytes", st.bytes);
+        // the image sources XMage's downloader can pull card + token art from
+        out.put("sources", java.util.List.of("Scryfall", "Gatherer / WizardCards", "Grabbag (tokens)"));
+        ctx.json(out);
     }
 
     /** Translate an upstream callback into a browser-friendly WS frame. */

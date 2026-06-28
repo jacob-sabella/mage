@@ -1571,3 +1571,8 @@ html, body { overflow-x: hidden; }
 .clips-player { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .clips-player video { width: 100%; border-radius: 10px; background: #000; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5); }
 .clips-caption { font-size: 13px; font-weight: 600; }
+
+/* image cache settings panel */
+.img-stats { display: flex; gap: 22px; margin: 12px 0 4px; flex-wrap: wrap; }
+.img-stat { display: flex; flex-direction: column; gap: 2px; }
+.img-stat-n { font-size: 22px; font-weight: 800; font-family: var(--font-display); color: var(--accent-2); line-height: 1.1; }

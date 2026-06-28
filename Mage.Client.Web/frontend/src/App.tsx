@@ -122,7 +122,78 @@ function SettingsView() {
         </label>
         <p className="muted setting-hint">Profile changes apply on your next connect.</p>
       </div>
+      <ImageCacheCard />
     </section>
+  )
+}
+
+interface ImageStats {
+  available: boolean
+  dir: string | null
+  files: number
+  sets: number
+  bytes: number
+  sources: string[]
+}
+
+/** Exposes XMage's card/token image system: what it downloads, from where, and
+ *  the live state of this server's image cache. */
+function ImageCacheCard() {
+  const [stats, setStats] = useState<ImageStats | null>(null)
+  const [error, setError] = useState(false)
+  useEffect(() => {
+    let alive = true
+    fetch('/api/images/stats')
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error())))
+      .then((d: ImageStats) => alive && setStats(d))
+      .catch(() => alive && setError(true))
+    return () => {
+      alive = false
+    }
+  }, [])
+  const mb = stats ? (stats.bytes / (1024 * 1024)).toFixed(0) : '0'
+  return (
+    <div className="panel settings-card">
+      <h1 className="h1">Card &amp; token images</h1>
+      <p className="subtitle">Real card and token art served by this site.</p>
+      <p className="muted setting-hint">
+        XMage downloads high-resolution card and token art from public sources (Scryfall, Gatherer / WizardCards, and
+        Grabbag for tokens) into a server-side image cache laid out as{' '}
+        <code>&lt;SET&gt;/&lt;Name&gt;.&lt;num&gt;.full.jpg</code>. The web client serves matching art from that cache;
+        anything missing falls back to a readable text card — so downloading more art never changes the rules, only the
+        visuals.
+      </p>
+      {error ? (
+        <p className="deck-error">Couldn’t read the image cache status.</p>
+      ) : !stats ? (
+        <p className="muted">Loading image cache status…</p>
+      ) : (
+        <>
+          <div className="img-stats">
+            <div className="img-stat">
+              <span className="img-stat-n">{stats.files.toLocaleString()}</span>
+              <span className="muted">card / token images</span>
+            </div>
+            <div className="img-stat">
+              <span className="img-stat-n">{stats.sets.toLocaleString()}</span>
+              <span className="muted">sets</span>
+            </div>
+            <div className="img-stat">
+              <span className="img-stat-n">{mb} MB</span>
+              <span className="muted">on disk</span>
+            </div>
+          </div>
+          <p className="muted setting-hint">
+            Sources: {stats.sources.join(' · ')}. Cache: <code>{stats.dir ?? '(not configured)'}</code>
+            {stats.available ? '' : ' — not mounted on this server'}.
+          </p>
+          <p className="muted setting-hint">
+            To add art, run the image downloader in the desktop XMage client against this same cache directory (a
+            one-click in-app downloader is coming next). New art appears automatically as the cache fills.
+          </p>
+        </>
+      )}
+    </div>
   )
 }
 
