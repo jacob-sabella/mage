@@ -53,6 +53,7 @@ public class MageServerImpl implements MageServer {
 
     private final ManagerFactory managerFactory;
     private final String adminPassword;
+    private final String sitePassword;
     private final boolean testMode;
     private final boolean detailsMode;
     private final LinkedHashMap<String, String> activeAuthTokens = new LinkedHashMap<String, String>() {
@@ -66,6 +67,7 @@ public class MageServerImpl implements MageServer {
     public MageServerImpl(ManagerFactory managerFactory, String adminPassword, boolean testMode, boolean detailsMode) {
         this.managerFactory = managerFactory;
         this.adminPassword = adminPassword;
+        this.sitePassword = System.getenv("SITE_PASSWORD") != null ? System.getenv("SITE_PASSWORD") : "";
         this.testMode = testMode;
         this.detailsMode = detailsMode;
         this.callExecutor = managerFactory.threadExecutor().getCallExecutor();
@@ -87,6 +89,46 @@ public class MageServerImpl implements MageServer {
     // generateAuthToken returns a uniformly distributed 6-digits string.
     static private String generateAuthToken() {
         return String.format("%06d", RANDOM.nextInt(1000000));
+    }
+
+    private static String generateSiteToken() {
+        byte[] bytes = new byte[32];
+        RANDOM.nextBytes(bytes);
+        StringBuilder sb = new StringBuilder(64);
+        for (byte b : bytes) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
+    }
+
+    @Override
+    public String verifySitePassword(String sessionId, String password) throws MageException {
+        try {
+            if (sitePassword.isEmpty()) {
+                // No site password configured — grant access immediately.
+                Optional<Session> session = managerFactory.sessionManager().getSession(sessionId);
+                if (session.isPresent()) {
+                    session.get().setSiteVerified(true);
+                }
+                return null;
+            }
+            if (!sitePassword.equals(password)) {
+                Thread.sleep(3000);
+                sendErrorMessageToClient(sessionId, "Wrong site password.");
+                return null;
+            }
+            Optional<Session> session = managerFactory.sessionManager().getSession(sessionId);
+            if (!session.isPresent()) {
+                return null;
+            }
+            session.get().setSiteVerified(true);
+            String token = generateSiteToken();
+            logger.info("Site password verified for session " + sessionId);
+            return token;
+        } catch (Exception ex) {
+            handleException(ex);
+        }
+        return null;
     }
 
     @Override
@@ -156,6 +198,14 @@ public class MageServerImpl implements MageServer {
     @Override
     public boolean connectUser(String userName, String password, String sessionId, String restoreSessionId, MageVersion version, String userIdStr) throws MageException {
         try {
+            if (!sitePassword.isEmpty()) {
+                Optional<Session> session = managerFactory.sessionManager().getSession(sessionId);
+                if (!session.isPresent() || !session.get().isSiteVerified()) {
+                    Thread.sleep(3000);
+                    sendErrorMessageToClient(sessionId, "Site password required. Call verifySitePassword first.");
+                    return false;
+                }
+            }
             if (version.compareTo(Main.getVersion()) != 0) {
                 logger.debug("MageVersionException: userName=" + userName + ", version=" + version + " sessionId=" + sessionId);
                 throw new MageVersionException(version, Main.getVersion());
@@ -186,6 +236,13 @@ public class MageServerImpl implements MageServer {
     @Override
     public boolean connectAdmin(String adminPassword, String sessionId, MageVersion version) throws MageException {
         try {
+            if (!sitePassword.isEmpty()) {
+                Optional<Session> session = managerFactory.sessionManager().getSession(sessionId);
+                if (!session.isPresent() || !session.get().isSiteVerified()) {
+                    Thread.sleep(3000);
+                    throw new MageException("Site password required. Call verifySitePassword first.");
+                }
+            }
             if (version.compareTo(Main.getVersion()) != 0) {
                 throw new MageException("Wrong client version " + version + ", expecting version " + Main.getVersion());
             }
