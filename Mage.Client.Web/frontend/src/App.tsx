@@ -4,6 +4,7 @@ import { TopBar } from './components/TopBar'
 import { LoginView } from './components/LoginView'
 import { LobbyView } from './components/LobbyView'
 import { DeckEditor } from './components/DeckEditor'
+import { ShortcutsOverlay } from './components/ShortcutsOverlay'
 import { usePrefs, FAMILIES } from './prefs'
 import type { Session } from './types'
 import './theme.css'
@@ -132,6 +133,23 @@ export default function App() {
   const [online, setOnline] = useState(false)
   const [view, setView] = useState<View>('play')
 
+  // global "?" toggles the keyboard-shortcuts overlay (ignored while typing)
+  const [showHelp, setShowHelp] = useState(false)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+      if (e.key === '?') {
+        e.preventDefault()
+        setShowHelp((v) => !v)
+      } else if (e.key === 'Escape') {
+        setShowHelp(false)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   // setSession also persists, so a refresh can resume the same gateway session
   const setSession = (s: Session | null) => {
     saveSession(s)
@@ -205,6 +223,10 @@ export default function App() {
           <LoginView onConnected={setSession} />
         )}
       </main>
+      <button className="help-fab" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts" onClick={() => setShowHelp(true)}>
+        ?
+      </button>
+      {showHelp && <ShortcutsOverlay onClose={() => setShowHelp(false)} />}
     </>
   )
 }
