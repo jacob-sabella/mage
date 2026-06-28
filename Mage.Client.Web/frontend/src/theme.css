@@ -491,6 +491,10 @@ input::placeholder { color: var(--text-dim); }
   flex: 1;
   min-height: 0;
   align-items: stretch;
+  /* don't stretch the search table edge-to-edge on wide screens — cap + centre */
+  width: 100%;
+  max-width: 1500px;
+  margin-inline: auto;
 }
 .deck-search {
   flex: 1;
@@ -504,7 +508,7 @@ input::placeholder { color: var(--text-dim); }
 .deck-error { color: #ff8080; font-size: 13px; margin: 0; }
 
 .deck-list {
-  width: 340px;
+  width: 360px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -514,7 +518,10 @@ input::placeholder { color: var(--text-dim); }
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 6px 8px;
+  flex-wrap: wrap; /* title + count on one line, buttons wrap below when tight */
 }
+.deck-list-head .deck-title { flex: 1 1 auto; }
 .deck-title { margin: 0; font-size: 16px; }
 .deck-list-body { flex: 1; min-height: 0; overflow-y: auto; }
 .deck-entries { list-style: none; margin: 0; padding: 0; }
@@ -1071,8 +1078,9 @@ input:focus {
 /* ===== keep everything inside the window (no horizontal overflow) ===== */
 html, body { overflow-x: hidden; }
 #app { min-width: 0; overflow: hidden; }
-.view, .lobby-view, .lobby-body, .lobby-main, .deck-editor, .deck-search, .deck-list,
+.view, .lobby-view, .lobby-body, .lobby-main, .deck-search, .deck-list,
 .game-table, .board-wrap, .chat-col { min-width: 0; max-width: 100%; }
+.deck-editor { min-width: 0; } /* width capped + centred above, not 100% */
 .lobby-view { flex: 1; }
 .lobby-main { overflow: hidden; }          /* shrink past the table's natural width */
 .lobby-main .table-wrap, .deck-search .table-wrap { min-width: 0; overflow-x: auto; }
