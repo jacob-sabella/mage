@@ -97,6 +97,15 @@ export function DeckEditor() {
   const [saveStatus, setSaveStatus] = useState<string | null>(null)
   // hover a card (search result or deck entry) to preview its art
   const [preview, setPreview] = useState<PreviewCard | null>(null)
+  const previewClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const showPreview = useCallback((card: PreviewCard | null) => {
+    if (previewClearTimer.current) clearTimeout(previewClearTimer.current)
+    if (card !== null) {
+      setPreview(card)
+    } else {
+      previewClearTimer.current = setTimeout(() => setPreview(null), 150)
+    }
+  }, [])
 
   const total = deck.reduce((s, e) => s + e.count, 0)
   const deckCount = useMemo(() => Object.fromEntries(deck.map((e) => [e.name, e.count])), [deck])
@@ -407,7 +416,7 @@ export function DeckEditor() {
                 count={deckCount[card.name] ?? 0}
                 onAdd={addCard}
                 onRemove={decName}
-                onHover={setPreview}
+                onHover={showPreview}
               />
             ))}
           </div>
@@ -431,8 +440,8 @@ export function DeckEditor() {
                     <tr
                       key={`${card.name}-${card.set}-${i}`}
                       className={n > 0 ? 'in-deck' : ''}
-                      onMouseEnter={() => setPreview(card)}
-                      onMouseLeave={() => setPreview(null)}
+                      onMouseEnter={() => showPreview(card)}
+                      onMouseLeave={() => showPreview(null)}
                     >
                       <td className="deck-table-add">
                         <button className="btn ghost deck-mini-btn" aria-label={`Add ${card.name}`} onClick={() => addCard(card)}>
@@ -537,8 +546,8 @@ export function DeckEditor() {
                       <li
                         key={e.name}
                         className={`deck-entry${overLimit(e) ? ' over-limit' : ''}`}
-                        onMouseEnter={() => setPreview(e)}
-                        onMouseLeave={() => setPreview(null)}
+                        onMouseEnter={() => showPreview(e)}
+                        onMouseLeave={() => showPreview(null)}
                       >
                         <span className="deck-entry-count">{e.count}×</span>
                         <span className="deck-entry-name">{e.name}</span>
