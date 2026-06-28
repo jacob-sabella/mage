@@ -200,6 +200,7 @@ function Card3D({
   showCost,
   cardProps,
   onHoverCard,
+  onPressCard,
 }: {
   card: GameCard
   position: [number, number, number]
@@ -207,6 +208,7 @@ function Card3D({
   showCost?: boolean
   cardProps: CardProps
   onHoverCard?: (c: GameCard | null) => void
+  onPressCard?: (c: GameCard | null) => void
 }) {
   const [art, setArt] = useState<THREE.Texture | null>(null)
   const [hover, setHover] = useState(false)
@@ -278,6 +280,10 @@ function Card3D({
         onPointerLeave={() => {
           setHover(false)
           onHoverCard?.(null)
+        }}
+        onPointerDown={(e) => {
+          e.stopPropagation()
+          onPressCard?.(card)
         }}
         onClick={
           onClick
@@ -408,10 +414,12 @@ function PlayerZone({
   seat,
   cardProps,
   onHoverCard,
+  onPressCard,
 }: {
   seat: Seat
   cardProps: CardProps
   onHoverCard?: (c: GameCard | null) => void
+  onPressCard?: (c: GameCard | null) => void
 }) {
   const [expanded, setExpanded] = useState(false)
 
@@ -457,7 +465,7 @@ function PlayerZone({
   return (
     <group position={[seat.x, 0, seat.z]} rotation={[0, seat.yaw, 0]}>
       {placed.map(({ card, pos }) => (
-        <Card3D key={card.id} card={card} position={pos} cardProps={cardProps} onHoverCard={onHoverCard} />
+        <Card3D key={card.id} card={card} position={pos} cardProps={cardProps} onHoverCard={onHoverCard} onPressCard={onPressCard} />
       ))}
       {/* overflow badges: show +N when a row is clipped */}
       {!expanded && creatureOverflow > 0 && (
@@ -721,11 +729,13 @@ export function Board3D({
   game,
   cardProps,
   onHoverCard,
+  onPressCard,
   targets,
 }: {
   game: GameState
   cardProps: CardProps
   onHoverCard?: (c: GameCard | null) => void
+  onPressCard?: (c: GameCard | null) => void
   targets?: string[]
 }) {
   const { prefs } = usePrefs()
@@ -842,7 +852,7 @@ export function Board3D({
         </mesh>
 
         {seats.map((s) => (
-          <PlayerZone key={s.player.id} seat={s} cardProps={cardProps} onHoverCard={onHoverCard} />
+          <PlayerZone key={s.player.id} seat={s} cardProps={cardProps} onHoverCard={onHoverCard} onPressCard={onPressCard} />
         ))}
 
         {/* action-direction arrows: attackers→defender, blockers→attacker, targeting */}
@@ -850,12 +860,12 @@ export function Board3D({
 
         {/* stack (standing, center) */}
         {stack.map(({ card, pos }) => (
-          <Card3D key={card.id} card={card} position={[pos[0], 0, 0]} standing showCost cardProps={cardProps} onHoverCard={onHoverCard} />
+          <Card3D key={card.id} card={card} position={[pos[0], 0, 0]} standing showCost cardProps={cardProps} onHoverCard={onHoverCard} onPressCard={onPressCard} />
         ))}
 
         {/* my hand: laid flat in front of the viewer, slightly raised */}
         {hand.map(({ card, pos }) => (
-          <Card3D key={card.id} card={card} position={[pos[0], 0.06, pos[2]]} showCost cardProps={cardProps} onHoverCard={onHoverCard} />
+          <Card3D key={card.id} card={card} position={[pos[0], 0.06, pos[2]]} showCost cardProps={cardProps} onHoverCard={onHoverCard} onPressCard={onPressCard} />
         ))}
 
         {/* free cam → user orbits/pans; otherwise the camera is driven to the

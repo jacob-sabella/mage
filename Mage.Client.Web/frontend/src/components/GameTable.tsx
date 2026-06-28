@@ -32,6 +32,7 @@ const SKIP_BUTTONS = [
 
 export function GameTable({ game, prompt, interactive, log = [], result, onRespond, onLeave }: Props) {
   const [preview, setPreview] = useState<CardType | null>(null)
+  const [pressedCard, setPressedCard] = useState<CardType | null>(null)
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Debounce clearing the preview so rapid enter/leave events (from 3D raycasting)
@@ -57,6 +58,12 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [interactive, onRespond])
+
+  useEffect(() => {
+    const clear = () => setPressedCard(null)
+    window.addEventListener('pointerup', clear)
+    return () => window.removeEventListener('pointerup', clear)
+  }, [])
 
   if (!game) {
     return (
@@ -140,9 +147,11 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
           game={game}
           cardProps={cardProps}
           onHoverCard={handleHoverCard}
+          onPressCard={setPressedCard}
           targets={prompt?.kind === 'target' ? prompt.targets : undefined}
         />
         <CardPreview card={preview} />
+        <CardZoomOverlay card={pressedCard} />
 
         {game.combat.length > 0 && (
           <div className="combat-panel panel overlay-tr">
@@ -192,7 +201,7 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
               </button>
             ))}
           </div>
-          {prompt?.kind === 'select' && <PlayableBar game={game} onRespond={onRespond} onHoverCard={handleHoverCard} />}
+          {prompt?.kind === 'select' && <PlayableBar game={game} onRespond={onRespond} onHoverCard={handleHoverCard} onPressCard={setPressedCard} />}
           <span className="spacer" />
           <ActionBar prompt={prompt} onRespond={onRespond} />
         </div>
@@ -222,10 +231,12 @@ function PlayableBar({
   game,
   onRespond,
   onHoverCard,
+  onPressCard,
 }: {
   game: GameState
   onRespond: (kind: RespondKind, value?: string) => void
   onHoverCard?: (c: CardType | null) => void
+  onPressCard?: (c: CardType | null) => void
 }) {
   const byId: Record<string, CardType> = {}
   game.myHand.forEach((c) => (byId[c.id] = c))
@@ -242,6 +253,7 @@ function PlayableBar({
           onClick={() => onRespond('uuid', c.id)}
           onMouseEnter={() => onHoverCard?.(c)}
           onMouseLeave={() => onHoverCard?.(null)}
+          onMouseDown={() => onPressCard?.(c)}
         >
           {c.name}
         </button>
@@ -284,6 +296,18 @@ function CardPreview({ card }: { card: CardType | null }) {
         <div className="card-preview-type muted">{(card.types ?? []).join(' ')}</div>
         {(pt || loy) && <div className="card-preview-pt">{pt ?? loy}</div>}
       </div>
+    </div>
+  )
+}
+
+function CardZoomOverlay({ card }: { card: CardType | null }) {
+  if (!card) return null
+  const img = `/api/cardimg?set=${encodeURIComponent(card.set ?? '')}&num=${encodeURIComponent(
+    card.num ?? '',
+  )}&name=${encodeURIComponent(card.name)}`
+  return (
+    <div className="card-zoom-overlay">
+      <img className="card-zoom-img" src={img} alt={card.name} />
     </div>
   )
 }

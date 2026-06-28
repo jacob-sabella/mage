@@ -1117,6 +1117,27 @@ input::placeholder { color: var(--text-dim); }
 .card-preview-type { font-size: 12px; margin-top: 4px; }
 .card-preview-pt { margin-top: 6px; font-weight: 800; font-size: 16px; color: var(--accent-2); }
 
+/* ----- press-and-hold full-screen card zoom overlay ----- */
+.card-zoom-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  pointer-events: none;
+}
+.card-zoom-img {
+  max-height: 90vh;
+  max-width: min(90vw, 540px);
+  width: auto;
+  height: auto;
+  border-radius: 14px;
+  box-shadow: 0 0 80px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  display: block;
+}
+
 /* ----- booster draft ----- */
 .draft-view { display: flex; flex-direction: column; gap: 16px; height: 100%; }
 .draft-head { display: flex; align-items: center; gap: 14px; }
