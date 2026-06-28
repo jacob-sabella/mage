@@ -1723,3 +1723,9 @@ html, body { overflow-x: hidden; }
     radial-gradient(130% 100% at 50% -10%, color-mix(in srgb, var(--accent) 16%, var(--bg-deep)) 0%, var(--bg-deep) 62%) fixed,
     var(--bg-deep);
 }
+
+/* in-app image downloader */
+.img-download { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+.img-progress { margin-top: 8px; }
+.img-progress-bar { height: 6px; border-radius: 999px; background: var(--bg-raised); overflow: hidden; margin-bottom: 6px; }
+.img-progress-fill { height: 100%; background: var(--accent-2); transition: width 0.3s ease; }

@@ -71,9 +71,11 @@ public class WebClientApp {
             .connectTimeout(java.time.Duration.ofSeconds(10))
             .build();
     // real card art from a desktop XMage client's downloaded image cache
-    private final ImageIndex images = new ImageIndex(
-            System.getenv().getOrDefault("MAGE_IMAGE_DIR",
-                    System.getProperty("user.home") + "/xmage/xmage/mage-client/plugins/images"));
+    private final String imageDir = System.getenv().getOrDefault("MAGE_IMAGE_DIR",
+            System.getProperty("user.home") + "/xmage/xmage/mage-client/plugins/images");
+    private final ImageIndex images = new ImageIndex(imageDir);
+    // in-app downloader: fills the cache with card art from Scryfall on demand
+    private final ImageDownloader downloader = new ImageDownloader(imageDir, images);
 
     public static void main(String[] args) {
         int port = resolvePort(args);
@@ -139,6 +141,9 @@ public class WebClientApp {
         app.get("/api/cards/search", this::handleCardSearch);
         app.get("/api/cardimg", this::handleCardImage);
         app.get("/api/images/stats", this::handleImageStats);
+        app.post("/api/images/download", this::handleImageDownload);
+        app.post("/api/images/download/cancel", this::handleImageDownloadCancel);
+        app.get("/api/images/download/progress", this::handleImageDownloadProgress);
         app.get("/api/decks/list", this::handleDecksList);
         app.get("/api/decks/load", this::handleDeckLoad);
         app.post("/api/decks/save", this::handleDeckSave);
@@ -745,6 +750,46 @@ public class WebClientApp {
         out.put("bytes", st.bytes);
         // the image sources XMage's downloader can pull card + token art from
         out.put("sources", java.util.List.of("Scryfall", "Gatherer / WizardCards", "Grabbag (tokens)"));
+        ctx.json(out);
+    }
+
+    /** Kick off a background download of missing card art (capped per run). */
+    private void handleImageDownload(Context ctx) {
+        int limit = 0;
+        try {
+            String body = ctx.body();
+            if (body != null && body.contains("limit")) {
+                java.util.regex.Matcher m = java.util.regex.Pattern.compile("\"limit\"\\s*:\\s*(\\d+)").matcher(body);
+                if (m.find()) {
+                    limit = Integer.parseInt(m.group(1));
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        boolean started = downloader.start(limit);
+        java.util.Map<String, Object> out = new java.util.LinkedHashMap<>();
+        out.put("started", started);
+        out.put("message", downloader.progress().message);
+        ctx.json(out);
+    }
+
+    private void handleImageDownloadCancel(Context ctx) {
+        downloader.cancel();
+        ctx.json(java.util.Map.of("cancelled", true));
+    }
+
+    private void handleImageDownloadProgress(Context ctx) {
+        ImageDownloader.Progress p = downloader.progress();
+        java.util.Map<String, Object> out = new java.util.LinkedHashMap<>();
+        out.put("running", p.running);
+        out.put("cancelled", p.cancelled);
+        out.put("scanned", p.scanned);
+        out.put("candidates", p.candidates);
+        out.put("done", p.done.get());
+        out.put("failed", p.failed.get());
+        out.put("skipped", p.skipped);
+        out.put("current", p.current);
+        out.put("message", p.message);
         ctx.json(out);
     }
 

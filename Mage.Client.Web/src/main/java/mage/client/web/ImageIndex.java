@@ -52,6 +52,12 @@ public class ImageIndex {
         return byKey.get('*' + n); // any set with this name
     }
 
+    /** Drop the cached index so freshly-downloaded images are picked up. */
+    public synchronized void invalidate() {
+        byKey.clear();
+        built = false;
+    }
+
     private void ensureBuilt() {
         if (built) {
             return;
