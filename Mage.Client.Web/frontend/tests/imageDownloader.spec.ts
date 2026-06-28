@@ -10,13 +10,13 @@ test('Settings can start an image download and shows progress', async ({ page })
   await page.route('**/api/images/download/progress', (r) => {
     polls++
     const running = polls < 2
-    r.fulfill({ json: { running, cancelled: false, scanned: 120, candidates: 10, done: running ? 4 : 10, failed: 0, skipped: 110, current: running ? 'Lightning Bolt (LEA)' : '', message: running ? 'scanning…' : 'done — 10 downloaded, 0 failed' } })
+    r.fulfill({ json: { running, cancelled: false, scanned: 120, candidates: 10, done: running ? 4 : 10, failed: 0, skipped: 110, totalMissing: running ? -1 : 0, current: running ? 'Lightning Bolt (LEA)' : '', message: running ? 'scanning…' : 'done — 10 downloaded, all images complete!' } })
   })
   await gotoScreen(page, 'lobby')
   await page.getByRole('button', { name: 'Settings' }).click()
   await page.getByRole('button', { name: 'Download missing art' }).click()
   await expect(page.getByText(/fetching Lightning Bolt/)).toBeVisible()
   await expect(page.locator('.img-progress-fill')).toBeVisible()
-  // completes
-  await expect(page.getByText(/done — 10 downloaded/)).toBeVisible({ timeout: 5000 })
+  // completes with all-done indicator
+  await expect(page.getByText(/All card images are downloaded/)).toBeVisible({ timeout: 5000 })
 })
