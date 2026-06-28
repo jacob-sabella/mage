@@ -728,7 +728,7 @@ input::placeholder { color: var(--text-dim); }
 .combat-unblocked { color: var(--danger); font-size: 12px; }
 
 /* ----- settings ----- */
-.settings-view { display: flex; justify-content: center; }
+.settings-view { display: flex; justify-content: center; align-items: flex-start; overflow-y: auto; }
 .settings-card { width: 460px; max-width: 100%; padding: 30px; }
 .setting-row {
   display: flex; align-items: center; justify-content: space-between;
