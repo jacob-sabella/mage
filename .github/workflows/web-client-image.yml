@@ -18,8 +18,11 @@ on:
   workflow_dispatch:
 
 concurrency:
+  # queue, don't cancel: with several agents merging rapidly, cancel-in-progress
+  # meant the ~15min gateway build never finished. Let the running build complete;
+  # GitHub keeps only the latest pending run, so :latest still converges to HEAD.
   group: web-client-image-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   gateway:
