@@ -33,12 +33,6 @@ const SKIP_BUTTONS = [
 export function GameTable({ game, prompt, interactive, log = [], result, onRespond, onLeave }: Props) {
   const [preview, setPreview] = useState<CardType | null>(null)
 
-  // Hide the global topbar and nav while in-game to reclaim vertical space
-  useEffect(() => {
-    document.body.classList.add('in-game')
-    return () => document.body.classList.remove('in-game')
-  }, [])
-
   useEffect(() => {
     if (!interactive) return
     const onKey = (e: KeyboardEvent) => {
