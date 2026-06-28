@@ -1010,7 +1010,14 @@ input::placeholder { color: var(--text-dim); }
   padding: 3px 10px; color: var(--text); font: inherit; text-align: left; cursor: default;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
-.pstat.active { border-color: var(--accent); }
+.pstat.active {
+  border-color: var(--accent);
+  animation: pstat-pulse 2.4s ease-in-out infinite;
+}
+@keyframes pstat-pulse {
+  0%, 100% { box-shadow: 0 0 calc(9px * var(--glow-strength, 1)) color-mix(in srgb, var(--accent) 28%, transparent); }
+  50% { box-shadow: 0 0 calc(20px * var(--glow-strength, 1)) color-mix(in srgb, var(--accent) 55%, transparent); }
+}
 .pstat.targetable { cursor: crosshair; box-shadow: 0 0 0 2px var(--accent); }
 .pstat-name { font-weight: 700; font-size: 15px; }
 .pstat-life { color: var(--success); font-weight: 800; font-size: 15px; }
