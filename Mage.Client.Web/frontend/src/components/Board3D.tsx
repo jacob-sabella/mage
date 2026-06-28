@@ -666,6 +666,28 @@ function CinematicRig({
   return null
 }
 
+/** A pulsing gold ring on the table under the active player's zone, so whose
+ *  turn it is reads at a glance (pairs with the Auto camera). */
+function ActiveSeatGlow({ seat }: { seat: Seat }) {
+  const ref = useRef<THREE.Mesh>(null)
+  const clock = useRef(0)
+  useFrame((_, dt) => {
+    clock.current += Math.min(dt, 0.05)
+    const m = ref.current
+    if (!m) return
+    const p = 0.5 + 0.5 * Math.sin(clock.current * 2.1)
+    ;(m.material as THREE.MeshBasicMaterial).opacity = 0.22 + p * 0.4
+    const s = 1 + p * 0.05
+    m.scale.set(s, s, s)
+  })
+  return (
+    <mesh ref={ref} rotation={[-Math.PI / 2, 0, 0]} position={[seat.x * 0.66, 0.015, seat.z * 0.66]}>
+      <ringGeometry args={[1.75, 2.05, 64]} />
+      <meshBasicMaterial color="#ffce54" transparent opacity={0.4} toneMapped={false} depthWrite={false} />
+    </mesh>
+  )
+}
+
 const ARROW_COLOR: Record<string, string> = { attack: '#ff3b3b', block: '#ffb13b', target: '#3bd6ff' }
 
 /** A single arced 3D arrow (tube shaft + cone head) from `from` to `to`. */
@@ -988,6 +1010,12 @@ export function Board3D({
         {seats.map((s) => (
           <PlayerZone key={s.player.id} seat={s} cardProps={cardProps} onHoverCard={onHoverCard} onPressCard={onPressCard} />
         ))}
+
+        {/* highlight whose turn it is */}
+        {(() => {
+          const active = seats.find((s) => s.player.name === game.activePlayer)
+          return active ? <ActiveSeatGlow seat={active} /> : null
+        })()}
 
         {/* action-direction arrows: attackers→defender, blockers→attacker, targeting */}
         <BoardArrows seats={seats} combat={game.combat} targets={targets} />
