@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Grid, Html, OrbitControls } from '@react-three/drei'
+import { Billboard, Grid, Html, OrbitControls } from '@react-three/drei'
 import { usePrefs, CHROMA_FAMILY } from '../prefs'
 
 // per-family in-game scene tint (background, fog, table, grid on/off)
@@ -876,9 +876,11 @@ export function Board3D({
         {/* action-direction arrows: attackers→defender, blockers→attacker, targeting */}
         <BoardArrows seats={seats} combat={game.combat} targets={targets} />
 
-        {/* stack (standing, center) */}
+        {/* stack (standing, center) — Billboard keeps each card facing the camera */}
         {stack.map(({ card, pos }) => (
-          <Card3D key={card.id} card={card} position={[pos[0], 0, 0]} standing showCost cardProps={cardProps} onHoverCard={onHoverCard} onPressCard={onPressCard} />
+          <Billboard key={card.id} lockX lockZ position={[pos[0], 0, 0]}>
+            <Card3D card={card} position={[0, 0, 0]} standing showCost cardProps={cardProps} onHoverCard={onHoverCard} onPressCard={onPressCard} />
+          </Billboard>
         ))}
 
         {/* my hand: laid flat in front of the viewer, slightly raised */}
