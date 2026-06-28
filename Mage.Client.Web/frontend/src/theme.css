@@ -946,7 +946,7 @@ input::placeholder { color: var(--text-dim); }
   border-color: var(--stroke);
   background: transparent;
 }
-.card-preview-img { width: 100%; display: block; background: #11141b; height: 168px; object-fit: cover; object-position: center 15%; }
+.card-preview-img { width: 100%; display: block; background: #11141b; height: auto; object-fit: contain; }
 .card-preview-info { padding: 10px 12px; }
 .card-preview-head { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
 .card-preview-name { font-weight: 700; font-size: 15px; }
