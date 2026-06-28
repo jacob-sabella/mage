@@ -12,6 +12,9 @@ export default defineConfig({
     baseURL: 'http://localhost:4173',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    // CLIPS=1 records a small video per test (see scripts/build-clips.mjs), which
+    // packages them into the app as a viewable gallery. Off for normal runs.
+    video: process.env.CLIPS ? { mode: 'on', size: { width: 720, height: 450 } } : 'off',
   },
   projects: [
     {

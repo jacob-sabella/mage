@@ -1556,3 +1556,18 @@ html, body { overflow-x: hidden; }
   box-shadow: 0 1px 3px rgba(0,0,0,0.4); transition: transform 0.1s;
 }
 .basic-btn:hover { transform: scale(1.12); }
+
+/* secret test gallery (type "clips") */
+.clips-modal { width: 940px; max-width: 96vw; }
+.clips-body { display: grid; grid-template-columns: 248px 1fr; gap: 14px; min-height: 380px; }
+.clips-list { max-height: 60vh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 4px; }
+.clips-group-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent-2); font-weight: 800; margin-bottom: 3px; }
+.clips-item { display: flex; align-items: center; gap: 7px; width: 100%; text-align: left; padding: 5px 8px; border-radius: 7px; border: 1px solid transparent; background: transparent; color: var(--text); cursor: pointer; font-size: 12px; line-height: 1.25; }
+.clips-item:hover { background: rgba(255, 255, 255, 0.06); }
+.clips-item.active { background: var(--accent); color: #0d1119; font-weight: 600; }
+.clips-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.clips-dot.ok { background: #3ad6a0; }
+.clips-dot.fail { background: var(--danger, #e0555f); }
+.clips-player { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.clips-player video { width: 100%; border-radius: 10px; background: #000; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5); }
+.clips-caption { font-size: 13px; font-weight: 600; }

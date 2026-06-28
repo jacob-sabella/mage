@@ -5,6 +5,7 @@ import { LoginView } from './components/LoginView'
 import { LobbyView } from './components/LobbyView'
 import { DeckEditor } from './components/DeckEditor'
 import { ShortcutsOverlay } from './components/ShortcutsOverlay'
+import { TestClipsModal } from './components/TestClipsModal'
 import { Toaster } from './toast'
 import { resetTitle } from './notify'
 import { usePrefs, FAMILIES } from './prefs'
@@ -135,12 +136,19 @@ export default function App() {
   const [online, setOnline] = useState(false)
   const [view, setView] = useState<View>('play')
 
-  // global "?" toggles the keyboard-shortcuts overlay (ignored while typing)
+  // global "?" toggles the keyboard-shortcuts overlay (ignored while typing);
+  // typing the secret word "clips" opens the test-recording gallery.
   const [showHelp, setShowHelp] = useState(false)
+  const [showClips, setShowClips] = useState(false)
   useEffect(() => {
+    let buf = ''
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+      if (e.key.length === 1) {
+        buf = (buf + e.key.toLowerCase()).slice(-6)
+        if (buf.endsWith('clips')) setShowClips(true)
+      }
       if (e.key === '?') {
         e.preventDefault()
         setShowHelp((v) => !v)
@@ -242,6 +250,7 @@ export default function App() {
         ?
       </button>
       {showHelp && <ShortcutsOverlay onClose={() => setShowHelp(false)} />}
+      {showClips && <TestClipsModal onClose={() => setShowClips(false)} />}
       <Toaster />
     </>
   )

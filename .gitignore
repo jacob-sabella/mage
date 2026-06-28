@@ -71,3 +71,4 @@ mage-bundle.zip
 # build targets
 /deploy
 /temp
+Mage.Client.Web/src/main/resources/web/test-clips/

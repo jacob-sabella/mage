@@ -1,0 +1,328 @@
+{
+  "clips": [
+    {
+      "title": "Add basics adds a basic land to the deck",
+      "spec": "deckBasics.spec.ts",
+      "file": "add-basics-adds-a-basic-land-to-the-deck.webm",
+      "ok": true
+    },
+    {
+      "title": "adding a card puts it in the deck with a quantity",
+      "spec": "deckEditor.spec.ts",
+      "file": "adding-a-card-puts-it-in-the-deck-with-a-quantity.webm",
+      "ok": true
+    },
+    {
+      "title": "auto-loads cards into the search results",
+      "spec": "deckEditor.spec.ts",
+      "file": "auto-loads-cards-into-the-search-results.webm",
+      "ok": true
+    },
+    {
+      "title": "Open loads a deck (cards, quantities, sideboard, stats)",
+      "spec": "deckEditor.spec.ts",
+      "file": "open-loads-a-deck-cards-quantities-sideboard-stats.webm",
+      "ok": true
+    },
+    {
+      "title": "Copy decklist writes the deck as text to the clipboard",
+      "spec": "deckExport.spec.ts",
+      "file": "copy-decklist-writes-the-deck-as-text-to-the-clipboard.webm",
+      "ok": true
+    },
+    {
+      "title": "paste text imports a deck and shows unresolved cards",
+      "spec": "deckIO.spec.ts",
+      "file": "paste-text-imports-a-deck-and-shows-unresolved-cards.webm",
+      "ok": true
+    },
+    {
+      "title": "uploading a .dck reports the stored name and loads it",
+      "spec": "deckIO.spec.ts",
+      "file": "uploading-a-dck-reports-the-stored-name-and-loads-it.webm",
+      "ok": true
+    },
+    {
+      "title": "New clears the in-progress deck after confirm",
+      "spec": "deckNew.spec.ts",
+      "file": "new-clears-the-in-progress-deck-after-confirm.webm",
+      "ok": true
+    },
+    {
+      "title": "deck editor auto-saves the in-progress deck across a reload",
+      "spec": "deckPersist.spec.ts",
+      "file": "deck-editor-auto-saves-the-in-progress-deck-across-a-reload.webm",
+      "ok": true
+    },
+    {
+      "title": "lists decks and filters by search",
+      "spec": "deckPicker.spec.ts",
+      "file": "lists-decks-and-filters-by-search.webm",
+      "ok": true
+    },
+    {
+      "title": "picking a deck triggers create-game with that deck",
+      "spec": "deckPicker.spec.ts",
+      "file": "picking-a-deck-triggers-create-game-with-that-deck.webm",
+      "ok": true
+    },
+    {
+      "title": "selecting opponents creates a free-for-all with that many AIs",
+      "spec": "deckPicker.spec.ts",
+      "file": "selecting-opponents-creates-a-free-for-all-with-that-many-ai.webm",
+      "ok": true
+    },
+    {
+      "title": "Sample hand draws 7 cards from the deck",
+      "spec": "deckSampleHand.spec.ts",
+      "file": "sample-hand-draws-7-cards-from-the-deck.webm",
+      "ok": true
+    },
+    {
+      "title": "after the draft, the construct screen builds + submits a deck",
+      "spec": "draft.spec.ts",
+      "file": "after-the-draft-the-construct-screen-builds-submits-a-deck.webm",
+      "ok": true
+    },
+    {
+      "title": "clicking a card sends a pick for that card",
+      "spec": "draft.spec.ts",
+      "file": "clicking-a-card-sends-a-pick-for-that-card.webm",
+      "ok": true
+    },
+    {
+      "title": "Draft vs AI button starts a draft",
+      "spec": "draft.spec.ts",
+      "file": "draft-vs-ai-button-starts-a-draft.webm",
+      "ok": true
+    },
+    {
+      "title": "shows the booster pack and your picks",
+      "spec": "draft.spec.ts",
+      "file": "shows-the-booster-pack-and-your-picks.webm",
+      "ok": true
+    },
+    {
+      "title": "Escape closes the report modal",
+      "spec": "escClose.spec.ts",
+      "file": "escape-closes-the-report-modal.webm",
+      "ok": true
+    },
+    {
+      "title": "a P/T change pushed by the server updates the on-board badge",
+      "spec": "game.spec.ts",
+      "file": "a-p-t-change-pushed-by-the-server-updates-the-on-board-badge.webm",
+      "ok": true
+    },
+    {
+      "title": "action arrows: declared combat renders the board + combat overlay",
+      "spec": "game.spec.ts",
+      "file": "action-arrows-declared-combat-renders-the-board-combat-overl.webm",
+      "ok": true
+    },
+    {
+      "title": "can target any opponent in a multiplayer game",
+      "spec": "game.spec.ts",
+      "file": "can-target-any-opponent-in-a-multiplayer-game.webm",
+      "ok": true
+    },
+    {
+      "title": "combat: declare-attackers prompt + clicking a creature declares it",
+      "spec": "game.spec.ts",
+      "file": "combat-declare-attackers-prompt-clicking-a-creature-declares.webm",
+      "ok": true
+    },
+    {
+      "title": "creatures show a P/T badge (not lands)",
+      "spec": "game.spec.ts",
+      "file": "creatures-show-a-p-t-badge-not-lands.webm",
+      "ok": true
+    },
+    {
+      "title": "hand cards show mana-cost pips",
+      "spec": "game.spec.ts",
+      "file": "hand-cards-show-mana-cost-pips.webm",
+      "ok": true
+    },
+    {
+      "title": "hovering a card shows a large readable preview (name, type, P/T)",
+      "spec": "game.spec.ts",
+      "file": "hovering-a-card-shows-a-large-readable-preview-name-type-p-t.webm",
+      "ok": true
+    },
+    {
+      "title": "mulligan prompt offers Yes/No and strips HTML from the message",
+      "spec": "game.spec.ts",
+      "file": "mulligan-prompt-offers-yes-no-and-strips-html-from-the-messa.webm",
+      "ok": true
+    },
+    {
+      "title": "multi-amount: distribute, gated on total, sends space-joined string",
+      "spec": "game.spec.ts",
+      "file": "multi-amount-distribute-gated-on-total-sends-space-joined-st.webm",
+      "ok": true
+    },
+    {
+      "title": "passing priority sends a respond and is accepted",
+      "spec": "game.spec.ts",
+      "file": "passing-priority-sends-a-respond-and-is-accepted.webm",
+      "ok": true
+    },
+    {
+      "title": "pile choice shows both piles and picks one (boolean)",
+      "spec": "game.spec.ts",
+      "file": "pile-choice-shows-both-piles-and-picks-one-boolean.webm",
+      "ok": true
+    },
+    {
+      "title": "playable bar lists castable cards and plays one by name",
+      "spec": "game.spec.ts",
+      "file": "playable-bar-lists-castable-cards-and-plays-one-by-name.webm",
+      "ok": true
+    },
+    {
+      "title": "priority prompt offers Pass and Done; skip bar + log present",
+      "spec": "game.spec.ts",
+      "file": "priority-prompt-offers-pass-and-done-skip-bar-log-present.webm",
+      "ok": true
+    },
+    {
+      "title": "renders 4 seats, player strip, and a view button per player",
+      "spec": "game.spec.ts",
+      "file": "renders-4-seats-player-strip-and-a-view-button-per-player.webm",
+      "ok": true
+    },
+    {
+      "title": "renders the 3D board and player status strip",
+      "spec": "game.spec.ts",
+      "file": "renders-the-3d-board-and-player-status-strip.webm",
+      "ok": true
+    },
+    {
+      "title": "shows a result overlay and returns to the lobby",
+      "spec": "game.spec.ts",
+      "file": "shows-a-result-overlay-and-returns-to-the-lobby.webm",
+      "ok": true
+    },
+    {
+      "title": "snap-view buttons switch the active view",
+      "spec": "game.spec.ts",
+      "file": "snap-view-buttons-switch-the-active-view.webm",
+      "ok": true
+    },
+    {
+      "title": "target prompt shows the choose-a-target hint",
+      "spec": "game.spec.ts",
+      "file": "target-prompt-shows-the-choose-a-target-hint.webm",
+      "ok": true
+    },
+    {
+      "title": "view menu offers Auto / 2D / 3D / free camera modes",
+      "spec": "game.spec.ts",
+      "file": "view-menu-offers-auto-2d-3d-free-camera-modes.webm",
+      "ok": true
+    },
+    {
+      "title": "History shows finished matches",
+      "spec": "lobby.spec.ts",
+      "file": "history-shows-finished-matches.webm",
+      "ok": true
+    },
+    {
+      "title": "Join shows only on joinable tables; Watch on running games",
+      "spec": "lobby.spec.ts",
+      "file": "join-shows-only-on-joinable-tables-watch-on-running-games.webm",
+      "ok": true
+    },
+    {
+      "title": "New game vs AI opens the deck picker",
+      "spec": "lobby.spec.ts",
+      "file": "new-game-vs-ai-opens-the-deck-picker.webm",
+      "ok": true
+    },
+    {
+      "title": "resumes a session and lists open tables",
+      "spec": "lobby.spec.ts",
+      "file": "resumes-a-session-and-lists-open-tables.webm",
+      "ok": true
+    },
+    {
+      "title": "a preset fills the server/port fields",
+      "spec": "login.spec.ts",
+      "file": "a-preset-fills-the-server-port-fields.webm",
+      "ok": true
+    },
+    {
+      "title": "connecting lands on the lobby",
+      "spec": "login.spec.ts",
+      "file": "connecting-lands-on-the-lobby.webm",
+      "ok": true
+    },
+    {
+      "title": "shows the connect screen with server presets",
+      "spec": "login.spec.ts",
+      "file": "shows-the-connect-screen-with-server-presets.webm",
+      "ok": true
+    },
+    {
+      "title": "request-feature button opens the feature variant and sends kind=feature",
+      "spec": "report.spec.ts",
+      "file": "request-feature-button-opens-the-feature-variant-and-sends-k.webm",
+      "ok": true
+    },
+    {
+      "title": "screenshot can be removed before submitting",
+      "spec": "report.spec.ts",
+      "file": "screenshot-can-be-removed-before-submitting.webm",
+      "ok": true
+    },
+    {
+      "title": "shows an error if the gateway has no token configured",
+      "spec": "report.spec.ts",
+      "file": "shows-an-error-if-the-gateway-has-no-token-configured.webm",
+      "ok": true
+    },
+    {
+      "title": "submits a report and shows the created issue link",
+      "spec": "report.spec.ts",
+      "file": "submits-a-report-and-shows-the-created-issue-link.webm",
+      "ok": true
+    },
+    {
+      "title": "user can upload a custom screenshot",
+      "spec": "report.spec.ts",
+      "file": "user-can-upload-a-custom-screenshot.webm",
+      "ok": true
+    },
+    {
+      "title": "card-images preference toggles and persists across reload",
+      "spec": "settings.spec.ts",
+      "file": "card-images-preference-toggles-and-persists-across-reload.webm",
+      "ok": true
+    },
+    {
+      "title": "settings accessible without connecting to a server",
+      "spec": "settings.spec.ts",
+      "file": "settings-accessible-without-connecting-to-a-server.webm",
+      "ok": true
+    },
+    {
+      "title": "? opens the overlay, Escape closes it",
+      "spec": "shortcuts.spec.ts",
+      "file": "opens-the-overlay-escape-closes-it.webm",
+      "ok": true
+    },
+    {
+      "title": "the help button opens it too",
+      "spec": "shortcuts.spec.ts",
+      "file": "the-help-button-opens-it-too.webm",
+      "ok": true
+    },
+    {
+      "title": "entering a game where it is your turn shows a \"Your turn\" toast",
+      "spec": "toast.spec.ts",
+      "file": "entering-a-game-where-it-is-your-turn-shows-a-your-turn-toas.webm",
+      "ok": true
+    }
+  ]
+}
