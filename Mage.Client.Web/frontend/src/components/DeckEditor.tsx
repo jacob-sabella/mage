@@ -15,6 +15,9 @@ const COLOR_HEX: Record<string, string> = {
   C: '#9aa3b2',
 }
 const TYPE_ORDER = ['Creature', 'Planeswalker', 'Instant', 'Sorcery', 'Artifact', 'Enchantment', 'Battle', 'Land']
+const BASICS: { c: string; name: string }[] = [
+  { c: 'W', name: 'Plains' }, { c: 'U', name: 'Island' }, { c: 'B', name: 'Swamp' }, { c: 'R', name: 'Mountain' }, { c: 'G', name: 'Forest' },
+]
 
 function isLand(e: DeckCardEntry) {
   return (e.types ?? []).some((t) => t.toLowerCase() === 'land')
@@ -364,6 +367,22 @@ export function DeckEditor() {
             New
           </button>
           <input ref={fileInputRef} type="file" accept=".dck" style={{ display: 'none' }} onChange={onUpload} />
+        </div>
+
+        <div className="deck-basics">
+          <span className="muted">Add basics</span>
+          {BASICS.map((b) => (
+            <button
+              key={b.name}
+              className="basic-btn"
+              style={{ background: COLOR_HEX[b.c] }}
+              aria-label={`Add ${b.name}`}
+              title={`Add ${b.name}`}
+              onClick={() => addCard({ name: b.name, types: ['Land'], manaValue: 0, colors: '', manaCost: '', set: '', rarity: 'Common' })}
+            >
+              {b.c}
+            </button>
+          ))}
         </div>
 
         {deck.length > 0 && (

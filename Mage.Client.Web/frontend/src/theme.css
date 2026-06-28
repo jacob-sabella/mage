@@ -1535,3 +1535,12 @@ html, body { overflow-x: hidden; }
 }
 .login-hero-tag { font-size: 14px; margin-top: 8px; letter-spacing: 0.5px; }
 @media (max-width: 480px) { .login-hero-title { font-size: 40px; letter-spacing: 5px; } }
+
+/* quick-add basic lands */
+.deck-basics { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.basic-btn {
+  width: 24px; height: 24px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.35);
+  color: #11141b; font-weight: 800; font-size: 12px; cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4); transition: transform 0.1s;
+}
+.basic-btn:hover { transform: scale(1.12); }
