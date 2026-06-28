@@ -97,10 +97,9 @@ export interface Prefs {
   theme: ThemeName // colour palette
   manaIcons: boolean // render mana costs as symbols instead of {3}{B}{B} text
   panelOpacity: number // 0.35–1: how solid menus/panels are over the backdrop
-  audioReactive: boolean // pulse the 3D backdrop to audio output (tab / system audio)
 }
 
-const DEFAULTS: Prefs = { cardImages: true, avatarId: 0, flagName: '', theme: 'synthwave', manaIcons: true, panelOpacity: 0.72, audioReactive: false }
+const DEFAULTS: Prefs = { cardImages: true, avatarId: 0, flagName: '', theme: 'synthwave', manaIcons: true, panelOpacity: 0.72 }
 const KEY = 'mage.prefs'
 
 function load(): Prefs {
