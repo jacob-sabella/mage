@@ -603,6 +603,69 @@ function CameraRig({ target }: { target: ViewTarget }) {
   return null
 }
 
+/** Cinematic auto-camera: orbits around the table to settle behind whoever's
+ *  turn it is, with a slow "alive" drift, and during combat eases in toward the
+ *  centre. With no active player it slowly circles the whole table. The angle is
+ *  interpolated along the shortest arc so a turn change swooshes around the rim
+ *  rather than cutting straight across. */
+function CinematicRig({
+  seats,
+  activeName,
+  radius,
+  zoom,
+  combat,
+}: {
+  seats: Seat[]
+  activeName?: string | null
+  radius: number
+  zoom: number
+  combat: number
+}) {
+  const { camera } = useThree()
+  const look = useRef(new THREE.Vector3(0, 0.5, 0))
+  const cyl = useRef({ theta: Math.PI / 2, r: radius + 5, y: 6.5 })
+  const clock = useRef(0)
+
+  useFrame((_, dtRaw) => {
+    const dt = Math.min(dtRaw, 0.05) // clamp after tab-switch stalls
+    clock.current += dt
+    const seat = seats.find((s) => s.player.name === activeName)
+
+    // combat pushes the framing in toward the centre of the table for drama
+    const combatPull = combat > 0 ? 0.78 : 1
+
+    let targetTheta: number
+    let lookTarget: THREE.Vector3
+    if (seat) {
+      targetTheta = Math.atan2(seat.z, seat.x) // camera sits outside the active seat
+      lookTarget = new THREE.Vector3(seat.x * 0.32 * combatPull, 0.5, seat.z * 0.32 * combatPull)
+    } else {
+      // no active player (pre-game / overview) → slow continuous circle
+      targetTheta = cyl.current.theta + 0.5
+      lookTarget = new THREE.Vector3(0, 0.5, 0)
+    }
+    const targetR = ((radius + 5.8) / zoom) * combatPull
+    const targetY = (seat ? 7.1 : 9) / Math.sqrt(zoom)
+
+    // shortest-arc angle lerp → swoosh around the rim
+    let dTheta = targetTheta - cyl.current.theta
+    while (dTheta > Math.PI) dTheta -= 2 * Math.PI
+    while (dTheta < -Math.PI) dTheta += 2 * Math.PI
+    cyl.current.theta += dTheta * Math.min(1, dt * (seat ? 1.7 : 0.3))
+    cyl.current.r += (targetR - cyl.current.r) * Math.min(1, dt * 2.4)
+    cyl.current.y += (targetY - cyl.current.y) * Math.min(1, dt * 2.4)
+
+    // gentle alive drift so a settled camera never feels frozen
+    const driftTheta = cyl.current.theta + Math.sin(clock.current * 0.22) * 0.05
+    const driftY = cyl.current.y + Math.sin(clock.current * 0.4) * 0.22
+    camera.position.set(Math.cos(driftTheta) * cyl.current.r, driftY, Math.sin(driftTheta) * cyl.current.r)
+
+    look.current.lerp(lookTarget, Math.min(1, dt * 2.2))
+    camera.lookAt(look.current)
+  })
+  return null
+}
+
 const ARROW_COLOR: Record<string, string> = { attack: '#ff3b3b', block: '#ffb13b', target: '#3bd6ff' }
 
 /** A single arced 3D arrow (tube shaft + cone head) from `from` to `to`. */
@@ -677,7 +740,7 @@ function BoardArrows({ seats, combat, targets }: { seats: Seat[]; combat: GameSt
   )
 }
 
-type ViewMode = '3d' | '2d' | 'free'
+type ViewMode = '3d' | '2d' | 'free' | 'auto'
 
 const ZOOM_MIN = 0.35
 const ZOOM_MAX = 3.0
@@ -718,8 +781,8 @@ function ZoomBar({ zoom, onZoom }: { zoom: number; onZoom: (z: number) => void }
   )
 }
 
-/** Radial fan menu for camera control: a mode ring (2D/3D/Free) plus, in 3D, a
- *  focus ring (Overview + each seat). Collapsed to a single button by default. */
+/** Radial fan menu for camera control: a mode ring (Auto/2D/3D/Free) plus, in
+ *  3D, a focus ring (Overview + each seat). Collapsed to a button by default. */
 function ViewMenu({
   mode,
   setMode,
@@ -735,9 +798,9 @@ function ViewMenu({
 }) {
   const [open, setOpen] = useState(false)
   type Item = { key: string; label: string; active: boolean; cat: string; onClick: () => void }
-  const modeItems: Item[] = (['3d', '2d', 'free'] as ViewMode[]).map((m) => ({
+  const modeItems: Item[] = (['auto', '3d', '2d', 'free'] as ViewMode[]).map((m) => ({
     key: 'm-' + m,
-    label: m === '3d' ? '3D' : m === '2d' ? '2D' : 'Free',
+    label: m === '3d' ? '3D' : m === '2d' ? '2D' : m === 'auto' ? 'Auto' : 'Free',
     active: mode === m,
     cat: 'mode',
     onClick: () => setMode(m),
@@ -845,8 +908,8 @@ export function Board3D({
     ],
     [seats, radius],
   )
-  // 2D = a fixed top-down lock on the table; 3D = the angled seat views; free =
-  // user-orbited camera. The whole canvas is the world either way.
+  // auto = cinematic cam that follows the active player; 2D = fixed top-down;
+  // 3D = the angled seat views; free = user-orbited. Same world either way.
   const [mode, setMode] = useState<ViewMode>('3d')
   const TOP_DOWN: ViewTarget = useMemo(
     () => ({ pos: new THREE.Vector3(0, 15 + seats.length * 0.8, 2.2), look: new THREE.Vector3(0, 0, 0) }),
@@ -945,6 +1008,8 @@ export function Board3D({
             selected (2D top-down or 3D seat) viewpoint */}
         {mode === 'free' ? (
           <OrbitControls makeDefault enablePan enableDamping dampingFactor={0.08} minDistance={1.5} maxDistance={40} target={[0, 0, 0]} />
+        ) : mode === 'auto' ? (
+          <CinematicRig seats={seats} activeName={game.activePlayer} radius={radius} zoom={zoom} combat={game.combat.length} />
         ) : (
           <CameraRig target={target} />
         )}

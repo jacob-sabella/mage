@@ -181,12 +181,15 @@ test.describe('Game board (3D)', () => {
     await expect(overview).toHaveClass(/active/)
   })
 
-  test('view menu offers 2D / 3D / free camera modes', async ({ page }) => {
+  test('view menu offers Auto / 2D / 3D / free camera modes', async ({ page }) => {
     await gotoScreen(page, 'game')
     await page.locator('.view-fab').click()
-    await expect(page.locator('.view-radial.mode')).toHaveCount(3)
+    await expect(page.locator('.view-radial.mode')).toHaveCount(4)
     await page.locator('.view-radial.mode', { hasText: '2D' }).click()
     await expect(page.locator('.view-radial.mode.active', { hasText: '2D' })).toBeVisible()
+    // cinematic auto-cam mode is selectable (menu stays open after a mode click)
+    await page.locator('.view-radial.mode', { hasText: 'Auto' }).click()
+    await expect(page.locator('.view-radial.mode.active', { hasText: 'Auto' })).toBeVisible()
   })
 })
 
