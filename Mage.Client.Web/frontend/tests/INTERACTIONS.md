@@ -47,6 +47,7 @@ condition — while staying wide enough that chat + the 3D board (both gated at
 | **Deck editor** | search input, Search, +/- on entries, basics, gallery/table view toggle, Import, Open, New, Save, Sample hand, card-tile add/remove | ✓ | ✓ | ✓ | **`/` focuses search**, Enter searches; hover preview (mouse) / tap preview + long-press (touch); in-deck **remove (−) badge visible on touch** |
 | **Card preview** | board hover/right-click, deck-list hover, deck-entry/tile tap | ✓ | ✓ | ✓ (stack item) | hover (desktop), tap/long-press (touch), focus (stack item) |
 | **3D game board** | Pass, Done, Yes/No, skip-bar, playable chips, view menu, zoom +/-, zoom-reset %, stack item | ✓ | ✓ | ✓ | **hotkeys** `P`/Space (pass), `D` (done), `Y`/`N` (ask), `F2` (skip to next turn); view-fab + zoom respond to tap |
+| **Dense multiplayer board** (`game3p`/`game4p`) | play chip on a busy board, player-strip seat (targetable), collapsed Stack/Combat chip toggle | ✓ | ✓ | — | seat sends its player id under a `select` prompt; the Stack/Combat chips expand/collapse on tap at phone widths (where they default collapsed); play chips stay tappable with 3-4 seats. Per-viewport layout of these boards is covered by the usability suite. |
 | **Game over** | Play again, Back to lobby | ✓ | ✓ | ✓ | |
 | **Settings** | checkboxes (card images, mana, motion, sound), theme swatches, sliders | ✓ | ✓ | ✓ | Space toggles a focused checkbox |
 | **Draft / Construct** | booster pick, Auto-build, Submit, basics steppers | ✓ | ✓ | ✓ | Enter picks a card / submits the deck |
@@ -107,6 +108,7 @@ pixels for `page.mouse` / `page.touchscreen` / CDP `Input.dispatchTouchEvent`.
 | Gesture | Driver | Asserted via the hook |
 |---------|--------|-----------------------|
 | **Tap a card** (mouse + touch) | `page.mouse.click` / `page.touchscreen.tap` at the projected card pixel | faux backend records `/api/game/respond` `{kind:'uuid', value:<cardId>}` |
+| **Tap a card on a dense board** (touch) | same, on the maxed `game4p` board (~18 permanents/seat, 4 seats) | playable hand cards stay tappable on a packed canvas |
 | **Long-press preview** (touch) | CDP `touchStart` → 600 ms hold → `touchEnd` | the `.card-action-sheet` opens; a quick CDP tap does **not** |
 | **Pinch-zoom** (touch) | two CDP touch points spreading apart | OrbitControls `camera().distance` shrinks |
 | **Pan** (touch) | one-finger CDP drag (mobile `free` mode, `ONE: PAN`) | `camera().target` moves |

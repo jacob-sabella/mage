@@ -1358,11 +1358,15 @@ input:focus {
 .board-wrap .board3d { flex: 1; min-height: 0; }
 .board3d { min-height: 0; }
 
-/* overlays float on the board instead of pushing the layout around */
-.overlay-tr { position: absolute; top: 12px; right: 12px; z-index: 6; max-width: 280px; }
+/* overlays float on the board instead of pushing the layout around. The
+   stack/combat rail (top-right) and the game log (bottom-right) are capped to
+   disjoint vertical bands so a dense board (3-deep stack + 6-group combat)
+   can't grow the rail down into the log — it scrolls within its band instead.
+   (50% + 34% leaves a ≥16% gap on any board taller than ~150px.) */
+.overlay-tr { position: absolute; top: 12px; right: 12px; z-index: 6; max-width: 280px; max-height: 50%; overflow-y: auto; }
 .board-wrap .game-log {
   position: absolute; right: 12px; bottom: 12px; z-index: 6;
-  width: 300px; max-height: 190px; margin: 0;
+  width: 300px; max-height: min(180px, 34%); margin: 0;
 }
 
 /* card preview: fixed so no ancestor overflow can clip it; animates in on mount */
@@ -1708,7 +1712,12 @@ html, body { overflow-x: hidden; }
 
   /* turn controls: let everything wrap, full-width playable bar */
   .game-toolbar { flex-wrap: wrap; gap: 6px; }
-  .player-strip { flex-wrap: wrap; }
+  /* player strip: a single horizontally-scrollable row (NOT wrapping to 2-4
+     tall rows with 3-4 seats), so it stays ~one line high and leaves the dense
+     board real estate instead of being squeezed behind the bottom dock */
+  .player-strip { flex-wrap: nowrap; overflow-x: auto; gap: 6px; }
+  .pstat { flex: 0 0 auto; }
+  .pstat-counts { white-space: nowrap; }
   .control-dock { padding: 8px 10px; gap: 6px 8px; }
   .control-dock .playable-bar { max-width: 100%; flex: 1 1 100%; }
   .control-dock .action-bar { min-width: 0; flex: 1 1 100%; }
@@ -1961,14 +1970,22 @@ html, body { overflow-x: hidden; }
    the stack/combat overlay to the top-left under the camera button so the two
    floating panels don't collide either (usability rules 2 + 7). */
 @media (max-width: 760px) {
+  /* dense boards on phones: keep the game log (top-RIGHT) and the stack/combat
+     rail (top-LEFT, under the camera fab) both NARROW so they never meet in the
+     middle, and SHORT so an expanded combat list scrolls inside its own box
+     rather than spilling over the bottom control dock / play chips. */
   .board-wrap .game-log {
     top: 10px; right: 8px; left: auto; bottom: auto;
-    width: min(248px, 60vw); max-height: 26vh;
+    width: min(150px, 42vw); max-height: 24vh;
   }
   .board-wrap .overlay-tr {
-    top: 64px; left: 10px; right: auto;
-    max-width: min(240px, calc(100vw - 20px));
+    top: 60px; left: 8px; right: auto;
+    width: min(160px, 46vw); max-width: min(160px, 46vw); max-height: 40vh;
   }
+  /* rail is now left-anchored, so align its panels to the left edge, and let the
+     collapsed chips size to content instead of a 150px floor */
+  .board-overlays { align-items: flex-start; }
+  .stack-panel { min-width: 0; max-width: 100%; }
 }
 .game-log-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; background: transparent; border: 0; cursor: pointer; color: inherit; padding: 0; }
 .game-log-toggle { font-size: 11px; color: var(--text-dim); }

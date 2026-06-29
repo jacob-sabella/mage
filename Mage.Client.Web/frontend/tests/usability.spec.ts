@@ -70,6 +70,33 @@ type Screen = {
   controls: (p: Page) => { label: string; loc: Locator }[]
   // an overlay/modal expected to sit ABOVE the page (rule 7)
   overlay?: (p: Page) => Locator
+  // floating in-game panels that must not cover the primary controls or each
+  // other (rule 7, dense-board edition). Each entry is a CSS selector; the
+  // check measures the bounding boxes and asserts no panel overlaps another
+  // panel or any primary control.
+  panels?: string[]
+}
+
+// the dense 3p / 4p boards both show: a 3-deep stack + 6-group combat (the
+// `.overlay-tr` rail), the game log, and the player-strip (3 or 4 seats). These
+// floating / flow elements must stay clear of the bottom control dock and each
+// other. We measure the `.overlay-tr` rail (the scroll-clipped container that
+// bounds stack+combat) rather than the inner panels, whose layout boxes ignore
+// the rail's overflow clip and would over-report an overlap that's not visible.
+const GAME_PANELS = ['.overlay-tr', '.board-wrap .game-log', '.player-strip']
+const GAME_CONTROLS = (p: Page) => [
+  { label: 'Pass', loc: p.getByRole('button', { name: /^Pass/ }) },
+  { label: 'Done', loc: p.getByRole('button', { name: /^Done/ }) },
+  { label: 'playable chip', loc: p.locator('.play-chip').first() },
+  { label: 'view-fab', loc: p.locator('.view-fab') },
+]
+// land on a dense multiplayer board and wait for the canvas + a primary control
+const goDenseGame = (scenario: 'game3p' | 'game4p') => async (p: Page) => {
+  await gotoScreen(p, scenario)
+  await p.locator('.board3d canvas').waitFor()
+  await p.getByRole('button', { name: /^Pass/ }).waitFor()
+  // the floating overlay column (stack/combat) is gated on game state arriving
+  await p.locator('.player-strip').waitFor()
 }
 
 // ---- navigation to every view --------------------------------------------
@@ -165,12 +192,24 @@ const SCREENS: Screen[] = [
       await p.locator('.board3d canvas').waitFor()
       await p.getByRole('button', { name: /^Pass/ }).waitFor()
     },
-    controls: (p) => [
-      { label: 'Pass', loc: p.getByRole('button', { name: /^Pass/ }) },
-      { label: 'Done', loc: p.getByRole('button', { name: /^Done/ }) },
-      { label: 'playable chip', loc: p.locator('.play-chip').first() },
-      { label: 'view-fab', loc: p.locator('.view-fab') },
-    ],
+    controls: GAME_CONTROLS,
+  },
+  {
+    // dense 3-player board (~18 permanents/seat, full hands, a 3-deep stack,
+    // 6-group combat) — worst-case multiplayer layout. Same control set as the
+    // duel board PLUS the floating-panel clearance check.
+    name: 'game3p',
+    go: goDenseGame('game3p'),
+    controls: GAME_CONTROLS,
+    panels: GAME_PANELS,
+  },
+  {
+    // dense 4-player board — the player-strip now wraps to four seats; verifies
+    // it doesn't push past the edge or cover the board overlays / controls.
+    name: 'game4p',
+    go: goDenseGame('game4p'),
+    controls: GAME_CONTROLS,
+    panels: GAME_PANELS,
   },
   {
     name: 'settings',
@@ -396,6 +435,50 @@ async function checkOverlayAbove(page: Page, loc: Locator, label: string): Promi
   return hit ? [] : [`overlay ${label} not on top at centre`]
 }
 
+/** Rule 7 (dense boards): the floating in-game panels must not cover the primary
+ *  turn controls, and must not cover each other. A panel sitting on top of
+ *  Pass/Done/play-chip, or two panels overlapping into an unreadable pile, is a
+ *  layout defect on a busy multiplayer board. We compute bounding boxes and
+ *  assert pairwise non-overlap (with a small tolerance for borders/blur). */
+async function checkPanelsClear(page: Page, panelSelectors: string[]): Promise<string[]> {
+  const errs: string[] = []
+  const TOL = 4 // px — ignore hairline border/shadow kisses
+  const boxOf = async (sel: string): Promise<{ sel: string; box: { x: number; y: number; width: number; height: number } } | null> => {
+    const loc = page.locator(sel).first()
+    if ((await loc.count()) === 0 || !(await loc.isVisible().catch(() => false))) return null
+    const box = await loc.boundingBox()
+    return box ? { sel, box } : null
+  }
+  const overlaps = (a: { x: number; y: number; width: number; height: number }, b: { x: number; y: number; width: number; height: number }) => {
+    const ix = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)
+    const iy = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y)
+    return ix > TOL && iy > TOL
+  }
+  const panels = (await Promise.all(panelSelectors.map(boxOf))).filter(Boolean) as { sel: string; box: { x: number; y: number; width: number; height: number } }[]
+  // panels vs each other
+  for (let i = 0; i < panels.length; i++) {
+    for (let j = i + 1; j < panels.length; j++) {
+      if (overlaps(panels[i].box, panels[j].box)) {
+        errs.push(`panel ${panels[i].sel} overlaps panel ${panels[j].sel}`)
+      }
+    }
+  }
+  // panels vs the primary turn controls (a panel painted over Pass/Done/etc.)
+  for (const c of GAME_CONTROLS(page)) {
+    const loc = c.loc
+    if ((await loc.count()) === 0 || !(await loc.isVisible().catch(() => false))) continue
+    const cbox = await loc.boundingBox()
+    if (!cbox) continue
+    for (const pn of panels) {
+      // the player-strip legitimately sits ABOVE the board in normal flow and the
+      // dock below it; an overlap there would mean it bled over a control. Only
+      // flag a true geometric overlap (the control's box intersects the panel's).
+      if (overlaps(pn.box, cbox)) errs.push(`panel ${pn.sel} covers control ${c.label}`)
+    }
+  }
+  return errs
+}
+
 // ===========================================================================
 //  PART A — full matrix × every screen: overflow, controls, animation, text.
 // ===========================================================================
@@ -413,6 +496,7 @@ async function checkOverlayAbove(page: Page, loc: Locator, label: string): Promi
           errs.push(...(await checkAnimationBounds(page))) // rule 5
           errs.push(...(await checkReadableText(page))) // rule 8
           if (screen.overlay) errs.push(...(await checkOverlayAbove(page, screen.overlay(page), screen.name))) // rule 7
+          if (screen.panels) errs.push(...(await checkPanelsClear(page, screen.panels))) // rule 7 (dense boards)
           expect(errs, `\n  ${errs.join('\n  ')}\n`).toEqual([])
         })
       }

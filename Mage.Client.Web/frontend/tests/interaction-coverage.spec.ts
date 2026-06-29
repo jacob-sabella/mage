@@ -548,6 +548,80 @@ suite('Game board · touch', () => {
 })
 
 // ===========================================================================
+//  DENSE MULTIPLAYER BOARD  (3p / 4p, maxed-out layouts)
+// ===========================================================================
+//  The dense boards add a player-strip with 3-4 seats, a busy play bar and the
+//  collapsible Stack/Combat chips. We exercise those extra controls across the
+//  modalities here — the per-viewport LAYOUT of these boards is covered by the
+//  usability suite (game3p / game4p screens).
+suite('Dense multiplayer board · modalities', () => {
+  test('mouse: a play chip on the busy 4-player board plays that card', async ({ page }) => {
+    await gotoScreen(page, 'game4p')
+    await expect(page.locator('.player-strip .pstat')).toHaveCount(4)
+    let playedId: string | null = null
+    await page.route('**/api/game/respond', (route) => {
+      const b = JSON.parse(route.request().postData() || '{}')
+      if (b.kind === 'uuid') playedId = b.value
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
+    })
+    await page.locator('.play-chip', { hasText: 'Lightning Bolt' }).click()
+    await expect.poll(() => playedId).toBe('h1')
+  })
+
+  test('mouse: a player-strip seat is targetable and sends its player id', async ({ page }) => {
+    // the dense board sits on a `select` prompt → every seat is a target button
+    await gotoScreen(page, 'game3p')
+    let target: string | null = null
+    await page.route('**/api/game/respond', (route) => {
+      const b = JSON.parse(route.request().postData() || '{}')
+      if (b.kind === 'uuid') target = b.value
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
+    })
+    await page.locator('.pstat', { hasText: 'Teferi' }).click()
+    await expect.poll(() => target).toBe('p3')
+  })
+})
+
+suite('Dense multiplayer board · touch (phone)', () => {
+  // a phone-sized touch context (<=760px) where the Stack/Combat panels default
+  // to COLLAPSED chips, so we can drive the expand/collapse toggle on touch.
+  test.use({ hasTouch: true, isMobile: true, viewport: { width: 720, height: 1000 } })
+
+  test('tap the collapsed Stack chip expands it, tap again collapses', async ({ page }) => {
+    await gotoScreen(page, 'game4p')
+    const stack = page.locator('.stack-panel')
+    await expect(stack).toHaveClass(/collapsed/) // chips start collapsed on phones
+    await expect(stack.locator('.overlay-body')).toHaveCount(0)
+    await stack.locator('.overlay-head').tap()
+    await expect(stack).not.toHaveClass(/collapsed/)
+    await expect(stack.locator('.stack-item').first()).toBeVisible()
+    await stack.locator('.overlay-head').tap()
+    await expect(stack).toHaveClass(/collapsed/)
+  })
+
+  test('tap the collapsed Combat chip expands it', async ({ page }) => {
+    await gotoScreen(page, 'game4p')
+    const combat = page.locator('.combat-panel')
+    await expect(combat).toHaveClass(/collapsed/)
+    await combat.locator('.overlay-head').tap()
+    await expect(combat).not.toHaveClass(/collapsed/)
+    await expect(combat.locator('.combat-group').first()).toBeVisible()
+  })
+
+  test('tap a play chip on the dense board plays that card', async ({ page }) => {
+    await gotoScreen(page, 'game3p')
+    let playedId: string | null = null
+    await page.route('**/api/game/respond', (route) => {
+      const b = JSON.parse(route.request().postData() || '{}')
+      if (b.kind === 'uuid') playedId = b.value
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
+    })
+    await page.locator('.play-chip', { hasText: 'Mulldrifter' }).tap()
+    await expect.poll(() => playedId).toBe('h3')
+  })
+})
+
+// ===========================================================================
 //  GAME OVER
 // ===========================================================================
 suite('Game over · modalities', () => {

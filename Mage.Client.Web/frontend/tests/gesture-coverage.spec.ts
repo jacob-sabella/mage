@@ -147,6 +147,25 @@ suite('Gesture · tap a card · touch', () => {
   })
 })
 
+suite('Gesture · tap a card on a dense board · touch', () => {
+  test.use(TOUCH)
+  test('touch: tapping a playable card on a maxed 4-player board plays it', async ({ page }) => {
+    await gotoScreen(page, 'game4p')
+    await waitBoard(page)
+    let played: string | null = null
+    await page.route('**/api/game/respond', (route) => {
+      const b = JSON.parse(route.request().postData() || '{}')
+      if (b.kind === 'uuid') played = b.value
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
+    })
+    // even on a packed board (~18 permanents/seat, 4 seats) the playable hand
+    // cards stay tappable on the canvas
+    const card = await firstVisibleCardPos(page, ['h1', 'h3'])
+    await page.touchscreen.tap(card.x, card.y)
+    await expect.poll(() => played, { timeout: 8000 }).toBe(card.id)
+  })
+})
+
 // ===========================================================================
 //  2. LONG-PRESS PREVIEW  (touch)
 // ===========================================================================
