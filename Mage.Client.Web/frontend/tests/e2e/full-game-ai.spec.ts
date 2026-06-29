@@ -39,10 +39,11 @@ test('full game vs AI plays through to game over', async ({ page }) => {
   await page.getByRole('button', { name: 'Connect' }).click()
   await expect(page.getByRole('heading', { name: 'Open tables' })).toBeVisible({ timeout: 20_000 })
 
-  // start a game vs AI with an aggressive deck so the game resolves quickly
-  await page.getByRole('button', { name: 'New game vs AI' }).click()
+  // configure a game vs AI with an aggressive deck so the game resolves quickly
+  await page.getByRole('button', { name: 'New game', exact: true }).click()
   await page.getByPlaceholder('Search decks…').fill('Goblins')
   await page.getByRole('button', { name: /Goblins/ }).first().click()
+  await page.getByRole('button', { name: 'Start game' }).click()
 
   // the live 3D board opens
   await expect(page.locator('.board3d canvas')).toBeVisible({ timeout: 45_000 })

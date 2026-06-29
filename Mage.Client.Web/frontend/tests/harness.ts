@@ -299,7 +299,14 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
   }))
   await page.route('**/api/decks/upload', json({ ok: true, name: 'Imported Deck', path: '/decks/imported.dck' }))
   await page.route('**/api/cards/search**', json(SAMPLE.cards))
-  await page.route('**/api/tables/create', json({ ok: true, tableId: 'g-1' }))
+  await page.route('**/api/gametypes**', json([
+    { name: 'Two Player Duel', minPlayers: 2, maxPlayers: 2, useRange: false, useAttackOption: false },
+    { name: 'Free For All', minPlayers: 2, maxPlayers: 10, useRange: true, useAttackOption: true },
+  ]))
+  await page.route('**/api/tables/create', json({ ok: true, tableId: 'g-1', started: true, openSeats: 0 }))
+  await page.route('**/api/tables/start', json({ ok: true }))
+  await page.route('**/api/tables/add-ai', json({ ok: true }))
+  await page.route('**/api/tables/remove', json({ ok: true }))
   await page.route('**/api/draft/create', json({ ok: true, tableId: 'd-1' }))
   await page.route('**/api/draft/pick', json({ ok: true }))
   await page.route('**/api/game/respond', json({ ok: true }))

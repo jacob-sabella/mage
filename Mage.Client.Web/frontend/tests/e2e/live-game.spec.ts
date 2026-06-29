@@ -28,9 +28,10 @@ test('real game vs AI: connect → board → live card indicators', async ({ pag
   await expect(page.getByRole('heading', { name: 'Open tables' })).toBeVisible({ timeout: 20_000 })
 
   // start a game vs AI with a creature-heavy deck so P/T badges appear
-  await page.getByRole('button', { name: 'New game vs AI' }).click()
+  await page.getByRole('button', { name: 'New game', exact: true }).click()
   await page.getByPlaceholder('Search decks…').fill('Goblins')
   await page.getByRole('button', { name: /Goblins/ }).first().click()
+  await page.getByRole('button', { name: 'Start game' }).click()
 
   // the live 3D board opens
   await expect(page.locator('.board3d canvas')).toBeVisible({ timeout: 30_000 })

@@ -59,23 +59,29 @@ test('full PvP game: two humans create + join a table and play to game over', as
     await connect(a, host)
     await connect(b, guest)
 
-    // A opens a joinable PvP table and waits
-    await a.getByRole('button', { name: 'New game vs Player' }).click()
+    // A configures a table with one open human seat (0 AI) and opens it
+    await a.getByRole('button', { name: 'New game', exact: true }).click()
+    await a.getByRole('button', { name: 'Fewer AI opponents' }).click() // 1 -> 0
+    await a.getByRole('button', { name: 'More Open seats (humans)' }).click() // 0 -> 1 open
     await pickGoblins(a)
-    await expect(a.getByText(/Waiting for an opponent/i)).toBeVisible({ timeout: 15_000 })
+    await a.getByRole('button', { name: 'Create table' }).click()
+    await expect(a.locator('.waiting-room')).toBeVisible({ timeout: 15_000 })
 
     // B locates A's specific table (by host name) and joins it
     const joinHostTable = async () => {
       await b.getByRole('button', { name: 'Refresh' }).click()
-      const row = b.locator('tr', { hasText: `${host}'s table` })
+      const row = b.locator('tr', { hasText: `${host}'s game` })
       const join = row.getByRole('button', { name: 'Join' })
       await expect(join).toBeVisible({ timeout: 3000 })
       await join.click()
     }
     await expect(joinHostTable).toPass({ timeout: 40_000 })
-    await pickGoblins(b)
+    await pickGoblins(b) // the join deck picker joins on pick
 
-    // the match auto-starts once B is seated → both boards open
+    // once both seats are filled the owner starts the match → both boards open
+    const startBtn = a.getByRole('button', { name: 'Start match' })
+    await expect(startBtn).toBeEnabled({ timeout: 40_000 })
+    await startBtn.click()
     await expect(a.locator('.board3d canvas')).toBeVisible({ timeout: 60_000 })
     await expect(b.locator('.board3d canvas')).toBeVisible({ timeout: 60_000 })
 
@@ -113,10 +119,13 @@ test('host can cancel an open PvP table before anyone joins', async ({ page }) =
   test.skip(!gatewayUp, 'gateway not reachable on :8090 (start the stack first)')
   test.setTimeout(60_000)
   await connect(page, 'cancel' + (Date.now() % 100000))
-  await page.getByRole('button', { name: 'New game vs Player' }).click()
+  await page.getByRole('button', { name: 'New game', exact: true }).click()
+  await page.getByRole('button', { name: 'Fewer AI opponents' }).click() // 1 -> 0
+  await page.getByRole('button', { name: 'More Open seats (humans)' }).click() // 0 -> 1 open
   await pickGoblins(page)
-  await expect(page.getByText(/Waiting for an opponent/i)).toBeVisible({ timeout: 15_000 })
-  // cancel the open table → the waiting status clears
-  await page.getByRole('button', { name: 'Cancel' }).click()
-  await expect(page.getByText(/Waiting for an opponent/i)).toBeHidden({ timeout: 10_000 })
+  await page.getByRole('button', { name: 'Create table' }).click()
+  await expect(page.locator('.waiting-room')).toBeVisible({ timeout: 15_000 })
+  // cancel the open table → the waiting room closes
+  await page.getByRole('button', { name: 'Cancel table' }).click()
+  await expect(page.locator('.waiting-room')).toBeHidden({ timeout: 10_000 })
 })

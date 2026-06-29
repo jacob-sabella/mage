@@ -61,9 +61,6 @@ import java.util.stream.Collectors;
 public class WebClientApp {
 
     private final SessionRegistry sessions = new SessionRegistry();
-    // open PvP tables awaiting a second human: tableId -> the owner connection that
-    // must start the match once someone joins the empty seat
-    private final java.util.Map<UUID, ServerConnection> pvpOwners = new java.util.concurrent.ConcurrentHashMap<>();
     // token -> live websocket, so upstream callbacks can be pushed to the browser
     private final ConcurrentHashMap<String, WsContext> sockets = new ConcurrentHashMap<>();
     // token -> last log line sent; used to suppress consecutive duplicate log spam
@@ -141,8 +138,11 @@ public class WebClientApp {
         app.post("/api/chat", this::handleChat);
         app.post("/api/watch", this::handleWatch);
         app.post("/api/join", this::handleJoin);
+        app.get("/api/gametypes", this::handleGameTypes);
         app.post("/api/tables/create", this::handleCreateTable);
         app.post("/api/tables/remove", this::handleRemoveTable);
+        app.post("/api/tables/start", this::handleStartTable);
+        app.post("/api/tables/add-ai", this::handleAddAi);
         app.post("/api/draft/create", this::handleCreateDraft);
         app.post("/api/draft/pick", this::handleDraftPick);
         app.post("/api/draft/submit", this::handleDraftSubmit);
@@ -329,23 +329,14 @@ public class WebClientApp {
             return;
         }
         boolean ok;
-        UUID tableId;
         try {
-            tableId = UUID.fromString(req.tableId);
-            ok = conn.joinTable(tableId, req.deckPath);
+            ok = conn.joinTable(UUID.fromString(req.tableId), req.deckPath);
         } catch (IllegalArgumentException e) {
             ctx.status(400).json(error("invalid tableId"));
             return;
         }
-        // If this was an open PvP table, the second human is now seated — the owner
-        // connection starts the match. On start the server pushes START_GAME and
-        // both gateways join the game.
-        if (ok) {
-            ServerConnection owner = pvpOwners.remove(tableId);
-            if (owner != null) {
-                owner.startMatch(tableId);
-            }
-        }
+        // The table owner starts the match from the waiting room (manual start), so
+        // joining just seats this player; START_GAME arrives when the owner starts.
         ctx.json(Map.of("ok", ok));
     }
 
@@ -596,26 +587,118 @@ public class WebClientApp {
             ctx.status(400).json(error("deckPath is required"));
             return;
         }
-        boolean vsHuman = Boolean.TRUE.equals(req.vsHuman);
+        // map the request (new config fields, with legacy fallbacks) to a TableConfig
+        ServerConnection.TableConfig cfg = new ServerConnection.TableConfig();
+        cfg.deckPath = req.deckPath;
+        cfg.gameName = req.gameName;
+        boolean legacyVsHuman = Boolean.TRUE.equals(req.vsHuman);
+        if (req.gameType != null && !req.gameType.isEmpty()) {
+            cfg.gameType = req.gameType;
+        } else if (legacyVsHuman || (req.openSeats != null && req.openSeats > 0)) {
+            cfg.gameType = "Two Player Duel";
+        } else {
+            int oppo = req.opponents == null ? 1 : req.opponents;
+            cfg.gameType = oppo >= 2 ? "Free For All" : "Two Player Duel";
+        }
+        cfg.aiOpponents = req.aiOpponents != null ? req.aiOpponents
+                : legacyVsHuman ? 0 : (req.opponents == null ? 1 : req.opponents);
+        cfg.openSeats = req.openSeats != null ? req.openSeats : (legacyVsHuman ? 1 : 0);
+        if (req.timeLimit != null) cfg.timeLimit = req.timeLimit;
+        if (req.bufferTime != null) cfg.bufferTime = req.bufferTime;
+        if (req.mulliganType != null) cfg.mulliganType = req.mulliganType;
+        if (req.freeMulligans != null) cfg.freeMulligans = req.freeMulligans;
+        if (req.skillLevel != null) cfg.skillLevel = req.skillLevel;
+        if (req.range != null) cfg.range = req.range;
+        if (req.attackOption != null) cfg.attackOption = req.attackOption;
+        if (req.rated != null) cfg.rated = req.rated;
+        if (req.spectatorsAllowed != null) cfg.spectatorsAllowed = req.spectatorsAllowed;
+        if (req.rollbackAllowed != null) cfg.rollbackAllowed = req.rollbackAllowed;
+        if (req.planeChase != null) cfg.planeChase = req.planeChase;
+        if (req.password != null) cfg.password = req.password;
+        if (req.quitRatio != null) cfg.quitRatio = req.quitRatio;
+        if (req.minimumRating != null) cfg.minimumRating = req.minimumRating;
+        if (req.winsNeeded != null) cfg.winsNeeded = req.winsNeeded;
+        if (req.customStartLife != null) cfg.customStartLife = req.customStartLife;
+        if (req.customStartHandSize != null) cfg.customStartHandSize = req.customStartHandSize;
+
         UUID tableId;
         try {
-            tableId = vsHuman
-                    ? conn.createHumanTable(req.deckPath)
-                    : conn.createGameVsAi(req.deckPath, req.opponents == null ? 1 : req.opponents);
+            tableId = conn.createConfiguredTable(cfg);
         } catch (Exception e) {
             ctx.status(500).json(error("create failed: " + e.getMessage()));
             return;
         }
         if (tableId == null) {
-            ctx.status(500).json(error("could not create/start game (is the deck valid?)"));
+            ctx.status(500).json(error("could not create the table (is the deck valid for the format?)"));
             return;
         }
-        if (vsHuman) {
-            // open table: remember the owner so we can start the match when a 2nd human joins
-            pvpOwners.put(tableId, conn);
+        // No open human seats → start immediately (vs-AI quick play). Otherwise the
+        // table waits in a room for humans to join and the owner to start it.
+        boolean started = cfg.openSeats <= 0;
+        if (started) {
+            conn.startMatch(tableId);
         }
-        // START_GAME will arrive on the WS; the gateway joins the game then.
-        ctx.json(Map.of("ok", true, "tableId", tableId.toString(), "vsHuman", vsHuman));
+        ctx.json(Map.of("ok", true, "tableId", tableId.toString(), "started", started, "openSeats", cfg.openSeats));
+    }
+
+    private void handleGameTypes(Context ctx) {
+        ServerConnection conn = sessions.get(ctx.queryParam("token"));
+        if (conn == null) {
+            ctx.status(401).json(error("not connected"));
+            return;
+        }
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (mage.view.GameTypeView gt : conn.getGameTypes()) {
+            out.add(Map.of(
+                    "name", gt.getName(),
+                    "minPlayers", gt.getMinPlayers(),
+                    "maxPlayers", gt.getMaxPlayers(),
+                    "useRange", gt.isUseRange(),
+                    "useAttackOption", gt.isUseAttackOption()));
+        }
+        ctx.json(out);
+    }
+
+    private void handleStartTable(Context ctx) {
+        JoinRequest req = ctx.bodyAsClass(JoinRequest.class);
+        ServerConnection conn = sessions.get(req == null ? null : req.token);
+        if (conn == null) {
+            ctx.status(401).json(error("not connected"));
+            return;
+        }
+        if (req.tableId == null) {
+            ctx.status(400).json(error("tableId is required"));
+            return;
+        }
+        boolean ok;
+        try {
+            ok = conn.startMatch(UUID.fromString(req.tableId));
+        } catch (IllegalArgumentException e) {
+            ctx.status(400).json(error("invalid tableId"));
+            return;
+        }
+        ctx.json(Map.of("ok", ok));
+    }
+
+    private void handleAddAi(Context ctx) {
+        JoinRequest req = ctx.bodyAsClass(JoinRequest.class);
+        ServerConnection conn = sessions.get(req == null ? null : req.token);
+        if (conn == null) {
+            ctx.status(401).json(error("not connected"));
+            return;
+        }
+        if (req.tableId == null || req.deckPath == null) {
+            ctx.status(400).json(error("tableId and deckPath are required"));
+            return;
+        }
+        boolean ok;
+        try {
+            ok = conn.addAi(UUID.fromString(req.tableId), req.deckPath, 1);
+        } catch (IllegalArgumentException e) {
+            ctx.status(400).json(error("invalid tableId"));
+            return;
+        }
+        ctx.json(Map.of("ok", ok));
     }
 
     // cancel an open table (e.g. a PvP table nobody has joined yet)
@@ -632,9 +715,7 @@ public class WebClientApp {
         }
         boolean ok;
         try {
-            UUID tableId = UUID.fromString(req.tableId);
-            pvpOwners.remove(tableId);
-            ok = conn.removeTable(tableId);
+            ok = conn.removeTable(UUID.fromString(req.tableId));
         } catch (IllegalArgumentException e) {
             ctx.status(400).json(error("invalid tableId"));
             return;
@@ -1183,8 +1264,31 @@ public class WebClientApp {
     public static class CreateRequest {
         public String token;
         public String deckPath;
-        public Integer opponents; // number of AI opponents (default 1; 2+ = Free For All)
-        public Boolean vsHuman;   // true = open a joinable PvP table instead of vs-AI
+        public Integer opponents; // legacy: number of AI opponents (default 1)
+        public Boolean vsHuman;   // legacy: true = open a 1-open-seat PvP table
+
+        // full table configuration (preferred). When present, these drive the table.
+        public String gameName;
+        public String gameType;     // e.g. "Two Player Duel", "Free For All"
+        public Integer aiOpponents; // AI seats
+        public Integer openSeats;   // open human seats
+        public String timeLimit;    // MatchTimeLimit enum name
+        public String bufferTime;   // MatchBufferTime enum name
+        public String mulliganType; // MulliganType enum name
+        public Integer freeMulligans;
+        public String skillLevel;   // SkillLevel enum name
+        public String range;        // RangeOfInfluence enum name
+        public String attackOption; // MultiplayerAttackOption enum name
+        public Boolean rated;
+        public Boolean spectatorsAllowed;
+        public Boolean rollbackAllowed;
+        public Boolean planeChase;
+        public String password;
+        public Integer quitRatio;
+        public Integer minimumRating;
+        public Integer winsNeeded;
+        public Integer customStartLife;
+        public Integer customStartHandSize;
     }
 
     public static class CreateDraftRequest {

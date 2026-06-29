@@ -20,10 +20,11 @@ test.describe('Lobby', () => {
     await expect(dueling.getByRole('button', { name: 'Join' })).toHaveCount(0)
   })
 
-  test('New game vs AI opens the deck picker', async ({ page }) => {
+  test('New game opens the table setup screen', async ({ page }) => {
     await gotoScreen(page, 'lobby')
-    await page.getByRole('button', { name: 'New game vs AI' }).click()
-    await expect(page.getByRole('heading', { name: /Pick your deck/ })).toBeVisible()
+    await page.getByRole('button', { name: 'New game', exact: true }).click()
+    await expect(page.getByRole('heading', { name: 'New game' })).toBeVisible()
+    await expect(page.locator('.table-setup')).toBeVisible()
   })
 
   test('History shows finished matches', async ({ page }) => {

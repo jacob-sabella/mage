@@ -2,8 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   createDraft,
   createGameVsAi,
-  createGameVsHuman,
-  removeTable,
+  createTable,
   disconnect,
   fetchMatches,
   fetchTables,
@@ -12,7 +11,7 @@ import {
   sendChat,
   watchGame,
 } from '../api'
-import type { MatchDto, RespondKind } from '../api'
+import type { MatchDto, RespondKind, TableConfig } from '../api'
 import { useServerEvents } from '../useServerEvents'
 import { setReportSnapshot } from '../reportState'
 import { pushToast } from '../toast'
@@ -20,6 +19,8 @@ import { notifyIfHidden } from '../notify'
 import { playCue } from '../sound'
 import { ChatPanel } from './ChatPanel'
 import { DeckPicker } from './DeckPicker'
+import { TableSetup } from './TableSetup'
+import { WaitingRoom } from './WaitingRoom'
 import { ConstructView } from './ConstructView'
 import { DraftView } from './DraftView'
 import { GameTable } from './GameTable'
@@ -58,8 +59,10 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   // we initiated a play (create/join); adopt the next game frame as ours
   const [pendingPlay, setPendingPlay] = useState(false)
   const [playStatus, setPlayStatus] = useState<string | null>(null)
-  // an open PvP table we created and are waiting on, so we can cancel it
+  // an open table we created and are waiting on (the pre-game waiting room)
   const [openTableId, setOpenTableId] = useState<string | null>(null)
+  const [openTableDeck, setOpenTableDeck] = useState<string | null>(null)
+  const [setupOpen, setSetupOpen] = useState(false) // the New-game configuration modal
   const [gameOver, setGameOver] = useState<string | null>(null)
   // start with chat collapsed on small/short screens to free space for the board
   const [chatOpen, setChatOpen] = useState(
@@ -203,49 +206,59 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
 
   const handleJoin = useCallback((tableId: string) => setDeckIntent({ mode: 'join', tableId }), [])
 
-  // cancel the open PvP table we're waiting on
+  // leave the waiting room (WaitingRoom removes the table itself); just reset state
   const handleCancelTable = useCallback(() => {
-    if (openTableId) removeTable(session.token, openTableId).catch(() => {})
     setOpenTableId(null)
+    setOpenTableDeck(null)
     setPendingPlay(false)
     setPlayStatus(null)
-  }, [openTableId, session.token])
+  }, [])
 
+  // the deck picker now only drives Join (table creation goes through TableSetup)
   const onDeckPicked = useCallback(
-    (path: string, opponents: number) => {
+    (path: string) => {
       const intent = deckIntent
       setDeckIntent(null)
-      if (!intent) return
+      if (!intent || !intent.tableId) return
       setPendingPlay(true)
-      if (intent.mode === 'create' && intent.vsHuman) {
-        // open a joinable table and wait in the lobby until another human sits down
-        setPlayStatus('Waiting for an opponent to join your table…')
-        createGameVsHuman(session.token, path)
-          .then((r) => {
-            if (r.ok) setOpenTableId(r.tableId)
-            else setPlayStatus('Could not open the table (is the deck valid for the format?)')
-          })
-          .catch((err) => setPlayStatus(`Could not open table: ${err instanceof Error ? err.message : 'error'}`))
-      } else if (intent.mode === 'create') {
-        setLastCreate({ path, opponents })
-        setPlayStatus(opponents > 1 ? `Starting free-for-all (${opponents + 1} players)…` : 'Starting game…')
-        createGameVsAi(session.token, path, opponents)
-          .then((r) => {
-            if (!r.ok) setPlayStatus('Could not start the game (is the deck valid for the format?)')
-          })
-          .catch((err) => setPlayStatus(`Could not start: ${err instanceof Error ? err.message : 'error'}`))
-      } else if (intent.tableId) {
-        setPlayStatus('Joining…')
-        joinTable(session.token, intent.tableId, path).catch((err) =>
-          setPlayStatus(`Could not join: ${err instanceof Error ? err.message : 'error'}`),
-        )
-      }
+      setPlayStatus('Joining…')
+      joinTable(session.token, intent.tableId, path).catch((err) =>
+        setPlayStatus(`Could not join: ${err instanceof Error ? err.message : 'error'}`),
+      )
     },
     [deckIntent, session.token],
   )
 
-  const handleNewGame = useCallback(() => setDeckIntent({ mode: 'create' }), [])
-  const handleNewGameVsHuman = useCallback(() => setDeckIntent({ mode: 'create', vsHuman: true }), [])
+  const handleNewGame = useCallback(() => setSetupOpen(true), [])
+
+  // create a fully-configured table; either start vs AI now or open a waiting room
+  const handleTableCreate = useCallback(
+    (config: TableConfig) => {
+      setSetupOpen(false)
+      setPendingPlay(true)
+      setLastCreate({ path: config.deckPath, opponents: Math.max(1, config.aiOpponents) })
+      setPlayStatus(config.openSeats > 0 ? 'Opening your table…' : 'Starting game…')
+      createTable(session.token, config)
+        .then((r) => {
+          if (!r.ok) {
+            setPlayStatus('Could not create the table (is the deck valid for the format?)')
+            setPendingPlay(false)
+            return
+          }
+          if (r.openSeats > 0) {
+            setOpenTableId(r.tableId)
+            setOpenTableDeck(config.deckPath)
+            setPlayStatus(null)
+          }
+          // openSeats === 0 → started now; the gameStart event adopts the board
+        })
+        .catch((err) => {
+          setPlayStatus(`Could not create: ${err instanceof Error ? err.message : 'error'}`)
+          setPendingPlay(false)
+        })
+    },
+    [session.token],
+  )
 
   const handleRespond = useCallback(
     (kind: RespondKind, value?: string) => {
@@ -347,24 +360,14 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
             {tables.length} {tables.length === 1 ? 'table' : 'tables'}
           </span>
         )}
-        {!activeGameId && playStatus && <span className="muted play-status">{playStatus}</span>}
-        {!activeGameId && openTableId && (
-          <button className="btn ghost" onClick={handleCancelTable} title="Close your open table">
-            Cancel
-          </button>
-        )}
+        {!activeGameId && !openTableId && playStatus && <span className="muted play-status">{playStatus}</span>}
         <span className="spacer" />
-        {!activeGameId && (
-          <button className="btn primary" onClick={handleNewGame}>
-            New game vs AI
+        {!activeGameId && !openTableId && (
+          <button className="btn primary" onClick={handleNewGame} title="Configure a game vs AI or open a table for other players">
+            New game
           </button>
         )}
-        {!activeGameId && !showHistory && (
-          <button className="btn" onClick={handleNewGameVsHuman} title="Open a table for another human to join">
-            New game vs Player
-          </button>
-        )}
-        {!activeGameId && !showHistory && (
+        {!activeGameId && !openTableId && !showHistory && (
           <button className="btn" onClick={handleNewDraft}>
             Draft vs AI
           </button>
@@ -396,6 +399,13 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
               onRespond={handleRespond}
               onLeave={handleLeaveGame}
               onPlayAgain={lastCreate ? handlePlayAgain : undefined}
+            />
+          ) : openTableId ? (
+            <WaitingRoom
+              token={session.token}
+              tableId={openTableId}
+              deckPath={openTableDeck ?? ''}
+              onCancel={handleCancelTable}
             />
           ) : showHistory ? (
             <div className="panel table-wrap">
@@ -488,17 +498,13 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
 
       {deckIntent && (
         <DeckPicker
-          title={
-            deckIntent.mode !== 'create'
-              ? 'Pick a deck to join with'
-              : deckIntent.vsHuman
-                ? 'Pick your deck (vs Player)'
-                : 'Pick your deck (vs AI)'
-          }
-          showOpponents={deckIntent.mode === 'create' && !deckIntent.vsHuman}
-          onPick={(d, opp) => onDeckPicked(d.path, opp)}
+          title="Pick a deck to join with"
+          onPick={(d) => onDeckPicked(d.path)}
           onClose={() => setDeckIntent(null)}
         />
+      )}
+      {setupOpen && (
+        <TableSetup token={session.token} onCreate={handleTableCreate} onClose={() => setSetupOpen(false)} />
       )}
     </section>
   )

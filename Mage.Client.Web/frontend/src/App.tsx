@@ -13,6 +13,7 @@ import { playCue, setSoundEnabled } from './sound'
 import { usePrefs, FAMILIES } from './prefs'
 import type { Session } from './types'
 import './theme.css'
+import './table-setup.css'
 
 const SESSION_KEY = 'mage.session'
 

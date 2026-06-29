@@ -179,6 +179,66 @@ export function removeTable(token: string, tableId: string): Promise<{ ok: boole
   })
 }
 
+export interface GameTypeInfo {
+  name: string
+  minPlayers: number
+  maxPlayers: number
+  useRange: boolean
+  useAttackOption: boolean
+}
+
+export function fetchGameTypes(token: string): Promise<GameTypeInfo[]> {
+  return request<GameTypeInfo[]>(`/api/gametypes?token=${encodeURIComponent(token)}`)
+}
+
+// Full table configuration sent to /api/tables/create.
+export interface TableConfig {
+  deckPath: string
+  gameName?: string
+  gameType: string
+  aiOpponents: number
+  openSeats: number
+  timeLimit?: string
+  bufferTime?: string
+  mulliganType?: string
+  freeMulligans?: number
+  skillLevel?: string
+  range?: string
+  attackOption?: string
+  rated?: boolean
+  spectatorsAllowed?: boolean
+  rollbackAllowed?: boolean
+  planeChase?: boolean
+  password?: string
+  quitRatio?: number
+  minimumRating?: number
+  winsNeeded?: number
+  customStartLife?: number
+  customStartHandSize?: number
+}
+
+// Create a fully-configured table. `started` is true when it began immediately
+// (no open human seats); otherwise it's an open table awaiting players.
+export function createTable(
+  token: string,
+  config: TableConfig,
+): Promise<{ ok: boolean; tableId: string; started: boolean; openSeats: number }> {
+  return request('/api/tables/create', {
+    method: 'POST',
+    body: JSON.stringify({ token, ...config }),
+  })
+}
+
+// Owner starts a waiting table's match.
+export function startTable(token: string, tableId: string): Promise<{ ok: boolean }> {
+  return request('/api/tables/start', { method: 'POST', body: JSON.stringify({ token, tableId }) })
+}
+
+// Fill an open seat of a waiting table with an AI (using the given deck).
+export function addAiToTable(token: string, tableId: string, deckPath: string): Promise<{ ok: boolean }> {
+  return request('/api/tables/add-ai', { method: 'POST', body: JSON.stringify({ token, tableId, deckPath }) })
+}
+
 export function checkSession(token: string): Promise<{ ok: boolean; server: string }> {
   return request<{ ok: boolean; server: string }>(`/api/session?token=${encodeURIComponent(token)}`)
 }

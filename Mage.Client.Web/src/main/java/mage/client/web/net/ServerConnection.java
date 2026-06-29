@@ -8,6 +8,7 @@ import mage.constants.RangeOfInfluence;
 import mage.constants.MatchBufferTime;
 import mage.constants.MatchTimeLimit;
 import mage.constants.SkillLevel;
+import mage.game.mulligan.MulliganType;
 import mage.game.match.MatchOptions;
 import mage.game.draft.DraftOptions;
 import mage.game.tournament.TournamentOptions;
@@ -448,6 +449,128 @@ public class ServerConnection {
     public boolean removeTable(UUID tableId) {
         UUID roomId = session.getMainRoomId();
         return roomId != null && tableId != null && session.removeTable(roomId, tableId);
+    }
+
+    /** The game types this server offers (name + seat counts), for the setup screen. */
+    public java.util.List<mage.view.GameTypeView> getGameTypes() {
+        try {
+            java.util.List<mage.view.GameTypeView> t = session.getGameTypes();
+            return t == null ? Collections.emptyList() : t;
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
+    }
+
+    private static <E extends Enum<E>> E enumOr(Class<E> type, String name, E fallback) {
+        if (name == null || name.isEmpty()) return fallback;
+        try {
+            return Enum.valueOf(type, name);
+        } catch (IllegalArgumentException e) {
+            return fallback;
+        }
+    }
+
+    /**
+     * Create a table from a full configuration (game type, seats, and match
+     * options) and seat the creator + any AI opponents. Open human seats are left
+     * for others to join; the match is NOT started here (the owner starts it from
+     * the waiting room, or the gateway auto-starts when no open seats remain).
+     * Returns the table id, or null.
+     */
+    public UUID createConfiguredTable(TableConfig cfg) {
+        UUID roomId = session.getMainRoomId();
+        if (roomId == null) {
+            return null;
+        }
+        DeckCardLists deck = DeckImporter.importDeckFromFile(cfg.deckPath, false);
+        int ai = Math.max(0, cfg.aiOpponents);
+        int open = Math.max(0, cfg.openSeats);
+
+        MatchOptions options = new MatchOptions(
+                cfg.gameName == null || cfg.gameName.isEmpty() ? playerName + "'s game" : cfg.gameName,
+                cfg.gameType, false);
+        options.getPlayerTypes().add(PlayerType.HUMAN); // seat 1 = you
+        for (int i = 0; i < ai; i++) options.getPlayerTypes().add(PlayerType.COMPUTER_MAD);
+        for (int i = 0; i < open; i++) options.getPlayerTypes().add(PlayerType.HUMAN);
+
+        options.setDeckType(cfg.deckType == null || cfg.deckType.isEmpty() ? "Constructed - Freeform" : cfg.deckType);
+        options.setLimited(false);
+        options.setWinsNeeded(Math.max(1, cfg.winsNeeded));
+        options.setFreeMulligans(Math.max(0, cfg.freeMulligans));
+        options.setMullgianType(enumOr(MulliganType.class, cfg.mulliganType, MulliganType.GAME_DEFAULT));
+        options.setSkillLevel(enumOr(SkillLevel.class, cfg.skillLevel, SkillLevel.CASUAL));
+        options.setRange(enumOr(RangeOfInfluence.class, cfg.range, RangeOfInfluence.ALL));
+        options.setAttackOption(enumOr(MultiplayerAttackOption.class, cfg.attackOption, MultiplayerAttackOption.LEFT));
+        options.setMatchTimeLimit(enumOr(MatchTimeLimit.class, cfg.timeLimit, MatchTimeLimit.NONE));
+        options.setMatchBufferTime(enumOr(MatchBufferTime.class, cfg.bufferTime, MatchBufferTime.NONE));
+        options.setSpectatorsAllowed(cfg.spectatorsAllowed);
+        options.setRollbackTurnsAllowed(cfg.rollbackAllowed);
+        options.setPlaneChase(cfg.planeChase);
+        options.setRated(cfg.rated);
+        options.setPassword(cfg.password == null ? "" : cfg.password);
+        options.setQuitRatio(cfg.quitRatio <= 0 ? 100 : cfg.quitRatio);
+        options.setMinimumRating(Math.max(0, cfg.minimumRating));
+        if (cfg.customStartLife > 0) {
+            options.setCustomStartLifeEnabled(true);
+            options.setCustomStartLife(cfg.customStartLife);
+        }
+        if (cfg.customStartHandSize > 0) {
+            options.setCustomStartHandSizeEnabled(true);
+            options.setCustomStartHandSize(cfg.customStartHandSize);
+        }
+
+        TableView table = session.createTable(roomId, options);
+        if (table == null) {
+            return null;
+        }
+        UUID tableId = table.getTableId();
+        boolean ok = session.joinTable(roomId, tableId, playerName, PlayerType.HUMAN, 1, deck, "");
+        for (int i = 0; i < ai && ok; i++) {
+            String aiName = "Computer" + (ai == 1 ? "" : " " + (i + 1));
+            ok &= session.joinTable(roomId, tableId, aiName, PlayerType.COMPUTER_MAD, 6, deck, "");
+        }
+        if (!ok) {
+            session.removeTable(roomId, tableId);
+            return null;
+        }
+        return tableId;
+    }
+
+    /** Fill one open seat of a table with an AI using the given deck. */
+    public boolean addAi(UUID tableId, String deckPath, int index) {
+        UUID roomId = session.getMainRoomId();
+        if (roomId == null || tableId == null) {
+            return false;
+        }
+        DeckCardLists deck = DeckImporter.importDeckFromFile(deckPath, false);
+        return session.joinTable(roomId, tableId, "Computer " + Math.max(1, index), PlayerType.COMPUTER_MAD, 6, deck, "");
+    }
+
+    /** All option fields the setup screen can send for a new table. */
+    public static class TableConfig {
+        public String gameName;
+        public String gameType = "Two Player Duel";
+        public String deckPath;
+        public String deckType;
+        public int aiOpponents = 1;
+        public int openSeats = 0;
+        public String timeLimit;
+        public String bufferTime;
+        public String mulliganType;
+        public int freeMulligans = 0;
+        public String skillLevel;
+        public String range;
+        public String attackOption;
+        public boolean rated = false;
+        public boolean spectatorsAllowed = true;
+        public boolean rollbackAllowed = true;
+        public boolean planeChase = false;
+        public String password = "";
+        public int quitRatio = 100;
+        public int minimumRating = 0;
+        public int winsNeeded = 1;
+        public int customStartLife = 0;
+        public int customStartHandSize = 0;
     }
 
     private static int totalCards(java.util.List<mage.cards.decks.DeckCardInfo> cards) {
