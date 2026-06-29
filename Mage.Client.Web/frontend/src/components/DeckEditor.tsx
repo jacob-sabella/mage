@@ -799,7 +799,10 @@ function DeckCardPreview({ card }: { card: PreviewCard | null }) {
       return
     }
     const apiUrl = `/api/cardimg?set=${encodeURIComponent(card.set ?? '')}&num=${encodeURIComponent(card.num ?? '')}&name=${encodeURIComponent(card.name)}`
-    setImgSrc(getCachedUrl(apiUrl))
+    const cached = getCachedUrl(apiUrl)
+    // only swap instantly when cached; otherwise keep the current image visible
+    // until the new one loads, so hovering uncached cards doesn't blank-flash
+    if (cached) setImgSrc(cached)
     let alive = true
     preloadImage(apiUrl).then((url) => {
       if (alive) setImgSrc(url)
@@ -814,7 +817,7 @@ function DeckCardPreview({ card }: { card: PreviewCard | null }) {
   return (
     <div className="card-preview" role="dialog" aria-label={`Card: ${card.name}`}>
       {imgSrc && (
-        <img className="card-preview-img" src={imgSrc} alt={card.name} onError={(e) => (e.currentTarget.style.visibility = 'hidden')} />
+        <img key={imgSrc} className="card-preview-img" src={imgSrc} alt={card.name} onError={(e) => (e.currentTarget.style.visibility = 'hidden')} />
       )}
       <div className="card-preview-info">
         <div className="card-preview-head">
