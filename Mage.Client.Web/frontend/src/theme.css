@@ -423,7 +423,9 @@ input::placeholder { color: var(--text-dim); }
 
 /* ----- lobby ----- */
 .lobby-view { display: flex; flex-direction: column; gap: 18px; }
-.lobby-header { display: flex; align-items: center; gap: 12px; }
+.lobby-header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+/* on narrow screens the toolbar wraps to extra rows so every button (incl.
+   Disconnect, the last one) stays on screen instead of overflowing off the edge */
 .chip {
   background: rgba(45, 212, 191, 0.15);
   color: var(--accent-2);
@@ -927,7 +929,10 @@ input::placeholder { color: var(--text-dim); }
 .combat-unblocked { color: var(--danger); font-size: 12px; }
 
 /* ----- settings ----- */
-.settings-view { display: flex; justify-content: center; align-items: flex-start; overflow-y: auto; }
+/* two cards (settings + image cache) sit side by side on wide screens; wrap +
+   a gap so on narrow screens they STACK instead of overflowing off the edge
+   (centering an unwrapped row pushes the first card off-screen left). */
+.settings-view { display: flex; justify-content: center; align-items: flex-start; overflow-y: auto; flex-wrap: wrap; gap: 16px; }
 .settings-card { width: 460px; max-width: 100%; padding: 30px; }
 .setting-row {
   display: flex; align-items: center; justify-content: space-between;

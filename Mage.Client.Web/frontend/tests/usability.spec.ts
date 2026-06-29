@@ -279,6 +279,14 @@ async function checkControl(page: Page, loc: Locator, label: string, mobile: boo
   const minW = meta.tag === 'INPUT' ? 14 : mobile ? 40 : 24
   if (box.height < minH - eps) errs.push(`${label}: short ${Math.round(box.height)}px`)
   if (box.width < minW - eps) errs.push(`${label}: narrow ${Math.round(box.width)}px`)
+  // horizontally off-screen = unreachable: there is no horizontal scroll (rule 1),
+  // so a control off the left/right edge is simply lost (e.g. a toolbar that
+  // overflows instead of wrapping). Vertical off-screen is fine — that scrolls.
+  const vpW = page.viewportSize()!.width
+  const centreX = box.x + box.width / 2
+  if (centreX < 0 || centreX > vpW) {
+    errs.push(`${label}: off-screen horizontally (centre x=${Math.round(centreX)}, viewport ${vpW}px)`)
+  }
   // coverage (rule 2): hit-test the centre if it's on-screen. Skip passive
   // overlays (pointer-events:none, e.g. the card preview) — they intentionally
   // let clicks fall through and aren't interactive controls.
