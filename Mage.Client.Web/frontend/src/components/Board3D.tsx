@@ -303,6 +303,7 @@ function Card3D({
       <mesh
         position={[0, hitY, 0]}
         rotation={rot}
+        userData={{ cardId: card.id }}
         onPointerEnter={(e) => {
           e.stopPropagation()
           setHover(true)
@@ -851,6 +852,75 @@ function applyZoom(t: ViewTarget, zoom: number): ViewTarget {
   return { pos: t.look.clone().addScaledVector(dir, 1 / zoom), look: t.look.clone() }
 }
 
+/**
+ * Read-only test/debug instrumentation. Lives INSIDE the <Canvas> so it can read
+ * the live three.js camera + scene, and exposes a tiny side-effect-free API on
+ * `window.__board3d` that gesture tests use to (a) project a card's world
+ * position to canvas pixels so a tap can be aimed at a real card, and (b) read
+ * the camera (position / orbit target / distance) and the custom zoom factor so
+ * a gesture's effect is assertable. It never mutates the scene.
+ *
+ * Always exposed (not DEV-gated): the production `vite build` the test webServer
+ * serves has `import.meta.env.DEV === false`, so a DEV gate would hide it from
+ * tests. The object is minimal and readonly, which is acceptable for a game
+ * client. The hook is removed on unmount so it never dangles after leaving the board.
+ */
+function BoardDebug({ zoom, mode, look }: { zoom: number; mode: ViewMode; look: THREE.Vector3 | null }) {
+  const three = useThree()
+  // keep a live ref so every API call reads the current frame's camera/controls
+  const ref = useRef({ three, zoom, mode, look })
+  ref.current = { three, zoom, mode, look }
+  useEffect(() => {
+    const project = (v: THREE.Vector3) => {
+      const { three } = ref.current
+      const p = v.clone().project(three.camera)
+      const el = three.gl.domElement
+      const w = el.clientWidth || el.width
+      const h = el.clientHeight || el.height
+      return { x: (p.x * 0.5 + 0.5) * w, y: (-p.y * 0.5 + 0.5) * h, z: p.z, w, h }
+    }
+    const cards = () => {
+      const { three } = ref.current
+      const out: { id: string; x: number; y: number }[] = []
+      three.scene.traverse((o) => {
+        const id = o.userData?.cardId as string | undefined
+        if (!id) return
+        const wp = new THREE.Vector3()
+        o.getWorldPosition(wp)
+        const p = project(wp)
+        // on-screen + in front of the camera (z<1) → a tappable target
+        if (p.z < 1 && p.x >= 0 && p.y >= 0 && p.x <= p.w && p.y <= p.h) out.push({ id, x: p.x, y: p.y })
+      })
+      return out
+    }
+    const api = {
+      mode: () => ref.current.mode,
+      zoom: () => ref.current.zoom,
+      camera: () => {
+        const { three, look } = ref.current
+        // free mode → OrbitControls owns the orbit target; otherwise use the
+        // CameraRig look point so `distance` is meaningful in every mode.
+        const ctrlTarget = (three.controls as { target?: THREE.Vector3 } | null)?.target
+        const tgt = ctrlTarget ?? look ?? new THREE.Vector3()
+        return {
+          pos: three.camera.position.toArray() as [number, number, number],
+          target: tgt.toArray() as [number, number, number],
+          distance: three.camera.position.distanceTo(tgt),
+        }
+      },
+      cards,
+      cardScreenPos: (id: string) => cards().find((c) => c.id === id) ?? null,
+    }
+    ;(window as unknown as { __board3d?: typeof api }).__board3d = api
+    return () => {
+      const w = window as unknown as { __board3d?: typeof api }
+      if (w.__board3d === api) delete w.__board3d
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  return null
+}
+
 /** Compact +/− zoom strip shown in 3D and 2D modes. */
 function ZoomBar({ zoom, onZoom }: { zoom: number; onZoom: (z: number) => void }) {
   return (
@@ -1144,6 +1214,9 @@ export function Board3D({
         ) : (
           <CameraRig target={target} />
         )}
+
+        {/* readonly test instrumentation (window.__board3d) — see BoardDebug */}
+        <BoardDebug zoom={zoom} mode={mode} look={mode === 'free' ? null : target.look} />
       </Canvas>
     </div>
   )

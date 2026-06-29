@@ -481,8 +481,18 @@ function CardActionSheet({
   const canTarget = interactive && prompt?.kind === 'target'
   const isCreature = card.types?.includes('Creature')
 
+  // A touch long-press opens this sheet while the finger is still down; lifting
+  // the finger then fires a synthetic `click` on the full-screen backdrop, which
+  // would instantly close the just-opened sheet. Ignore backdrop clicks that
+  // arrive within a short grace window of opening so long-press preview is usable.
+  const openedAt = useRef(Date.now())
+  const onBackdrop = () => {
+    if (Date.now() - openedAt.current < 400) return
+    onClose()
+  }
+
   return (
-    <div className="card-action-backdrop" onClick={onClose}>
+    <div className="card-action-backdrop" onClick={onBackdrop}>
       <div className="card-action-sheet panel" onClick={(e) => e.stopPropagation()}>
         <div className="card-action-content">
           <img
