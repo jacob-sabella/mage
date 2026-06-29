@@ -1859,3 +1859,7 @@ html, body { overflow-x: hidden; }
 .card-action-buttons .btn { flex: 1; min-width: 90px; padding: 13px 16px; font-size: 15px; font-weight: 700; }
 
 .game-over-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+/* count badge pops when a card's quantity changes */
+.card-tile-count { animation: badge-pop 0.25s ease; }
+@keyframes badge-pop { 0% { transform: scale(0.5); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }

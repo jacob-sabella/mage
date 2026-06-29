@@ -758,7 +758,7 @@ function CardTile({
       </button>
       {count > 0 && (
         <>
-          <span className="card-tile-count" aria-label={`${count} in deck`}>{count}</span>
+          <span className="card-tile-count" key={count} aria-label={`${count} in deck`}>{count}</span>
           <button className="card-tile-remove" aria-label={`Remove ${card.name}`} title={`Remove ${card.name}`} onClick={() => onRemove(card.name)}>
             −
           </button>
