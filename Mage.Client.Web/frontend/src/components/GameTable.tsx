@@ -277,7 +277,9 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
                         onClick={() => handleHoverCard(c)}
                       >
                         {i === 0 && <span className="stack-next-tag">next</span>}
-                        <span className="stack-item-name">{c.name}</span>
+                        <span className="stack-item-name">
+                          {c.sourceName ? `${c.sourceName} (ability)` : c.name}
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -457,25 +459,31 @@ function PlayableBar({
  *  playable bar): art + name + mana cost + type line + P/T or loyalty. */
 function CardPreview({ card }: { card: CardType | null }) {
   if (!card) return null
+  const isAbility = !!card.sourceName
+  // For abilities on the stack use the source card's image; the ability itself has no art.
+  const imgSet = card.sourceSet ?? card.set
+  const imgNum = card.sourceNum ?? card.num
+  const imgName = card.sourceName ?? card.name
   const cost = (card.manaCost?.match(/\{([^}]+)\}/g) ?? []).map((s) => s.slice(1, -1))
-  const img = `/api/cardimg?set=${encodeURIComponent(card.set ?? '')}&num=${encodeURIComponent(
-    card.num ?? '',
-  )}&name=${encodeURIComponent(card.name)}`
+  const img = `/api/cardimg?set=${encodeURIComponent(imgSet ?? '')}&num=${encodeURIComponent(
+    imgNum ?? '',
+  )}&name=${encodeURIComponent(imgName)}`
   const isCreature = (card.types ?? []).some((t) => /creature/i.test(t))
   const isPw = (card.types ?? []).some((t) => /planeswalker/i.test(t))
   const pt = isCreature && card.power != null && card.toughness != null ? `${card.power}/${card.toughness}` : null
   const loy = isPw && card.loyalty != null ? `Loyalty ${card.loyalty}` : null
+  const displayName = isAbility ? `${card.sourceName} (ability)` : card.name
   return (
-    <div className="card-preview" role="dialog" aria-label={`Card: ${card.name}`}>
+    <div className="card-preview" role="dialog" aria-label={`Card: ${displayName}`}>
       <img
         className="card-preview-img"
         src={img}
-        alt={card.name}
+        alt={displayName}
         onError={(e) => ((e.currentTarget.style.visibility = 'hidden'))}
       />
       <div className="card-preview-info">
         <div className="card-preview-head">
-          <span className="card-preview-name">{card.name}</span>
+          <span className="card-preview-name">{displayName}</span>
           <span className="card-preview-cost">
             {cost.map((s, i) => (
               <span key={i} className="mana-pip" style={{ background: MANA_COLOR[s] ?? '#9aa0ad' }}>

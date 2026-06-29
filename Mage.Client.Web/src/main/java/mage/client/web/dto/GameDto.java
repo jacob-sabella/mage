@@ -6,6 +6,7 @@ import mage.view.CardView;
 import mage.view.GameView;
 import mage.view.PermanentView;
 import mage.view.PlayerView;
+import mage.view.StackAbilityView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -171,6 +172,11 @@ public class GameDto {
         public List<String> types = new ArrayList<>();
         public boolean tapped;
         public int damage;
+        // Set only for stack abilities: identifies the source card so the UI can
+        // show the right name and look up the card image.
+        public String sourceName;
+        public String sourceSet;
+        public String sourceNum;
 
         static CardDto from(CardView card) {
             CardDto dto = new CardDto();
@@ -192,6 +198,14 @@ public class GameDto {
                 PermanentView permanent = (PermanentView) card;
                 dto.tapped = permanent.isTapped();
                 dto.damage = permanent.getDamage();
+            }
+            if (card instanceof StackAbilityView) {
+                CardView source = ((StackAbilityView) card).getSourceCard();
+                if (source != null) {
+                    dto.sourceName = source.getName();
+                    dto.sourceSet = source.getExpansionSetCode();
+                    dto.sourceNum = source.getCardNumber();
+                }
             }
             return dto;
         }
