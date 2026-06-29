@@ -512,7 +512,7 @@ function roundedRectShape(w: number, h: number, r: number): THREE.Shape {
 }
 
 const MAT_W = 8.8
-const MAT_H = 4.3
+const MAT_H = 4.7 // deep enough for three rows (creatures · others · lands)
 const MAT_Z = 0.35 // pushed slightly toward the player's back row
 
 /** A subtle playmat under a seat's zone: a dark fill + a thin coloured frame, so
@@ -560,29 +560,39 @@ function PlayerZone({
 }) {
   const [expanded, setExpanded] = useState(false)
 
-  const { placed, creatureOverflow, backOverflow, creatureVisCount, backVisCount } = useMemo(() => {
+  const { placed, rows } = useMemo(() => {
     const creatures: RowItem[] = []
-    const nonlands: RowItem[] = []
+    const others: RowItem[] = [] // artifacts, enchantments, planeswalkers, …
     const lands: GameCard[] = []
     for (const c of seat.player.battlefield) {
       const t = (c.types ?? []).map((x) => x.toLowerCase())
       if (t.some((x) => x.includes('creature'))) creatures.push({ card: c })
       else if (t.some((x) => x.includes('land'))) lands.push(c)
-      else nonlands.push({ card: c })
+      else others.push({ card: c })
     }
-    const back: RowItem[] = [...nonlands, ...groupLands(lands)]
-    const creatureOverflow = Math.max(0, creatures.length - MAX_PER_ROW)
-    const backOverflow = Math.max(0, back.length - MAX_PER_ROW)
-    const visCreatures = expanded ? creatures : creatures.slice(0, MAX_PER_ROW)
-    const visBack = expanded ? back : back.slice(0, MAX_PER_ROW)
-    return {
-      placed: [...row(visCreatures, 0, -0.95), ...row(visBack, 0, 0.95)],
-      creatureOverflow,
-      backOverflow,
-      creatureVisCount: visCreatures.length,
-      backVisCount: visBack.length,
-    }
+    const landRow = groupLands(lands)
+    // Standard MTG table layout, front (toward combat) → back (near the player):
+    //   creatures · non-creature permanents · lands.
+    // The middle row only appears when there are other permanents, so a plain
+    // creature+land board keeps its roomy two-row spacing.
+    const defs = others.length
+      ? [
+          { items: creatures, z: -1.2 },
+          { items: others, z: 0.3 },
+          { items: landRow, z: 1.75 },
+        ]
+      : [
+          { items: creatures, z: -0.95 },
+          { items: landRow, z: 0.95 },
+        ]
+    const rows = defs.map((d) => {
+      const overflow = Math.max(0, d.items.length - MAX_PER_ROW)
+      const vis = expanded ? d.items : d.items.slice(0, MAX_PER_ROW)
+      return { placed: row(vis, 0, d.z), overflow, visCount: vis.length, z: d.z }
+    })
+    return { placed: rows.flatMap((r) => r.placed), rows }
   }, [seat.player.battlefield, expanded])
+  const anyOverflow = rows.some((r) => r.overflow > 0)
 
   const p = seat.player
   const gy = p.graveyard.length ? p.graveyard[p.graveyard.length - 1] : null
@@ -604,22 +614,18 @@ function PlayerZone({
         <Card3D key={card.id} card={card} position={pos} stackCount={stackCount} cardProps={cardProps} onHoverCard={onHoverCard} onPressCard={onPressCard} onLongPressCard={onLongPressCard} />
       ))}
       {/* overflow badges: show +N when a row is clipped */}
-      {!expanded && creatureOverflow > 0 && (
-        <Html position={[overflowX(creatureVisCount), 0.2, -0.95]} center distanceFactor={10} zIndexRange={[20, 0]}>
-          <button className="c3d-overflow-btn" onClick={() => setExpanded(true)}>
-            +{creatureOverflow}
-          </button>
-        </Html>
-      )}
-      {!expanded && backOverflow > 0 && (
-        <Html position={[overflowX(backVisCount), 0.2, 0.95]} center distanceFactor={10} zIndexRange={[20, 0]}>
-          <button className="c3d-overflow-btn" onClick={() => setExpanded(true)}>
-            +{backOverflow}
-          </button>
-        </Html>
-      )}
+      {!expanded &&
+        rows.map((r, i) =>
+          r.overflow > 0 ? (
+            <Html key={i} position={[overflowX(r.visCount), 0.2, r.z]} center distanceFactor={10} zIndexRange={[20, 0]}>
+              <button className="c3d-overflow-btn" onClick={() => setExpanded(true)}>
+                +{r.overflow}
+              </button>
+            </Html>
+          ) : null,
+        )}
       {/* collapse button when all cards are shown */}
-      {expanded && (creatureOverflow > 0 || backOverflow > 0) && (
+      {expanded && anyOverflow && (
         <Html position={[0, 0.3, -1.8]} center distanceFactor={10} zIndexRange={[20, 0]}>
           <button className="c3d-overflow-btn c3d-overflow-collapse" onClick={() => setExpanded(false)}>
             ▲ collapse

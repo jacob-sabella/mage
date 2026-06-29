@@ -184,10 +184,17 @@ function densePlayer(
       colors: color, power: String(1 + (i % 9)), toughness: String(1 + ((i + 3) % 9)), tapped: i % 4 === 0,
     }),
   )
+  // non-creature, non-land permanents go in their own (middle) battlefield row
+  const others = [
+    card(`${pre}A0`, 'Sol Ring', ['Artifact'], { tapped: true }),
+    card(`${pre}A1`, 'Howling Mine', ['Artifact'], {}),
+    card(`${pre}E0`, 'Rancor', ['Enchantment'], { colors: color }),
+    card(`${pre}P0`, 'Garruk Wildspeaker', ['Planeswalker'], { colors: color, loyalty: '3' }),
+  ]
   return {
     id: pre, name, life, libraryCount: 47, handCount: me ? 7 : 6, graveyardCount: 6, exileCount: 3,
     active, manaPool: me ? '{G}{G}{U}{R}' : undefined,
-    battlefield: [...lands, ...creatures],
+    battlefield: [...lands, ...others, ...creatures],
     graveyard: Array.from({ length: 3 }, (_, i) => card(`${pre}G${i}`, CREATURE_POOL[i], ['Creature'], { colors: color })),
     exile: [],
   }
