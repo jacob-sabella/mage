@@ -815,10 +815,12 @@ function DeckCardPreview({ card }: { card: PreviewCard | null }) {
   if (!card) return <div className="card-preview card-preview-empty muted">Hover a card to preview</div>
   const cost = (card.manaCost?.match(/\{([^}]+)\}/g) ?? []).map((s) => s.slice(1, -1))
   return (
-    <div className="card-preview" role="dialog" aria-label={`Card: ${card.name}`}>
-      {imgSrc && (
-        <img key={imgSrc} className="card-preview-img" src={imgSrc} alt={card.name} onError={(e) => (e.currentTarget.style.visibility = 'hidden')} />
-      )}
+    <div className="card-preview deck-card-preview" role="dialog" aria-label={`Card: ${card.name}`}>
+      <div className="card-preview-imgbox">
+        {imgSrc && (
+          <img key={imgSrc} className="card-preview-img" src={imgSrc} alt={card.name} onError={(e) => (e.currentTarget.style.visibility = 'hidden')} />
+        )}
+      </div>
       <div className="card-preview-info">
         <div className="card-preview-head">
           <span className="card-preview-name">{card.name}</span>

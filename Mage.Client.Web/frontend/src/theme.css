@@ -1161,7 +1161,30 @@ input::placeholder { color: var(--text-dim); }
    that starved the entry list so its rows bled under the foot and the +/- and
    row controls became unclickable. A fixed height (same for empty + filled, so
    no reflow flicker on hover) leaves the scrollable entry list its full room. */
-.deck-list > .card-preview { flex: 0 0 auto; height: clamp(150px, 26vh, 240px); min-height: 0; }
+.deck-list > .card-preview { flex: 0 0 auto; height: clamp(300px, 52vh, 540px); min-height: 0; }
+/* Deck-editor preview: the card image is the hero. Centre it in a transparent
+   box and let it size to fit (no forced full-bleed + dark backing = no black
+   letterbox bars), so the actual card is as large and readable as the panel
+   allows. Height-driven, so it stays card-shaped and crisp. */
+.card-preview-imgbox {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 8px 4px;
+}
+.deck-card-preview .card-preview-img {
+  flex: initial;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  background: transparent;
+  border-radius: 9px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+}
+.deck-card-preview .card-preview-name { font-size: 16px; }
 .card-preview-empty {
   /* Same fixed height as the filled preview (inherited from .card-preview):
      must NOT flex-grow, or the empty<->filled swap on hover changes height and

@@ -19,7 +19,9 @@ import { gotoScreen, installMocks } from './harness'
  *   6. No random movement — key controls don't drift over a 1s idle window.
  *   7. Correct z-order — overlays/modals/toasts render above content; floating
  *      in-game panels don't cover the primary controls.
- *   8. Readable text — no primary text < 11px (decorative glyphs exempt).
+ *   8. Readability — (a) no primary text < 11px (decorative glyphs exempt), and
+ *      (b) content images meant to be READ (the card preview) get a legible
+ *      area — at least ~180x250px so the card's rules text is actually readable.
  *   9. Scrollability — overflowing views expose a scroll container.
  *  10. Visible keyboard focus — controls are focusable and :focus-visible is
  *      styled.
@@ -577,6 +579,35 @@ const getCls = (page: Page) => page.evaluate(() => (window as unknown as { __cls
     })
     expect(hasFocusVisible, ':focus-visible styling must exist').toBe(true)
   })
+})
+
+// ===========================================================================
+//  PART D — readability (rule 8b): the card preview gets a legible area on
+//  every viewport, so the card's rules text is actually readable (not a
+//  thumbnail letterboxed inside a big dark box, the bug this guards against).
+// ===========================================================================
+;(AUDIT ? test.describe : test.describe.skip)('usability · readability', () => {
+  const previewScreen = SCREENS.find((s) => s.name === 'card-preview')!
+  for (const vp of VIEWPORTS) {
+    test.describe(`${vp.name} ${vp.w}x${vp.h}`, () => {
+      test.use({ viewport: { width: vp.w, height: vp.h } })
+      test('card preview is legible', async ({ page }) => {
+        await previewScreen.go(page)
+        // measure the image AREA (imgbox), not the <img> (a real card fills it;
+        // it's image-size-independent so it works with the faux placeholder too)
+        const box = await page.locator('.card-preview-imgbox').boundingBox()
+        expect(box, 'card preview image area present').toBeTruthy()
+        expect(
+          box!.width,
+          `card preview too narrow to read (${Math.round(box!.width)}px)`,
+        ).toBeGreaterThanOrEqual(180)
+        expect(
+          box!.height,
+          `card preview too short to read (${Math.round(box!.height)}px)`,
+        ).toBeGreaterThanOrEqual(225)
+      })
+    })
+  }
 })
 
 test('usability suite is opt-in (AUDIT=1)', () => {
