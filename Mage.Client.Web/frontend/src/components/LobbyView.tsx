@@ -3,6 +3,7 @@ import {
   createDraft,
   createGameVsAi,
   createGameVsHuman,
+  removeTable,
   disconnect,
   fetchMatches,
   fetchTables,
@@ -57,6 +58,8 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   // we initiated a play (create/join); adopt the next game frame as ours
   const [pendingPlay, setPendingPlay] = useState(false)
   const [playStatus, setPlayStatus] = useState<string | null>(null)
+  // an open PvP table we created and are waiting on, so we can cancel it
+  const [openTableId, setOpenTableId] = useState<string | null>(null)
   const [gameOver, setGameOver] = useState<string | null>(null)
   // start with chat collapsed on small/short screens to free space for the board
   const [chatOpen, setChatOpen] = useState(
@@ -102,6 +105,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
       setInteractive(true)
       setPendingPlay(false)
       setPlayStatus(null)
+      setOpenTableId(null) // the table started — no longer cancellable
       setConstruct(null)
       setGameOver(null)
       setGame(null)
@@ -199,6 +203,14 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
 
   const handleJoin = useCallback((tableId: string) => setDeckIntent({ mode: 'join', tableId }), [])
 
+  // cancel the open PvP table we're waiting on
+  const handleCancelTable = useCallback(() => {
+    if (openTableId) removeTable(session.token, openTableId).catch(() => {})
+    setOpenTableId(null)
+    setPendingPlay(false)
+    setPlayStatus(null)
+  }, [openTableId, session.token])
+
   const onDeckPicked = useCallback(
     (path: string, opponents: number) => {
       const intent = deckIntent
@@ -210,7 +222,8 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
         setPlayStatus('Waiting for an opponent to join your table…')
         createGameVsHuman(session.token, path)
           .then((r) => {
-            if (!r.ok) setPlayStatus('Could not open the table (is the deck valid for the format?)')
+            if (r.ok) setOpenTableId(r.tableId)
+            else setPlayStatus('Could not open the table (is the deck valid for the format?)')
           })
           .catch((err) => setPlayStatus(`Could not open table: ${err instanceof Error ? err.message : 'error'}`))
       } else if (intent.mode === 'create') {
@@ -335,6 +348,11 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
           </span>
         )}
         {!activeGameId && playStatus && <span className="muted play-status">{playStatus}</span>}
+        {!activeGameId && openTableId && (
+          <button className="btn ghost" onClick={handleCancelTable} title="Close your open table">
+            Cancel
+          </button>
+        )}
         <span className="spacer" />
         {!activeGameId && (
           <button className="btn primary" onClick={handleNewGame}>

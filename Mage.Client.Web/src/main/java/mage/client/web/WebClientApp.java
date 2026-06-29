@@ -142,6 +142,7 @@ public class WebClientApp {
         app.post("/api/watch", this::handleWatch);
         app.post("/api/join", this::handleJoin);
         app.post("/api/tables/create", this::handleCreateTable);
+        app.post("/api/tables/remove", this::handleRemoveTable);
         app.post("/api/draft/create", this::handleCreateDraft);
         app.post("/api/draft/pick", this::handleDraftPick);
         app.post("/api/draft/submit", this::handleDraftSubmit);
@@ -615,6 +616,30 @@ public class WebClientApp {
         }
         // START_GAME will arrive on the WS; the gateway joins the game then.
         ctx.json(Map.of("ok", true, "tableId", tableId.toString(), "vsHuman", vsHuman));
+    }
+
+    // cancel an open table (e.g. a PvP table nobody has joined yet)
+    private void handleRemoveTable(Context ctx) {
+        JoinRequest req = ctx.bodyAsClass(JoinRequest.class);
+        ServerConnection conn = sessions.get(req == null ? null : req.token);
+        if (conn == null) {
+            ctx.status(401).json(error("not connected"));
+            return;
+        }
+        if (req.tableId == null) {
+            ctx.status(400).json(error("tableId is required"));
+            return;
+        }
+        boolean ok;
+        try {
+            UUID tableId = UUID.fromString(req.tableId);
+            pvpOwners.remove(tableId);
+            ok = conn.removeTable(tableId);
+        } catch (IllegalArgumentException e) {
+            ctx.status(400).json(error("invalid tableId"));
+            return;
+        }
+        ctx.json(Map.of("ok", ok));
     }
 
     // browse available .dck files so the UI doesn't need file paths

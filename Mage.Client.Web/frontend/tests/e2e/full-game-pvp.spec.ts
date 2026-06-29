@@ -108,3 +108,15 @@ test('full PvP game: two humans create + join a table and play to game over', as
     await ctxB.close()
   }
 })
+
+test('host can cancel an open PvP table before anyone joins', async ({ page }) => {
+  test.skip(!gatewayUp, 'gateway not reachable on :8090 (start the stack first)')
+  test.setTimeout(60_000)
+  await connect(page, 'cancel' + (Date.now() % 100000))
+  await page.getByRole('button', { name: 'New game vs Player' }).click()
+  await pickGoblins(page)
+  await expect(page.getByText(/Waiting for an opponent/i)).toBeVisible({ timeout: 15_000 })
+  // cancel the open table → the waiting status clears
+  await page.getByRole('button', { name: 'Cancel' }).click()
+  await expect(page.getByText(/Waiting for an opponent/i)).toBeHidden({ timeout: 10_000 })
+})

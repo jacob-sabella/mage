@@ -171,6 +171,14 @@ export function createGameVsHuman(
   })
 }
 
+// Cancel an open table you created (e.g. a PvP table nobody has joined yet).
+export function removeTable(token: string, tableId: string): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>('/api/tables/remove', {
+    method: 'POST',
+    body: JSON.stringify({ token, tableId }),
+  })
+}
+
 export function checkSession(token: string): Promise<{ ok: boolean; server: string }> {
   return request<{ ok: boolean; server: string }>(`/api/session?token=${encodeURIComponent(token)}`)
 }

@@ -444,6 +444,12 @@ public class ServerConnection {
         return roomId != null && tableId != null && session.startMatch(roomId, tableId);
     }
 
+    /** Remove a table this connection owns (e.g. cancel an unjoined PvP table). */
+    public boolean removeTable(UUID tableId) {
+        UUID roomId = session.getMainRoomId();
+        return roomId != null && tableId != null && session.removeTable(roomId, tableId);
+    }
+
     private static int totalCards(java.util.List<mage.cards.decks.DeckCardInfo> cards) {
         int t = 0;
         if (cards != null) {
