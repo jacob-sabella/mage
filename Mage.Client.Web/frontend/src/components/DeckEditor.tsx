@@ -144,13 +144,14 @@ export function DeckEditor() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, fColors, fType, fCmc])
 
-  const addCard = useCallback((card: CardInfoDto) => {
+  // playset=true (shift-click) tops the card up to a 4-of; otherwise adds one
+  const addCard = useCallback((card: CardInfoDto, playset = false) => {
     setDeck((prev) => {
       const ex = prev.find((e) => e.name === card.name)
-      if (ex) return prev.map((e) => (e.name === card.name ? { ...e, count: e.count + 1 } : e))
+      if (ex) return prev.map((e) => (e.name === card.name ? { ...e, count: playset ? Math.max(e.count, 4) : e.count + 1 } : e))
       return [
         ...prev,
-        { name: card.name, count: 1, manaValue: card.manaValue, colors: card.colors, types: card.types, manaCost: card.manaCost },
+        { name: card.name, count: playset ? 4 : 1, manaValue: card.manaValue, colors: card.colors, types: card.types, manaCost: card.manaCost },
       ]
     })
   }, [])
@@ -444,7 +445,7 @@ export function DeckEditor() {
                       onMouseLeave={() => showPreview(null)}
                     >
                       <td className="deck-table-add">
-                        <button className="btn ghost deck-mini-btn" aria-label={`Add ${card.name}`} onClick={() => addCard(card)}>
+                        <button className="btn ghost deck-mini-btn" aria-label={`Add ${card.name}`} title="Shift-click for a playset of 4" onClick={(e) => addCard(card, e.shiftKey)}>
                           +
                         </button>
                         {n > 0 && (
@@ -712,7 +713,7 @@ function CardTile({
 }: {
   card: CardInfoDto
   count: number
-  onAdd: (c: CardInfoDto) => void
+  onAdd: (c: CardInfoDto, playset?: boolean) => void
   onRemove: (name: string) => void
   onHover: (c: PreviewCard | null) => void
 }) {
@@ -723,7 +724,12 @@ function CardTile({
       onMouseEnter={() => onHover(card)}
       onMouseLeave={() => onHover(null)}
     >
-      <button className="card-tile-art" aria-label={`Add ${card.name}`} title={`Add ${card.name}`} onClick={() => onAdd(card)}>
+      <button
+        className="card-tile-art"
+        aria-label={`Add ${card.name}`}
+        title={`Add ${card.name} (shift-click for a playset of 4)`}
+        onClick={(e) => onAdd(card, e.shiftKey)}
+      >
         <img src={img} alt={card.name} loading="lazy" onError={(e) => (e.currentTarget.style.opacity = '0')} />
         <span className="card-tile-fallback">{card.name}</span>
         {/* crisp DOM name so cards are readable even when the art's printed text isn't */}
