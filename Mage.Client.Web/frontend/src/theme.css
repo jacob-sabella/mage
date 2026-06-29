@@ -714,6 +714,10 @@ input::placeholder { color: var(--text-dim); }
   flex-direction: column;
   gap: 12px;
   padding: 14px 16px;
+  /* when the column is over-constrained (short viewport + preview + stats +
+     foot) let the whole panel scroll, so the entry list + its +/- controls are
+     always reachable instead of being squeezed to zero behind the foot */
+  overflow-y: auto;
 }
 .deck-list-head {
   display: flex;
@@ -724,7 +728,7 @@ input::placeholder { color: var(--text-dim); }
 }
 .deck-list-head .deck-title { flex: 1 1 auto; }
 .deck-title { margin: 0; font-size: 16px; }
-.deck-list-body { flex: 1; min-height: 0; overflow-y: auto; }
+.deck-list-body { flex: 1; min-height: 140px; overflow-y: auto; }
 .deck-entries { list-style: none; margin: 0; padding: 0; }
 .deck-entry {
   display: flex;
@@ -1020,7 +1024,7 @@ input::placeholder { color: var(--text-dim); }
   padding: 2px 9px; font-size: 16px; font-weight: 700;
   border-radius: 999px; line-height: 1; min-width: 28px;
 }
-.zoom-label { font-size: 11px; min-width: 34px; text-align: center; color: var(--muted); }
+.zoom-label { font-size: 11px; min-width: 34px; text-align: center; color: var(--muted); background: none; border: 0; padding: 2px 4px; cursor: pointer; font-family: inherit; border-radius: 6px; }
 
 /* compact player status strip above the board */
 .player-strip { display: flex; gap: 12px; }
@@ -1153,6 +1157,11 @@ input::placeholder { color: var(--text-dim); }
   overflow: hidden;
   pointer-events: none;
 }
+/* In the deck-list column the preview must NOT flex-grow to half the panel —
+   that starved the entry list so its rows bled under the foot and the +/- and
+   row controls became unclickable. A fixed height (same for empty + filled, so
+   no reflow flicker on hover) leaves the scrollable entry list its full room. */
+.deck-list > .card-preview { flex: 0 0 auto; height: clamp(150px, 26vh, 240px); min-height: 0; }
 .card-preview-empty {
   /* Same fixed height as the filled preview (inherited from .card-preview):
      must NOT flex-grow, or the empty<->filled swap on hover changes height and
@@ -1528,6 +1537,11 @@ html, body { overflow-x: hidden; }
   opacity: 0; transition: opacity 0.12s;
 }
 .card-tile:hover .card-tile-remove { opacity: 1; }
+.card-tile-art:focus-visible + .card-tile-count + .card-tile-remove,
+.card-tile-remove:focus-visible { opacity: 1; }
+/* touch devices can't hover — a hidden remove button would be unreachable, so
+   always show it for in-deck tiles when the pointer is coarse / hover-incapable */
+@media (hover: none) { .card-tile .card-tile-remove { opacity: 1; } }
 .deck-groups { display: flex; flex-direction: column; gap: 12px; }
 .deck-group-title {
   display: flex; justify-content: space-between; align-items: baseline;
@@ -1636,7 +1650,7 @@ html, body { overflow-x: hidden; }
 /* stack panel (what's resolving) + overlay column */
 .board-overlays { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
 .stack-panel { min-width: 150px; max-width: 240px; padding: 8px 10px; }
-.stack-item { display: flex; align-items: center; gap: 6px; padding: 3px 0; font-size: 13px; }
+.stack-item { display: flex; align-items: center; gap: 6px; padding: 3px 0; font-size: 13px; width: 100%; background: none; border: 0; color: inherit; font-family: inherit; text-align: left; }
 .stack-item.next { font-weight: 700; }
 .stack-item-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .stack-next-tag {

@@ -863,9 +863,9 @@ function ZoomBar({ zoom, onZoom }: { zoom: number; onZoom: (z: number) => void }
       >
         −
       </button>
-      <span className="zoom-label" title="Click to reset zoom" onClick={() => onZoom(ZOOM_DEFAULT)} style={{ cursor: 'pointer' }}>
+      <button className="zoom-label" type="button" title="Reset zoom" aria-label="Reset zoom" onClick={() => onZoom(ZOOM_DEFAULT)}>
         {Math.round(zoom * 100)}%
-      </span>
+      </button>
       <button
         className="btn zoom-btn"
         onClick={() => onZoom(Math.min(ZOOM_MAX, +(zoom + ZOOM_STEP).toFixed(2)))}

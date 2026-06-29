@@ -230,16 +230,19 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
                 <div className="stack-title">Stack ({game.stack.length})</div>
                 {/* top of the stack resolves first (LIFO) */}
                 {[...game.stack].reverse().map((c, i) => (
-                  <div
+                  <button
+                    type="button"
                     className={`stack-item${i === 0 ? ' next' : ''}`}
                     key={c.id}
                     onMouseEnter={() => handleHoverCard(c)}
                     onMouseLeave={() => handleHoverCard(null)}
+                    onFocus={() => handleHoverCard(c)}
+                    onBlur={() => handleHoverCard(null)}
                     onClick={() => handleHoverCard(c)}
                   >
                     {i === 0 && <span className="stack-next-tag">next</span>}
                     <span className="stack-item-name">{c.name}</span>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
