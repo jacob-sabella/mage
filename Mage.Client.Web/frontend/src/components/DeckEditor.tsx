@@ -172,6 +172,20 @@ export function DeckEditor() {
   const [importing, setImporting] = useState(false)
   const [unresolved, setUnresolved] = useState<string[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
+  // "/" jumps to the card search (unless already typing somewhere)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+      if (e.key === '/') {
+        e.preventDefault()
+        searchRef.current?.focus()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   const doImport = useCallback(async () => {
     setImporting(true)
@@ -307,11 +321,18 @@ export function DeckEditor() {
       <section className="panel deck-search">
         <div className="deck-search-bar">
           <input
+            ref={searchRef}
             type="text"
-            placeholder="Search cards by name…"
+            placeholder="Search cards by name…  ( / )"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && runSearch()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') runSearch()
+              else if (e.key === 'Escape' && query) {
+                e.preventDefault()
+                setQuery('')
+              }
+            }}
           />
           <button className="btn primary" onClick={runSearch} disabled={searching}>
             {searching ? 'Searching…' : 'Search'}
