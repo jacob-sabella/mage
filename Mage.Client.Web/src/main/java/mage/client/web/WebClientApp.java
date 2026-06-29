@@ -61,6 +61,9 @@ import java.util.stream.Collectors;
 public class WebClientApp {
 
     private final SessionRegistry sessions = new SessionRegistry();
+    // open PvP tables awaiting a second human: tableId -> the owner connection that
+    // must start the match once someone joins the empty seat
+    private final java.util.Map<UUID, ServerConnection> pvpOwners = new java.util.concurrent.ConcurrentHashMap<>();
     // token -> live websocket, so upstream callbacks can be pushed to the browser
     private final ConcurrentHashMap<String, WsContext> sockets = new ConcurrentHashMap<>();
     // token -> last log line sent; used to suppress consecutive duplicate log spam
@@ -325,13 +328,23 @@ public class WebClientApp {
             return;
         }
         boolean ok;
+        UUID tableId;
         try {
-            ok = conn.joinTable(UUID.fromString(req.tableId), req.deckPath);
+            tableId = UUID.fromString(req.tableId);
+            ok = conn.joinTable(tableId, req.deckPath);
         } catch (IllegalArgumentException e) {
             ctx.status(400).json(error("invalid tableId"));
             return;
         }
-        // On match start the server pushes START_GAME; the gateway then joins the game.
+        // If this was an open PvP table, the second human is now seated — the owner
+        // connection starts the match. On start the server pushes START_GAME and
+        // both gateways join the game.
+        if (ok) {
+            ServerConnection owner = pvpOwners.remove(tableId);
+            if (owner != null) {
+                owner.startMatch(tableId);
+            }
+        }
         ctx.json(Map.of("ok", ok));
     }
 
@@ -582,9 +595,12 @@ public class WebClientApp {
             ctx.status(400).json(error("deckPath is required"));
             return;
         }
+        boolean vsHuman = Boolean.TRUE.equals(req.vsHuman);
         UUID tableId;
         try {
-            tableId = conn.createGameVsAi(req.deckPath, req.opponents == null ? 1 : req.opponents);
+            tableId = vsHuman
+                    ? conn.createHumanTable(req.deckPath)
+                    : conn.createGameVsAi(req.deckPath, req.opponents == null ? 1 : req.opponents);
         } catch (Exception e) {
             ctx.status(500).json(error("create failed: " + e.getMessage()));
             return;
@@ -593,8 +609,12 @@ public class WebClientApp {
             ctx.status(500).json(error("could not create/start game (is the deck valid?)"));
             return;
         }
+        if (vsHuman) {
+            // open table: remember the owner so we can start the match when a 2nd human joins
+            pvpOwners.put(tableId, conn);
+        }
         // START_GAME will arrive on the WS; the gateway joins the game then.
-        ctx.json(Map.of("ok", true, "tableId", tableId.toString()));
+        ctx.json(Map.of("ok", true, "tableId", tableId.toString(), "vsHuman", vsHuman));
     }
 
     // browse available .dck files so the UI doesn't need file paths
@@ -1139,6 +1159,7 @@ public class WebClientApp {
         public String token;
         public String deckPath;
         public Integer opponents; // number of AI opponents (default 1; 2+ = Free For All)
+        public Boolean vsHuman;   // true = open a joinable PvP table instead of vs-AI
     }
 
     public static class CreateDraftRequest {

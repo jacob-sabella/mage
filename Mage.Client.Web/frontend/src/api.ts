@@ -159,6 +159,18 @@ export function createGameVsAi(
   })
 }
 
+// Open a joinable PvP table (vs another human). Returns the tableId; the match
+// starts once a second human sits down. The creator waits in the lobby meanwhile.
+export function createGameVsHuman(
+  token: string,
+  deckPath: string,
+): Promise<{ ok: boolean; tableId: string; vsHuman: boolean }> {
+  return request<{ ok: boolean; tableId: string; vsHuman: boolean }>('/api/tables/create', {
+    method: 'POST',
+    body: JSON.stringify({ token, deckPath, vsHuman: true }),
+  })
+}
+
 export function checkSession(token: string): Promise<{ ok: boolean; server: string }> {
   return request<{ ok: boolean; server: string }>(`/api/session?token=${encodeURIComponent(token)}`)
 }

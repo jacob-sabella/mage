@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   createDraft,
   createGameVsAi,
+  createGameVsHuman,
   disconnect,
   fetchMatches,
   fetchTables,
@@ -191,8 +192,8 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
     [session.token],
   )
 
-  // deck picker drives both Join and New-game-vs-AI; remember which
-  const [deckIntent, setDeckIntent] = useState<{ mode: 'join' | 'create'; tableId?: string } | null>(null)
+  // deck picker drives Join, New-game-vs-AI and New-game-vs-Player; remember which
+  const [deckIntent, setDeckIntent] = useState<{ mode: 'join' | 'create'; tableId?: string; vsHuman?: boolean } | null>(null)
   // the last vs-AI setup, so "Play again" can rematch without re-picking a deck
   const [lastCreate, setLastCreate] = useState<{ path: string; opponents: number } | null>(null)
 
@@ -204,7 +205,15 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
       setDeckIntent(null)
       if (!intent) return
       setPendingPlay(true)
-      if (intent.mode === 'create') {
+      if (intent.mode === 'create' && intent.vsHuman) {
+        // open a joinable table and wait in the lobby until another human sits down
+        setPlayStatus('Waiting for an opponent to join your table…')
+        createGameVsHuman(session.token, path)
+          .then((r) => {
+            if (!r.ok) setPlayStatus('Could not open the table (is the deck valid for the format?)')
+          })
+          .catch((err) => setPlayStatus(`Could not open table: ${err instanceof Error ? err.message : 'error'}`))
+      } else if (intent.mode === 'create') {
         setLastCreate({ path, opponents })
         setPlayStatus(opponents > 1 ? `Starting free-for-all (${opponents + 1} players)…` : 'Starting game…')
         createGameVsAi(session.token, path, opponents)
@@ -223,6 +232,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   )
 
   const handleNewGame = useCallback(() => setDeckIntent({ mode: 'create' }), [])
+  const handleNewGameVsHuman = useCallback(() => setDeckIntent({ mode: 'create', vsHuman: true }), [])
 
   const handleRespond = useCallback(
     (kind: RespondKind, value?: string) => {
@@ -329,6 +339,11 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
         {!activeGameId && (
           <button className="btn primary" onClick={handleNewGame}>
             New game vs AI
+          </button>
+        )}
+        {!activeGameId && !showHistory && (
+          <button className="btn" onClick={handleNewGameVsHuman} title="Open a table for another human to join">
+            New game vs Player
           </button>
         )}
         {!activeGameId && !showHistory && (
@@ -455,8 +470,14 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
 
       {deckIntent && (
         <DeckPicker
-          title={deckIntent.mode === 'create' ? 'Pick your deck (vs AI)' : 'Pick a deck to join with'}
-          showOpponents={deckIntent.mode === 'create'}
+          title={
+            deckIntent.mode !== 'create'
+              ? 'Pick a deck to join with'
+              : deckIntent.vsHuman
+                ? 'Pick your deck (vs Player)'
+                : 'Pick your deck (vs AI)'
+          }
+          showOpponents={deckIntent.mode === 'create' && !deckIntent.vsHuman}
           onPick={(d, opp) => onDeckPicked(d.path, opp)}
           onClose={() => setDeckIntent(null)}
         />

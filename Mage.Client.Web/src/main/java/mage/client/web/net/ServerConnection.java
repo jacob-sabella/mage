@@ -393,6 +393,57 @@ public class ServerConnection {
         return tableId;
     }
 
+    /**
+     * Create an OPEN two-player human table (Two Player Duel) and sit down in it,
+     * WITHOUT adding an AI or starting the match. The table then shows up in the
+     * room's table list so another human can {@link #joinTable} it; the gateway
+     * starts the match (via {@link #startMatch}) once the second human is seated.
+     * Returns the table id, or null.
+     */
+    public UUID createHumanTable(String deckPath) {
+        UUID roomId = session.getMainRoomId();
+        if (roomId == null) {
+            return null;
+        }
+        DeckCardLists deck = DeckImporter.importDeckFromFile(deckPath, false);
+        int mainTotal = totalCards(deck.getCards());
+        int sideTotal = totalCards(deck.getSideboard());
+        boolean commander = sideTotal >= 1 && sideTotal <= 3 && mainTotal >= 90;
+        String gameType = commander ? "Freeform Commander Two Player Duel" : "Two Player Duel";
+        String deckType = commander ? "Variant Magic - Freeform Commander" : "Constructed - Freeform";
+
+        MatchOptions options = new MatchOptions(playerName + "'s table", gameType, false);
+        options.getPlayerTypes().add(PlayerType.HUMAN);
+        options.getPlayerTypes().add(PlayerType.HUMAN);
+        options.setDeckType(deckType);
+        options.setLimited(false);
+        options.setWinsNeeded(1);
+        options.setSkillLevel(SkillLevel.CASUAL);
+        options.setRange(RangeOfInfluence.ALL);
+        options.setAttackOption(MultiplayerAttackOption.LEFT);
+        options.setMatchTimeLimit(MatchTimeLimit.NONE);
+        options.setMatchBufferTime(MatchBufferTime.NONE);
+        options.setQuitRatio(100);
+        options.setMinimumRating(0);
+
+        TableView table = session.createTable(roomId, options);
+        if (table == null) {
+            return null;
+        }
+        UUID tableId = table.getTableId();
+        if (!session.joinTable(roomId, tableId, playerName, PlayerType.HUMAN, 1, deck, "")) {
+            session.removeTable(roomId, tableId);
+            return null;
+        }
+        return tableId;
+    }
+
+    /** Start a match this connection owns (used to launch a PvP table once full). */
+    public boolean startMatch(UUID tableId) {
+        UUID roomId = session.getMainRoomId();
+        return roomId != null && tableId != null && session.startMatch(roomId, tableId);
+    }
+
     private static int totalCards(java.util.List<mage.cards.decks.DeckCardInfo> cards) {
         int t = 0;
         if (cards != null) {
