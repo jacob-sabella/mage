@@ -15,6 +15,7 @@ import { useServerEvents } from '../useServerEvents'
 import { setReportSnapshot } from '../reportState'
 import { pushToast } from '../toast'
 import { notifyIfHidden } from '../notify'
+import { playCue } from '../sound'
 import { ChatPanel } from './ChatPanel'
 import { DeckPicker } from './DeckPicker'
 import { ConstructView } from './ConstructView'
@@ -105,6 +106,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
       setGame(null)
       setPrompt(null)
       pushToast('Game started')
+      playCue('start')
     } else if (e.type === 'game') {
       // adopt the game if we're expecting one but missed the gameStart frame
       if (!activeRef.current && e.gameId && pendingPlay) {
@@ -122,6 +124,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
         if (g.activePlayer && g.me && g.activePlayer === g.me && lastActiveRef.current !== g.activePlayer) {
           pushToast('Your turn', 'success')
           notifyIfHidden('Your turn')
+          playCue('turn')
         }
         lastActiveRef.current = g.activePlayer ?? null
         setGame(g)
@@ -135,6 +138,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
       setGameOver(over)
       pushToast(over, /win|won/i.test(over) ? 'success' : 'info')
       notifyIfHidden(over)
+      playCue(/win|won/i.test(over) ? 'win' : 'lose')
     } else if (e.type === 'log' && e.text) {
       if (!activeRef.current || (e.gameId && e.gameId !== activeRef.current)) return
       setGameLog((prev) => [...prev.slice(-299), e.text as string])

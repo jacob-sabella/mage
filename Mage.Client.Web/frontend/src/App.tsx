@@ -9,6 +9,7 @@ import { TestClipsModal } from './components/TestClipsModal'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { Toaster } from './toast'
 import { resetTitle } from './notify'
+import { playCue, setSoundEnabled } from './sound'
 import { usePrefs, FAMILIES } from './prefs'
 import type { Session } from './types'
 import './theme.css'
@@ -90,6 +91,23 @@ function SettingsView() {
             type="checkbox"
             checked={prefs.reduceMotion}
             onChange={(e) => setPref('reduceMotion', e.target.checked)}
+          />
+        </label>
+        <label className="setting-row">
+          <span>
+            <strong>Sound effects</strong>
+            <span className="muted setting-hint">Short cues for your turn, game start, and game over</span>
+          </span>
+          <input
+            type="checkbox"
+            checked={prefs.sound}
+            onChange={(e) => {
+              setPref('sound', e.target.checked)
+              if (e.target.checked) {
+                setSoundEnabled(true) // enable immediately so the preview cue plays
+                playCue('turn')
+              }
+            }}
           />
         </label>
         <label className="setting-row">

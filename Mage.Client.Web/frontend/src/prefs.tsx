@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { setSoundEnabled } from './sound'
 
 // A FAMILY is a base "world": its own backdrop (3D environment), fonts and vibe.
 // A CHROMA is a colour variant painted on that base — same world, new accents.
@@ -109,9 +110,10 @@ export interface Prefs {
   manaIcons: boolean // render mana costs as symbols instead of {3}{B}{B} text
   panelOpacity: number // 0.35–1: how solid menus/panels are over the backdrop
   reduceMotion: boolean // lite mode: drop the animated 3D backdrop + UI motion
+  sound: boolean // play short sound cues for game events (your turn, game over)
 }
 
-const DEFAULTS: Prefs = { cardImages: true, avatarId: 0, flagName: '', theme: 'synthwave', manaIcons: true, panelOpacity: 0.72, reduceMotion: false }
+const DEFAULTS: Prefs = { cardImages: true, avatarId: 0, flagName: '', theme: 'synthwave', manaIcons: true, panelOpacity: 0.72, reduceMotion: false, sound: false }
 const KEY = 'mage.prefs'
 
 function load(): Prefs {
@@ -153,6 +155,9 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.classList.toggle('reduce-motion', prefs.reduceMotion)
   }, [prefs.reduceMotion])
+  useEffect(() => {
+    setSoundEnabled(prefs.sound)
+  }, [prefs.sound])
   const value = useMemo<PrefsCtx>(
     () => ({
       prefs,
