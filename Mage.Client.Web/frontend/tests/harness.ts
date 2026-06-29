@@ -113,6 +113,8 @@ export type Scenario =
   | 'construct'
   | 'gameOver'
   | 'multiplayer'
+  | 'game3p'
+  | 'game4p'
   | 'arrows'
   | 'stack'
 
@@ -165,6 +167,65 @@ GAME_MULTI.players = [
   },
 ] as typeof SAMPLE.game.players
 
+// ---- worst-case dense multiplayer boards (3p / 4p, maxed-out card layouts) ----
+const CREATURE_POOL = [
+  'Serra Angel', 'Goblin Guide', 'Llanowar Elves', 'Sengir Vampire', 'Grizzly Bears',
+  'Shivan Dragon', 'Air Elemental', 'Hill Giant', 'Wall of Omens', 'Elvish Mystic',
+  'Phantom Monster', 'Bog Wraith', 'Craw Wurm', 'Prodigal Sorcerer',
+]
+function densePlayer(
+  pre: string, name: string, life: number, color: string, landName: string, active: boolean, me = false,
+) {
+  const lands = Array.from({ length: 8 }, (_, i) =>
+    card(`${pre}L${i}`, landName, ['Land'], { colors: color, tapped: i % 3 === 0 }),
+  )
+  const creatures = CREATURE_POOL.slice(0, 10).map((cn, i) =>
+    card(`${pre}C${i}`, cn, ['Creature'], {
+      colors: color, power: String(1 + (i % 9)), toughness: String(1 + ((i + 3) % 9)), tapped: i % 4 === 0,
+    }),
+  )
+  return {
+    id: pre, name, life, libraryCount: 47, handCount: me ? 7 : 6, graveyardCount: 6, exileCount: 3,
+    active, manaPool: me ? '{G}{G}{U}{R}' : undefined,
+    battlefield: [...lands, ...creatures],
+    graveyard: Array.from({ length: 3 }, (_, i) => card(`${pre}G${i}`, CREATURE_POOL[i], ['Creature'], { colors: color })),
+    exile: [],
+  }
+}
+function denseGame(seats: Array<[string, string, number, string, string]>) {
+  const g = JSON.parse(JSON.stringify(SAMPLE.game)) as typeof SAMPLE.game
+  g.turn = 14
+  g.players = seats.map(([pre, name, life, color, land], i) =>
+    densePlayer(pre, name, life, color, land, i === 0, pre === 'me'),
+  ) as typeof SAMPLE.game.players
+  // a busy stack and full combat: the viewer's creatures swing at everyone
+  g.stack = [
+    card('xs1', 'Exalted Sunborn', ['Creature'], { manaCost: '{3}{W}{W}', colors: 'W' }),
+    card('xs2', 'Lightning Bolt', ['Instant'], { manaCost: '{R}', colors: 'R' }),
+    card('xs3', 'Counterspell', ['Instant'], { manaCost: '{U}{U}', colors: 'U' }),
+  ] as typeof SAMPLE.game.stack
+  g.step = 'Declare Attackers'
+  const me = g.players[0]
+  const others = g.players.slice(1)
+  g.combat = me.battlefield
+    .filter((c) => c.types?.includes('Creature'))
+    .slice(0, 6)
+    .map((c, i) => ({ attackers: [c.id], blockers: [], defender: others[i % others.length].name, blocked: false })) as unknown[]
+  return g
+}
+// viewer + 2 opponents, and viewer + 3 opponents, all with maxed boards
+const GAME_3P_MAX = denseGame([
+  ['me', 'You', 20, 'G', 'Forest'],
+  ['p2', 'Chandra', 13, 'R', 'Mountain'],
+  ['p3', 'Teferi', 31, 'U', 'Island'],
+])
+const GAME_4P_MAX = denseGame([
+  ['me', 'You', 20, 'G', 'Forest'],
+  ['p2', 'Chandra', 13, 'R', 'Mountain'],
+  ['p3', 'Teferi', 31, 'U', 'Island'],
+  ['p4', 'Vraska', 8, 'B', 'Swamp'],
+])
+
 const GAME_STACK = JSON.parse(JSON.stringify(SAMPLE.game)) as typeof SAMPLE.game
 GAME_STACK.stack = [
   card('st1', 'Lightning Bolt', ['Instant'], { manaCost: '{R}', colors: 'R' }),
@@ -206,7 +267,12 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
               : 'select'
   const second = scenario === 'ptUpdate' ? GAME_BUFFED : null
   const gameState =
-    scenario === 'multiplayer' ? GAME_MULTI : scenario === 'arrows' ? GAME_ARROWS : scenario === 'stack' ? GAME_STACK : SAMPLE.game
+    scenario === 'multiplayer' ? GAME_MULTI
+    : scenario === 'game3p' ? GAME_3P_MAX
+    : scenario === 'game4p' ? GAME_4P_MAX
+    : scenario === 'arrows' ? GAME_ARROWS
+    : scenario === 'stack' ? GAME_STACK
+    : SAMPLE.game
   const isDraft = scenario === 'draft'
   const isConstruct = scenario === 'construct'
   // a small drafted pool for the construct screen

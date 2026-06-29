@@ -646,7 +646,9 @@ function seatPlayers(players: GamePlayer[], me?: string | null): { seats: Seat[]
   // when spectating, keep natural seat order; otherwise pull the viewer to the front
   const ordered = spectating ? players : [players[viewerIdx], ...players.filter((_, i) => i !== viewerIdx)]
   const n = ordered.length
-  const radius = Math.max(3.3, 2.6 + n * 0.52)
+  // push seats further apart as the table fills so a busy multiplayer board has
+  // breathing room (an 8.8-wide playmat needs the seats well separated)
+  const radius = Math.max(3.4, 1.9 + n * 1.05)
   const seats = ordered.map((player, i) => {
     const theta = Math.PI / 2 + (i * 2 * Math.PI) / n // front seat at +z
     return {
