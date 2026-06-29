@@ -91,6 +91,10 @@ export interface GameCard {
   types: string[]
   tapped: boolean
   damage: number
+  // Present only for stack abilities: the source card that generated the ability.
+  sourceName?: string | null
+  sourceSet?: string | null
+  sourceNum?: string | null
 }
 
 export interface GamePlayer {
