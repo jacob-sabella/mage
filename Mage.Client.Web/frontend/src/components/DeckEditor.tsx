@@ -739,6 +739,9 @@ function CardTile({
   onHover: (c: PreviewCard | null) => void
 }) {
   const img = `/api/cardimg?set=${encodeURIComponent(card.set ?? '')}&num=${encodeURIComponent((card as { num?: string }).num ?? '')}&name=${encodeURIComponent(card.name)}`
+  // touch: long-press previews (no hover on touch); a quick tap still adds
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressed = useRef(false)
   return (
     <div
       className={`card-tile${count > 0 ? ' in-deck' : ''}`}
@@ -747,9 +750,27 @@ function CardTile({
     >
       <button
         className="card-tile-art"
+        onPointerDown={(e) => {
+          if (e.pointerType !== 'touch') return
+          longPressed.current = false
+          pressTimer.current = setTimeout(() => {
+            longPressed.current = true
+            onHover(card)
+          }, 400)
+        }}
+        onPointerUp={() => {
+          if (pressTimer.current) clearTimeout(pressTimer.current)
+        }}
         aria-label={`Add ${card.name}`}
         title={`Add ${card.name} (shift-click for a playset of 4)`}
-        onClick={(e) => onAdd(card, e.shiftKey)}
+        onClick={(e) => {
+          if (pressTimer.current) clearTimeout(pressTimer.current)
+          if (longPressed.current) {
+            longPressed.current = false // long-press previewed — don't also add
+            return
+          }
+          onAdd(card, e.shiftKey)
+        }}
       >
         <img src={img} alt={card.name} loading="lazy" onError={(e) => (e.currentTarget.style.opacity = '0')} />
         <span className="card-tile-fallback">{card.name}</span>
