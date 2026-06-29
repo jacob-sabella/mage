@@ -384,6 +384,26 @@ input::placeholder { color: var(--text-dim); }
 }
 .btn:hover { background: var(--bg-hover); }
 .btn:disabled { opacity: 0.6; cursor: default; }
+
+/* ----- keyboard focus: a clearly visible ring for keyboard users only -----
+   (focus-visible so it never shows on plain mouse clicks). Applies to every
+   interactive control: buttons, links, inputs, selects, and anything the app
+   makes tabbable. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.btn:focus-visible,
+.nav-tab:focus-visible,
+.theme-swatch:focus-visible,
+.server-chip:focus-visible,
+.play-chip:focus-visible,
+.view-fab:focus-visible,
+.help-fab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 28%, transparent);
+}
 .btn.block { width: 100%; margin-top: 6px; }
 .btn.primary {
   background: var(--accent);
@@ -721,7 +741,7 @@ input::placeholder { color: var(--text-dim); }
 }
 .deck-entry-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .deck-entry-actions { display: flex; gap: 4px; }
-.deck-mini-btn { padding: 2px 10px; font-weight: 700; }
+.deck-mini-btn { padding: 2px 10px; font-weight: 700; min-width: 30px; min-height: 28px; }
 .deck-list-foot { border-top: 1px solid var(--stroke); padding-top: 12px; }
 .deck-save-status { margin: 8px 0 0; font-size: 12px; word-break: break-all; }
 
@@ -1116,10 +1136,15 @@ input::placeholder { color: var(--text-dim); }
 /* ----- hover card preview (inline inside deck list, top of right panel) ----- */
 .card-preview {
   width: 100%;
-  /* Fixed height prevents layout shifts that cause flicker: when the preview
-     jumps from empty→full, deck entries below would shift and trigger
-     onMouseLeave/onMouseEnter loops. A stable container height avoids this. */
-  height: 280px;
+  /* In the deck list the preview and the entry list SHARE the leftover column
+     space (both flex). Crucially the empty placeholder and the filled preview
+     use the exact same flex box (see .card-preview-empty), so swapping
+     empty<->full on hover never changes height — otherwise the deck entries
+     below shift and trigger an onMouseLeave/onMouseEnter flicker loop. A
+     min-height keeps the card readable; the game board overrides to a fixed
+     size (it's position:fixed, not in a column). */
+  flex: 1 1 0;
+  min-height: 160px;
   display: flex;
   flex-direction: column;
   background: var(--bg-raised);
@@ -1127,11 +1152,12 @@ input::placeholder { color: var(--text-dim); }
   border-radius: var(--radius-sm);
   overflow: hidden;
   pointer-events: none;
-  flex-shrink: 0;
 }
 .card-preview-empty {
-  flex: 1;
-  display: flex; align-items: center; justify-content: center;
+  /* Same fixed height as the filled preview (inherited from .card-preview):
+     must NOT flex-grow, or the empty<->filled swap on hover changes height and
+     shifts the deck entries below — an onMouseEnter/Leave flicker loop. */
+  align-items: center; justify-content: center;
   font-size: 12px;
   border-style: dashed;
   border-color: var(--stroke);
@@ -1310,6 +1336,7 @@ input:focus {
 .board-wrap .card-preview {
   position: fixed; bottom: 20px; left: 20px; z-index: 1000;
   width: 260px; max-width: 260px;
+  flex: 0 0 auto; height: 320px; /* fixed size on the board (not in a flex column) */
   animation: card-preview-pop 0.18s ease both;
 }
 
@@ -1508,7 +1535,7 @@ html, body { overflow-x: hidden; }
   color: var(--accent-2); padding-bottom: 4px; margin-bottom: 4px; border-bottom: 1px solid var(--stroke);
 }
 
-.deck-results-bar { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 0 2px; }
+.deck-results-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; padding: 0 2px; }
 .results-sort { display: flex; align-items: center; gap: 6px; }
 .results-sort .filter-select { padding: 4px 8px; }
 
@@ -1665,9 +1692,21 @@ html, body { overflow-x: hidden; }
   .sample-hand { grid-template-columns: repeat(3, 1fr); }
   .img-stats { gap: 14px; }
 
-  /* comfortable tap targets */
-  .btn { min-height: 36px; }
-  .nav-tab { min-height: 40px; }
+  /* comfortable tap targets — every primary control is a full 44px on touch
+     (the standard finger-size floor, comfortably above the 40px minimum).
+     Inputs keep their native size; the label row is the real hit area. */
+  .btn { min-height: 44px; }
+  .nav-tab { min-height: 44px; }
+  .server-chip, .theme-swatch, .picker-item, .view-switch-btn, .opp-btn, .skip-btn { min-height: 44px; }
+  .opp-btn { min-width: 44px; width: auto; padding: 0 12px; }
+  .view-fab { width: 44px; height: 44px; }
+  .play-chip { min-height: 44px; }
+  .deck-mini-btn { min-height: 44px; min-width: 44px; }
+  /* The floating "?" help button surfaces KEYBOARD shortcuts — of little use on
+     touch, where it only floats over full-width list/table content and can
+     cover a control. Drop it on small screens (the overlay is still reachable
+     via the "?" key on devices that have one). */
+  .help-fab { display: none; }
 }
 
 @media (max-width: 480px) {
@@ -1768,7 +1807,7 @@ html, body { overflow-x: hidden; }
 /* crisp card-name caption on gallery tiles (readable even at small sizes) */
 .card-tile-caption {
   position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
-  padding: 12px 5px 3px; font-size: 10px; font-weight: 700; line-height: 1.1;
+  padding: 12px 5px 3px; font-size: 11px; font-weight: 700; line-height: 1.1;
   color: #fff; text-align: center;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   background: linear-gradient(to top, rgba(0, 0, 0, 0.88), rgba(0, 0, 0, 0.55) 55%, transparent);
@@ -1811,16 +1850,34 @@ html, body { overflow-x: hidden; }
   .pstat-counts { display: none; }
   /* control dock: tighter so it doesn't dominate / push the board off-screen */
   .control-dock { padding: 6px 8px; gap: 5px 6px; }
-  .skip-btn, .play-chip { padding: 5px 8px; font-size: 11px; }
+  /* keep the dock compact but never below the tap-target floor */
+  .skip-btn, .play-chip { padding: 6px 8px; font-size: 11px; min-height: 44px; }
   .skip-key { display: none; }
   .action-bar .hint, .control-dock .hint { display: none; }
   /* a touch more board so the camera button clears the dock */
   .board-wrap, .board3d { min-height: 52vh; }
-  .view-fab { width: 34px; height: 34px; font-size: 15px; }
+  .view-fab { width: 44px; height: 44px; font-size: 15px; }
 }
 
 /* game log: above the floating card badges, and collapsible */
 .board-wrap .game-log { z-index: 50; }
+
+/* On narrow screens the control dock is sticky and grows tall as its buttons
+   wrap, rising into the board's bottom-right where the floating log lives — so
+   the log would cover the Pass/play controls. Anchor the log to the board's
+   top-right (clear of the bottom dock and the top-left camera menu), and move
+   the stack/combat overlay to the top-left under the camera button so the two
+   floating panels don't collide either (usability rules 2 + 7). */
+@media (max-width: 760px) {
+  .board-wrap .game-log {
+    top: 10px; right: 8px; left: auto; bottom: auto;
+    width: min(248px, 60vw); max-height: 26vh;
+  }
+  .board-wrap .overlay-tr {
+    top: 64px; left: 10px; right: auto;
+    max-width: min(240px, calc(100vw - 20px));
+  }
+}
 .game-log-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; background: transparent; border: 0; cursor: pointer; color: inherit; padding: 0; }
 .game-log-toggle { font-size: 11px; color: var(--text-dim); }
 .game-log.collapsed .game-log-body { display: none; }
