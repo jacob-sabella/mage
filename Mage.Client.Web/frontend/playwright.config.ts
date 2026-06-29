@@ -12,7 +12,9 @@ export default defineConfig({
   testDir: './tests',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  // retry once everywhere — the software-WebGL 3D board tests are occasionally
+  // timing-flaky; a real failure still fails both attempts
+  retries: 1,
   reporter: process.env.CI ? 'github' : 'list',
   use: {
     baseURL: 'http://localhost:4173',

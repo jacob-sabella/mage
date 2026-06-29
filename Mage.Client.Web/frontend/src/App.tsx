@@ -25,7 +25,7 @@ const SceneBackground = lazy(() =>
 type View = 'play' | 'decks' | 'settings'
 
 function SettingsView() {
-  const { prefs, setPref } = usePrefs()
+  const { prefs, setPref, reset } = usePrefs()
   return (
     <section className="view settings-view">
       <div className="panel settings-card">
@@ -151,6 +151,16 @@ function SettingsView() {
           />
         </label>
         <p className="muted setting-hint">Profile changes apply on your next connect.</p>
+        <div className="settings-reset">
+          <button
+            className="btn ghost"
+            onClick={() => {
+              if (window.confirm('Reset all preferences to defaults?')) reset()
+            }}
+          >
+            Reset preferences
+          </button>
+        </div>
       </div>
       <ImageCacheCard />
     </section>

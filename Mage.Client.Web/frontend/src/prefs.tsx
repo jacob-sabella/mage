@@ -127,9 +127,10 @@ function load(): Prefs {
 interface PrefsCtx {
   prefs: Prefs
   setPref: <K extends keyof Prefs>(key: K, value: Prefs[K]) => void
+  reset: () => void
 }
 
-const Ctx = createContext<PrefsCtx>({ prefs: DEFAULTS, setPref: () => {} })
+const Ctx = createContext<PrefsCtx>({ prefs: DEFAULTS, setPref: () => {}, reset: () => {} })
 
 export function PrefsProvider({ children }: { children: ReactNode }) {
   const [prefs, setPrefs] = useState<Prefs>(load)
@@ -167,6 +168,10 @@ export function PrefsProvider({ children }: { children: ReactNode }) {
           localStorage.setItem(KEY, JSON.stringify(next))
           return next
         }),
+      reset: () => {
+        localStorage.setItem(KEY, JSON.stringify(DEFAULTS))
+        setPrefs(DEFAULTS)
+      },
     }),
     [prefs],
   )
