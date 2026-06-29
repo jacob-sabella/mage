@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Board3D } from './Board3D'
 import type { RespondKind } from '../api'
 import { plain } from '../text'
@@ -34,6 +34,12 @@ const SKIP_BUTTONS = [
 export function GameTable({ game, prompt, interactive, log = [], result, onRespond, onLeave, onPlayAgain }: Props) {
   const [preview, setPreview] = useState<CardType | null>(null)
   const [pressedCard, setPressedCard] = useState<CardType | null>(null)
+  // resolve combat card ids → names (defenders may be a player name, left as-is)
+  const cardName = useMemo(() => {
+    const m = new Map<string, string>()
+    game?.players.forEach((p) => p.battlefield.forEach((c) => m.set(c.id, c.name)))
+    return (id: string) => m.get(id) ?? id
+  }, [game])
   const [actionSheetCard, setActionSheetCard] = useState<CardType | null>(null)
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -242,11 +248,11 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
                 <div className="stack-title">Combat</div>
                 {game.combat.map((cg, i) => (
                   <div className="combat-group" key={i}>
-                    <span className="combat-attackers">{cg.attackers.join(', ') || '—'}</span>
+                    <span className="combat-attackers">{cg.attackers.map(cardName).join(', ') || '—'}</span>
                     <span className="combat-arrow">→</span>
-                    <span className="combat-defender">{cg.defender}</span>
+                    <span className="combat-defender">{cg.defender ? cardName(cg.defender) : '—'}</span>
                     {cg.blockers.length > 0 ? (
-                      <span className="combat-blockers muted">blocked by {cg.blockers.join(', ')}</span>
+                      <span className="combat-blockers muted">blocked by {cg.blockers.map(cardName).join(', ')}</span>
                     ) : (
                       <span className="combat-unblocked">unblocked</span>
                     )}
