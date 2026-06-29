@@ -16,12 +16,16 @@ test('in-game chat drops below the board on mobile', async ({ page }) => {
   expect(dir).toBe('column')
 })
 
-test('focus-board toggle hides the life strips for a full-screen board', async ({ page }) => {
+test('focus-board toggle enters the immersive HUD (chrome hidden, life as a HUD)', async ({ page }) => {
   await gotoScreen(page, 'game')
   await expect(page.locator('.player-strip')).toBeVisible()
   await page.locator('.focus-toggle').click()
   await expect(page.locator('html')).toHaveClass(/board-focus/)
-  await expect(page.locator('.player-strip')).toBeHidden()
+  // immersive: the website chrome is hidden and the board fills the screen…
+  await expect(page.locator('.app-nav')).toBeHidden()
+  // …but player life stays on screen as a compact HUD (just without the counts)
+  await expect(page.locator('.player-strip')).toBeVisible()
+  await expect(page.locator('.pstat-counts').first()).toBeHidden()
 })
 
 test('chat starts collapsed on mobile to free space for the board', async ({ page }) => {

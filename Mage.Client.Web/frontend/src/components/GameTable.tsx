@@ -43,14 +43,15 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
   const [actionSheetCard, setActionSheetCard] = useState<CardType | null>(null)
   // the floating Stack/Combat panels crowd the board on phones — collapse them by
   // default there (tap the header to expand); leave them open on roomy screens
-  const compact = typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches
+  const compact =
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 760px), (max-height: 540px)').matches
   const [stackOpen, setStackOpen] = useState(!compact)
   const [combatOpen, setCombatOpen] = useState(!compact)
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // mobile "focus board" mode: hide chat + strips for a full-screen table
-  // tiny screens can't fit the strips + chat + board, so start focused (board
-  // fills the screen, strips/chat hidden) — still toggleable with the ⛶ button
+  // mobile immersive mode: a real landscape game HUD — the board fills the
+  // screen, the app chrome is hidden, and player info / controls become compact
+  // on-board panels instead of a scrolling page. Toggled with the ⛶ button.
   const [boardFocus, setBoardFocus] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(max-width: 360px)').matches,
   )
@@ -59,6 +60,31 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
     root.classList.toggle('board-focus', boardFocus)
     return () => root.classList.remove('board-focus')
   }, [boardFocus])
+
+  // entering immersive: go true fullscreen + ask for landscape (best-effort; iOS
+  // ignores orientation lock, the CSS still works). Must run in the click gesture.
+  const toggleImmersive = useCallback(() => {
+    const next = !boardFocus
+    type OrientationLock = ScreenOrientation & { lock?: (o: string) => Promise<void>; unlock?: () => void }
+    const orient = (typeof screen !== 'undefined' ? screen.orientation : undefined) as OrientationLock | undefined
+    if (next) {
+      document.documentElement.requestFullscreen?.().catch(() => {})
+      orient?.lock?.('landscape').catch(() => {})
+    } else {
+      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {})
+      orient?.unlock?.()
+    }
+    setBoardFocus(next)
+  }, [boardFocus])
+
+  // if the user drops out of fullscreen via a system gesture, leave immersive too
+  useEffect(() => {
+    const onFs = () => {
+      if (!document.fullscreenElement) setBoardFocus(false)
+    }
+    document.addEventListener('fullscreenchange', onFs)
+    return () => document.removeEventListener('fullscreenchange', onFs)
+  }, [])
 
   const handleLongPress = useCallback((card: CardType) => {
     if (navigator.vibrate) navigator.vibrate(30)
@@ -199,9 +225,9 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
 
       <button
         className="focus-toggle"
-        onClick={() => setBoardFocus((f) => !f)}
-        title={boardFocus ? 'Exit focus' : 'Focus board'}
-        aria-label={boardFocus ? 'Exit focus board' : 'Focus board'}
+        onClick={toggleImmersive}
+        title={boardFocus ? 'Exit fullscreen' : 'Fullscreen board'}
+        aria-label={boardFocus ? 'Exit fullscreen board' : 'Fullscreen board'}
       >
         {boardFocus ? '✕' : '⛶'}
       </button>

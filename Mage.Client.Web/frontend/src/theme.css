@@ -1758,20 +1758,70 @@ html, body { overflow-x: hidden; }
   .h1 { font-size: 22px; }
 }
 
-/* mobile "focus board": full-screen table (hide chat + life strips) */
+/* mobile immersive mode: a real landscape game HUD. The board fills the screen,
+   the website chrome is hidden, and turn / player / control info float as compact
+   translucent panels on top of the table instead of a scrolling page. */
 .focus-toggle { display: none; }
-@media (max-width: 760px) {
+/* phones in portrait (narrow) OR landscape (short) — covers both orientations */
+@media (max-width: 760px), (max-height: 540px) {
   .focus-toggle {
     display: flex; align-items: center; justify-content: center;
-    position: fixed; right: 12px; bottom: 54px; z-index: 31;
+    position: fixed; right: 12px; bottom: 54px; z-index: 33;
     width: 38px; height: 38px; border-radius: 50%; cursor: pointer;
     color: var(--text); font-size: 16px;
     background: rgba(14, 16, 22, 0.72); backdrop-filter: blur(6px);
     border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--stroke));
     box-shadow: 0 0 calc(12px * var(--glow-strength, 1)) color-mix(in srgb, var(--accent) 50%, transparent);
   }
-  .board-focus .chat-col, .board-focus .player-strip { display: none; }
-  .board-focus .lobby-main { min-height: 74vh; }
+
+  /* hide the website chrome */
+  .board-focus .topbar,
+  .board-focus .app-nav,
+  .board-focus .chat-col,
+  .board-focus .chat-reopen { display: none; }
+  .board-focus #app { padding: 0; margin: 0; overflow: hidden; }
+
+  /* the board owns the entire viewport */
+  .board-focus .lobby-body,
+  .board-focus .lobby-main,
+  .board-focus .game-table { height: 100dvh; min-height: 100dvh; gap: 0; }
+  .board-focus .board-wrap,
+  .board-focus .board3d { position: fixed; inset: 0; height: 100dvh; min-height: 0; z-index: 1; }
+
+  /* turn / phase → slim translucent top bar */
+  .board-focus .game-toolbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 22;
+    margin: 0; padding: 4px 8px; gap: 6px; font-size: 12px;
+    flex-wrap: nowrap; overflow-x: auto; white-space: nowrap;
+    background: linear-gradient(rgba(8, 10, 16, 0.82), rgba(8, 10, 16, 0));
+    backdrop-filter: blur(4px);
+  }
+  .board-focus .game-toolbar .h1 { font-size: 15px; }
+
+  /* player life → compact HUD chips under the toolbar (no hand/lib/grave clutter) */
+  .board-focus .player-strip {
+    position: fixed; top: 36px; left: 6px; right: 54px; z-index: 22;
+    display: flex; flex-wrap: nowrap; gap: 6px; overflow-x: auto;
+    background: transparent; padding: 0; margin: 0;
+  }
+  .board-focus .pstat { flex: 0 0 auto; min-width: 0; padding: 3px 8px; }
+  .board-focus .pstat-counts { display: none; }
+
+  /* controls → translucent dock pinned to the bottom */
+  .board-focus .control-dock {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 22; margin: 0;
+    background: linear-gradient(rgba(8, 10, 16, 0), rgba(8, 10, 16, 0.88));
+    backdrop-filter: blur(4px);
+  }
+  .board-focus .player-strip { right: 6px; }
+
+  /* drop the board's own overlays below the top HUD so they don't collide with
+     the turn bar / player chips, and move the exit button clear of the dock */
+  .board-focus .view-menu { top: 70px; left: 8px; }
+  .board-focus .zoom-bar { top: 70px; left: 56px; }
+  .board-focus .board-wrap .game-log { top: 70px; right: 8px; bottom: auto; }
+  .board-focus .board-wrap .overlay-tr { top: 116px; left: 8px; right: auto; }
+  .board-focus .focus-toggle { top: 50%; bottom: auto; right: 6px; transform: translateY(-50%); }
 }
 
 /* deck 4-copy-limit warning */
@@ -1789,7 +1839,7 @@ html, body { overflow-x: hidden; }
   /* shorter board so the action dock + playable chips stay on-screen; the board
      is pan/pinch-zoomable so its size matters less */
   .board-wrap, .board3d { min-height: 46vh; }
-  .board-focus .board-wrap, .board-focus .board3d { min-height: 74vh; }
+  /* (immersive board sizing handled in the .board-focus HUD block above) */
   /* pin the action dock to the bottom so its buttons are always reachable */
   .control-dock { position: sticky; bottom: 0; z-index: 20; }
   .deck-editor { flex: none; min-height: auto; }
