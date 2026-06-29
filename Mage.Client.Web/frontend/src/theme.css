@@ -1924,6 +1924,24 @@ html, body { overflow-x: hidden; }
 .game-log-toggle { font-size: 11px; color: var(--text-dim); }
 .game-log.collapsed .game-log-body { display: none; }
 
+/* collapsible Stack / Combat overlay panels — tap the header to expand/collapse
+   so on phones they sit as small chips instead of blanketing the board */
+.overlay-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; background: transparent; border: 0; padding: 0; cursor: pointer;
+  color: inherit; font: inherit;
+}
+.overlay-toggle { font-size: 11px; color: var(--text-dim); flex-shrink: 0; }
+.overlay-panel .overlay-body { margin-top: 6px; }
+.overlay-panel.collapsed { padding-top: 8px; padding-bottom: 8px; }
+
+@media (max-width: 760px) {
+  /* never let the floating panels own more than part of the board; scroll within */
+  .board-wrap .overlay-tr { max-height: 70vh; overflow-y: auto; }
+  .overlay-panel .overlay-body { max-height: 34vh; overflow-y: auto; }
+  .stack-item, .combat-group { font-size: 12px; }
+}
+
 /* ----- card action sheet (hold on touch / right-click on desktop) ----- */
 .card-action-backdrop {
   position: fixed; inset: 0; z-index: 9990;

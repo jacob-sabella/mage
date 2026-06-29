@@ -41,6 +41,11 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
     return (id: string) => m.get(id) ?? id
   }, [game])
   const [actionSheetCard, setActionSheetCard] = useState<CardType | null>(null)
+  // the floating Stack/Combat panels crowd the board on phones — collapse them by
+  // default there (tap the header to expand); leave them open on roomy screens
+  const compact = typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches
+  const [stackOpen, setStackOpen] = useState(!compact)
+  const [combatOpen, setCombatOpen] = useState(!compact)
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // mobile "focus board" mode: hide chat + strips for a full-screen table
@@ -226,41 +231,55 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
         {(game.stack.length > 0 || game.combat.length > 0) && (
           <div className="overlay-tr board-overlays">
             {game.stack.length > 0 && (
-              <div className="stack-panel panel">
-                <div className="stack-title">Stack ({game.stack.length})</div>
-                {/* top of the stack resolves first (LIFO) */}
-                {[...game.stack].reverse().map((c, i) => (
-                  <button
-                    type="button"
-                    className={`stack-item${i === 0 ? ' next' : ''}`}
-                    key={c.id}
-                    onMouseEnter={() => handleHoverCard(c)}
-                    onMouseLeave={() => handleHoverCard(null)}
-                    onFocus={() => handleHoverCard(c)}
-                    onBlur={() => handleHoverCard(null)}
-                    onClick={() => handleHoverCard(c)}
-                  >
-                    {i === 0 && <span className="stack-next-tag">next</span>}
-                    <span className="stack-item-name">{c.name}</span>
-                  </button>
-                ))}
+              <div className={`stack-panel panel overlay-panel${stackOpen ? '' : ' collapsed'}`}>
+                <button className="overlay-head" onClick={() => setStackOpen((o) => !o)} title={stackOpen ? 'Collapse' : 'Expand'}>
+                  <span className="stack-title">Stack ({game.stack.length})</span>
+                  <span className="overlay-toggle" aria-hidden>{stackOpen ? '▾' : '▸'}</span>
+                </button>
+                {stackOpen && (
+                  <div className="overlay-body">
+                    {/* top of the stack resolves first (LIFO) */}
+                    {[...game.stack].reverse().map((c, i) => (
+                      <button
+                        type="button"
+                        className={`stack-item${i === 0 ? ' next' : ''}`}
+                        key={c.id}
+                        onMouseEnter={() => handleHoverCard(c)}
+                        onMouseLeave={() => handleHoverCard(null)}
+                        onFocus={() => handleHoverCard(c)}
+                        onBlur={() => handleHoverCard(null)}
+                        onClick={() => handleHoverCard(c)}
+                      >
+                        {i === 0 && <span className="stack-next-tag">next</span>}
+                        <span className="stack-item-name">{c.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             {game.combat.length > 0 && (
-              <div className="combat-panel panel">
-                <div className="stack-title">Combat</div>
-                {game.combat.map((cg, i) => (
-                  <div className="combat-group" key={i}>
-                    <span className="combat-attackers">{cg.attackers.map(cardName).join(', ') || '—'}</span>
-                    <span className="combat-arrow">→</span>
-                    <span className="combat-defender">{cg.defender ? cardName(cg.defender) : '—'}</span>
-                    {cg.blockers.length > 0 ? (
-                      <span className="combat-blockers muted">blocked by {cg.blockers.map(cardName).join(', ')}</span>
-                    ) : (
-                      <span className="combat-unblocked">unblocked</span>
-                    )}
+              <div className={`combat-panel panel overlay-panel${combatOpen ? '' : ' collapsed'}`}>
+                <button className="overlay-head" onClick={() => setCombatOpen((o) => !o)} title={combatOpen ? 'Collapse' : 'Expand'}>
+                  <span className="stack-title">Combat ({game.combat.length})</span>
+                  <span className="overlay-toggle" aria-hidden>{combatOpen ? '▾' : '▸'}</span>
+                </button>
+                {combatOpen && (
+                  <div className="overlay-body">
+                    {game.combat.map((cg, i) => (
+                      <div className="combat-group" key={i}>
+                        <span className="combat-attackers">{cg.attackers.map(cardName).join(', ') || '—'}</span>
+                        <span className="combat-arrow">→</span>
+                        <span className="combat-defender">{cg.defender ? cardName(cg.defender) : '—'}</span>
+                        {cg.blockers.length > 0 ? (
+                          <span className="combat-blockers muted">blocked by {cg.blockers.map(cardName).join(', ')}</span>
+                        ) : (
+                          <span className="combat-unblocked">unblocked</span>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
             )}
           </div>
