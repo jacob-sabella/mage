@@ -17,6 +17,9 @@ const COLOR: Record<string, string> = {
   YELLOW: '#d9c45a',
 }
 
+// one-tap friendly phrases — common in card-game clients for fast, polite banter
+const QUICK_CHAT = ['Good game!', 'Well played', 'Hello!', 'Thinking…', 'Oops!', 'Nice!']
+
 export function ChatPanel({ lines, log = [], onSend }: Props) {
   const [draft, setDraft] = useState('')
   const [tab, setTab] = useState<'chat' | 'log'>('chat')
@@ -104,6 +107,13 @@ export function ChatPanel({ lines, log = [], onSend }: Props) {
                   {plain(l.text)}
                 </span>
               </div>
+            ))}
+          </div>
+          <div className="quick-chat" role="group" aria-label="Quick messages">
+            {QUICK_CHAT.map((q) => (
+              <button key={q} className="quick-chat-btn" onClick={() => onSend(q)} title={`Send "${q}"`}>
+                {q}
+              </button>
             ))}
           </div>
           <div className="chat-input">
