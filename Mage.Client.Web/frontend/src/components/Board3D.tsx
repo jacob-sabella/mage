@@ -1119,7 +1119,7 @@ export function Board3D({
   )
   // Small screens default to free mode: a flat top-down board you pan with one
   // finger and pinch to zoom — a large zoomable/pannable canvas (rotate locked).
-  const [mode, setMode] = useState<ViewMode>(() => (isMobile ? 'free' : 'auto'))
+  const [mode, setMode] = useState<ViewMode>(() => (isMobile ? 'free' : prefs.defaultCamera))
   const TOP_DOWN: ViewTarget = useMemo(
     () => ({ pos: new THREE.Vector3(0, 15 + seats.length * 0.8, 2.2), look: new THREE.Vector3(0, 0, 0) }),
     [seats.length],

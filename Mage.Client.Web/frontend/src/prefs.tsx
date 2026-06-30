@@ -112,9 +112,10 @@ export interface Prefs {
   reduceMotion: boolean // lite mode: drop the animated 3D backdrop + UI motion
   sound: boolean // play short sound cues for game events (your turn, game over)
   handSize: 'small' | 'medium' | 'large' // size of the fixed hand fan at the bottom
+  defaultCamera: 'auto' | '3d' | '2d' // desktop starting camera mode for the board
 }
 
-const DEFAULTS: Prefs = { cardImages: true, avatarId: 0, flagName: '', theme: 'synthwave', manaIcons: true, panelOpacity: 0.72, reduceMotion: false, sound: false, handSize: 'medium' }
+const DEFAULTS: Prefs = { cardImages: true, avatarId: 0, flagName: '', theme: 'synthwave', manaIcons: true, panelOpacity: 0.72, reduceMotion: false, sound: false, handSize: 'medium', defaultCamera: 'auto' }
 const KEY = 'mage.prefs'
 
 function load(): Prefs {

@@ -103,6 +103,24 @@ function SettingsView() {
             ))}
           </div>
         </div>
+        <div className="setting-row">
+          <span>
+            <strong>Default camera</strong>
+            <span className="muted setting-hint">Starting board view on desktop — Auto follows the action, 3D/2D stay put</span>
+          </span>
+          <div className="seg-control" role="group" aria-label="Default camera">
+            {(['auto', '3d', '2d'] as const).map((c) => (
+              <button
+                key={c}
+                className={`seg-btn${prefs.defaultCamera === c ? ' active' : ''}`}
+                aria-pressed={prefs.defaultCamera === c}
+                onClick={() => setPref('defaultCamera', c)}
+              >
+                {c === 'auto' ? 'Auto' : c.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
         <label className="setting-row">
           <span>
             <strong>Reduce motion</strong>

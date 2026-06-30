@@ -289,6 +289,17 @@ test.describe('Game board (3D)', () => {
     expect(wLarge).toBeGreaterThan(wMed + 10)
   })
 
+  test('default camera preference sets the starting board view', async ({ page }) => {
+    // seed the pref before the app loads so the board mounts in 2D
+    await page.addInitScript(() => localStorage.setItem('mage.prefs', JSON.stringify({ defaultCamera: '2d' })))
+    await gotoScreen(page, 'game')
+    await expect(page.locator('.board3d canvas')).toBeVisible()
+    await page.waitForFunction(() => !!(window as unknown as { __board3d?: unknown }).__board3d, null, { timeout: 15000 })
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { __board3d: { mode(): string } }).__board3d.mode()))
+      .toBe('2d')
+  })
+
   test('clicking a player (no targeting) focuses the camera on their board', async ({ page }) => {
     // mulligan = an "ask" prompt, so the player strip isn't in targeting mode
     await gotoScreen(page, 'mulligan')
