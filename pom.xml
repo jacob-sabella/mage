@@ -311,14 +311,14 @@
             <!-- junit 4 tests -->
             <groupId>org.junit.vintage</groupId>
             <artifactId>junit-vintage-engine</artifactId>
-            <version>5.11.4</version>
+            <version>5.14.4</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <!-- junit 5 tests -->
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
-            <version>5.11.4</version>
+            <version>5.14.4</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -353,7 +353,7 @@
                 <!-- junit compatible dependencies (xmage uses junit 5 platform for all v4 and v5 tests) -->
                 <groupId>org.junit</groupId>
                 <artifactId>junit-bom</artifactId>
-                <version>5.11.4</version>
+                <version>5.14.4</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -367,7 +367,7 @@
                 <!-- extended lib from google (collections, io, etc) -->
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
-                <version>33.4.8-jre</version>
+                <version>33.6.0-jre</version>
             </dependency>
             <dependency>
                 <!-- escape/unescape html in texts -->
@@ -391,7 +391,7 @@
                 <!-- scraping lib to download and parse html/symbols/images/svg -->
                 <groupId>org.jsoup</groupId>
                 <artifactId>jsoup</artifactId>
-                <version>1.21.2</version>
+                <version>1.22.2</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
