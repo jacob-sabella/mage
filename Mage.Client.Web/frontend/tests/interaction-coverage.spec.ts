@@ -443,7 +443,7 @@ suite('Game board · modalities', () => {
 
   test('hotkey: "Y"/"N" answer an ask prompt (mulligan)', async ({ page }) => {
     await gotoScreen(page, 'mulligan')
-    await expect(page.getByRole('button', { name: 'Yes' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Mulligan' })).toBeVisible()
     let answered: string | null = null
     await page.route('**/api/game/respond', (route) => {
       const b = JSON.parse(route.request().postData() || '{}')

@@ -843,16 +843,21 @@ function ActionBar({ prompt, onRespond, hideChoice }: { prompt: Prompt | null; o
       <span className="action-message">{plain(prompt.message) || promptFallback(prompt.kind)}</span>
       <span className="spacer" />
 
-      {prompt.kind === 'ask' && (
-        <>
-          <button className="btn primary" onClick={() => onRespond('boolean', 'true')}>
-            Yes <span className="skip-key">Y</span>
-          </button>
-          <button className="btn" onClick={() => onRespond('boolean', 'false')}>
-            No <span className="skip-key">N</span>
-          </button>
-        </>
-      )}
+      {prompt.kind === 'ask' &&
+        (() => {
+          // a mulligan ask reads far clearer as Mulligan / Keep than Yes / No
+          const mull = /mulligan/i.test(prompt.message ?? '')
+          return (
+            <>
+              <button className="btn primary" onClick={() => onRespond('boolean', 'true')}>
+                {mull ? 'Mulligan' : 'Yes'} <span className="skip-key">Y</span>
+              </button>
+              <button className="btn" onClick={() => onRespond('boolean', 'false')}>
+                {mull ? 'Keep' : 'No'} <span className="skip-key">N</span>
+              </button>
+            </>
+          )
+        })()}
 
       {prompt.kind === 'select' && (
         <>
