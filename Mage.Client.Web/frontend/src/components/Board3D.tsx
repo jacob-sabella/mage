@@ -1140,7 +1140,7 @@ export function Board3D({
     }
   }, [focusSeat, seats])
 
-  const [zoom, setZoom] = useState(ZOOM_DEFAULT)
+  const [zoom, setZoom] = useState(() => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, prefs.boardZoom || ZOOM_DEFAULT)))
 
   const rawTarget = mode === '2d' ? TOP_DOWN : views[view].target
   // free mode uses OrbitControls scroll-wheel zoom; for 3d/2d we scale the camera distance

@@ -289,6 +289,16 @@ test.describe('Game board (3D)', () => {
     expect(wLarge).toBeGreaterThan(wMed + 10)
   })
 
+  test('board zoom preference sets the starting zoom', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('mage.prefs', JSON.stringify({ boardZoom: 1.5 })))
+    await gotoScreen(page, 'game')
+    await expect(page.locator('.board3d canvas')).toBeVisible()
+    await page.waitForFunction(() => !!(window as unknown as { __board3d?: unknown }).__board3d, null, { timeout: 15000 })
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { __board3d: { zoom(): number } }).__board3d.zoom()))
+      .toBe(1.5)
+  })
+
   test('default camera preference sets the starting board view', async ({ page }) => {
     // seed the pref before the app loads so the board mounts in 2D
     await page.addInitScript(() => localStorage.setItem('mage.prefs', JSON.stringify({ defaultCamera: '2d' })))

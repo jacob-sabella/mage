@@ -123,6 +123,20 @@ function SettingsView() {
         </div>
         <label className="setting-row">
           <span>
+            <strong>Board zoom</strong>
+            <span className="muted setting-hint">Starting zoom for the board ({Math.round(prefs.boardZoom * 100)}%)</span>
+          </span>
+          <input
+            type="range"
+            min={0.35}
+            max={3}
+            step={0.05}
+            value={prefs.boardZoom}
+            onChange={(e) => setPref('boardZoom', Number(e.target.value))}
+          />
+        </label>
+        <label className="setting-row">
+          <span>
             <strong>Reduce motion</strong>
             <span className="muted setting-hint">Lite mode — drop the animated 3D background (saves battery)</span>
           </span>
