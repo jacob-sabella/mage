@@ -158,11 +158,10 @@ suite('Gesture · tap a card on a dense board · touch', () => {
       if (b.kind === 'uuid') played = b.value
       return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
     })
-    // even on a packed board (~18 permanents/seat, 4 seats) the playable hand
-    // cards stay tappable on the canvas
-    const card = await firstVisibleCardPos(page, ['h1', 'h3'])
-    await page.touchscreen.tap(card.x, card.y)
-    await expect.poll(() => played, { timeout: 8000 }).toBe(card.id)
+    // the hand is now a fixed DOM fan at the bottom; a playable card in it stays
+    // tappable even on a packed 4-player board (h1 Lightning Bolt / h3 Mulldrifter)
+    await page.locator('.hand-card.playable').first().tap()
+    await expect.poll(() => played, { timeout: 8000 }).toBe('h1')
   })
 })
 

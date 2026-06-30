@@ -78,7 +78,6 @@ export function LoginView({ onConnected }: Props) {
       <div className="login-stack">
         <div className="login-hero">
           <div className="login-hero-title">XMAGE</div>
-          <div className="login-hero-tag muted">Magic: the Gathering, reimagined for the web</div>
         </div>
         <div className="panel login-card">
           <h1 className="h1">Connect to a server</h1>

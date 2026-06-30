@@ -226,6 +226,27 @@ test.describe('Game board (3D)', () => {
     await expect(page.locator('.topbar')).toBeVisible()
   })
 
+  test('hand fan: your hand sits in a fixed bottom fan; a playable card plays', async ({ page }) => {
+    await gotoScreen(page, 'game')
+    await expect(page.locator('.board3d canvas')).toBeVisible()
+
+    const fan = page.locator('.hand-fan')
+    await expect(fan).toBeVisible()
+    // sample hand = Lightning Bolt, Mountain, Mulldrifter, Counterspell
+    await expect(fan.locator('.hand-card')).toHaveCount(4)
+    // only the castable ones (canPlay: h1 Bolt, h3 Mulldrifter) glow
+    await expect(fan.locator('.hand-card.playable')).toHaveCount(2)
+
+    let played: string | null = null
+    await page.route('**/api/game/respond', (route) => {
+      const b = JSON.parse(route.request().postData() || '{}')
+      if (b.kind === 'uuid') played = b.value
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
+    })
+    await fan.getByRole('button', { name: /Lightning Bolt/ }).click()
+    await expect.poll(() => played).toBe('h1')
+  })
+
   test('view menu offers Auto / 2D / 3D / free camera modes', async ({ page }) => {
     await gotoScreen(page, 'game')
     await page.locator('.view-fab').click()

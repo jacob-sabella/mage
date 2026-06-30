@@ -514,8 +514,8 @@ function roundedRectShape(w: number, h: number, r: number): THREE.Shape {
   return s
 }
 
-const MAT_W = 8.8
-const MAT_H = 4.7 // deep enough for three rows (creatures · others · lands)
+const MAT_W = 12.6
+const MAT_H = 6.6 // deep enough for three rows (creatures · others · lands)
 const MAT_Z = 0.35 // pushed slightly toward the player's back row
 // Everything that "sits on the table" (playmats + their cards, the centre rings,
 // the active-seat glow, the hand) is lifted by this much so the whole play layer
@@ -1125,9 +1125,8 @@ export function Board3D({
   // free mode uses OrbitControls scroll-wheel zoom; for 3d/2d we scale the camera distance
   const target = mode === 'free' ? rawTarget : applyZoom(rawTarget, zoom)
 
-  // the hand sits out front with room to spread, so give it a much wider cap than
-  // the battlefield rows — a full hand shouldn't compress into an unreadable pile
-  const hand = useMemo(() => row(game.myHand.map((c) => ({ card: c })), 0, 6.1, 1.55, 11), [game.myHand])
+  // the hand is no longer laid on the table — it's a fixed screen-space fan at the
+  // bottom of the screen (HandFan in GameTable), the way other MTG clients do it
   const stack = useMemo(() => row(game.stack.map((c) => ({ card: c })), 0, 0.6, 1.4), [game.stack])
 
   return (
@@ -1222,11 +1221,6 @@ export function Board3D({
             </Billboard>
           )
         })}
-
-        {/* my hand: laid flat in front of the viewer, slightly raised */}
-        {hand.map(({ card, pos }) => (
-          <Card3D key={card.id} card={card} position={[pos[0], TABLE_LIFT + 0.06, pos[2]]} showCost cardProps={cardProps} onHoverCard={onHoverCard} onOpenMenu={onOpenMenu} />
-        ))}
 
         {/* free cam → user orbits/pans; otherwise the camera is driven to the
             selected (2D top-down or 3D seat) viewpoint */}

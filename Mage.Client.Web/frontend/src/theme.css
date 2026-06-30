@@ -1421,6 +1421,51 @@ input:focus {
   background: transparent; border: none; box-shadow: none; padding: 0;
   flex: 1 1 auto; min-width: 0; overflow-x: auto; max-width: 46%;
 }
+
+/* ===== hand fan — fixed screen-space hand at the bottom of the board ===== */
+.hand-fan {
+  position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%);
+  display: flex; justify-content: center; align-items: flex-end;
+  max-width: 96%; z-index: 18; pointer-events: none;
+  padding-top: 60px; /* headroom so a hovered card can lift without clipping */
+}
+.hand-card {
+  pointer-events: auto;
+  position: relative; flex: 0 0 auto;
+  width: 104px; height: 145px; margin: 0 -22px; /* overlap into a fan */
+  padding: 0; border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--stroke));
+  border-radius: 9px; background: #11141b; cursor: pointer; overflow: hidden;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55);
+  transform-origin: center bottom;
+  transition: transform 0.13s ease, box-shadow 0.13s ease, margin 0.13s ease, border-color 0.13s ease;
+}
+.hand-card:first-child { margin-left: 0; }
+.hand-card:last-child { margin-right: 0; }
+.hand-card:hover,
+.hand-card:focus-visible {
+  transform: translateY(-30px) scale(1.16); z-index: 100;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.7);
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--stroke));
+  outline: none;
+}
+.hand-card.playable {
+  border-color: var(--accent-2, #4ec98a);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55), 0 0 14px color-mix(in srgb, var(--accent-2, #4ec98a) 55%, transparent);
+}
+.hand-card.targetable {
+  border-color: #3bd6ff;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55), 0 0 14px color-mix(in srgb, #3bd6ff 55%, transparent);
+}
+.hand-card-art { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hand-card-name {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 3px 5px; font-size: 11px; font-weight: 700; line-height: 1.15;
+  color: #f4f1e8; text-align: left;
+  background: linear-gradient(rgba(10, 12, 18, 0), rgba(10, 12, 18, 0.92));
+  white-space: normal; max-height: 38%; overflow: hidden;
+}
+/* in maximized mode the control dock floats over the board, so lift the fan clear */
+html.board-max .hand-fan { bottom: 88px; }
 /* a min flex-basis so a cramped action-bar wraps to its OWN full-width line
    (keeping Done/Pass visible) instead of shrinking + clipping the buttons */
 .control-dock .action-bar { background: transparent; border: none; box-shadow: none; padding: 0; flex: 1 1 340px; min-width: 300px; }

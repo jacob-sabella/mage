@@ -307,6 +307,12 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
           />
         )}
 
+        {/* your hand as a fixed screen-space fan at the bottom (like other MTG
+            clients) instead of laid flat on the 3D table */}
+        {game.myHand && game.myHand.length > 0 && (
+          <HandFan cards={game.myHand} cardProps={cardProps} onHoverCard={handleHoverCard} onOpenMenu={handleOpenMenu} />
+        )}
+
         {(game.stack.length > 0 || game.combat.length > 0) && (
           <div className="overlay-tr board-overlays">
             {game.stack.length > 0 && (
@@ -458,6 +464,71 @@ function ManaPool({ pool }: { pool: string }) {
         </span>
       ))}
     </span>
+  )
+}
+
+/** Your hand as a fixed, overlapping fan pinned to the bottom of the screen —
+ *  the way MTG Arena / xmage desktop show a hand — rather than laid on the 3D
+ *  table where the camera angle makes it hard to read. Playable cards glow; click
+ *  plays (when castable), hover shows the big preview, right-click / long-press
+ *  opens the card menu. */
+function HandFan({
+  cards,
+  cardProps,
+  onHoverCard,
+  onOpenMenu,
+}: {
+  cards: CardType[]
+  cardProps: (c: CardType) => { highlight?: 'play' | 'target'; onClick?: (c: CardType) => void }
+  onHoverCard: (c: CardType | null) => void
+  onOpenMenu: (c: CardType, members?: CardType[]) => void
+}) {
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressed = useRef(false)
+  return (
+    <div className="hand-fan" role="group" aria-label="Your hand">
+      {cards.map((card, i) => {
+        const { highlight, onClick } = cardProps(card)
+        const img = `/api/cardimg?set=${encodeURIComponent(card.set ?? '')}&num=${encodeURIComponent(
+          card.num ?? '',
+        )}&name=${encodeURIComponent(card.name)}`
+        return (
+          <button
+            key={card.id}
+            className={`hand-card${highlight === 'play' ? ' playable' : ''}${highlight === 'target' ? ' targetable' : ''}`}
+            style={{ zIndex: i }}
+            onMouseEnter={() => onHoverCard(card)}
+            onMouseLeave={() => onHoverCard(null)}
+            onClick={() => {
+              if (longPressed.current) {
+                longPressed.current = false
+                return
+              }
+              onClick?.(card)
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault()
+              onOpenMenu(card)
+            }}
+            onPointerDown={(e) => {
+              if (e.pointerType !== 'touch') return
+              longPressed.current = false
+              pressTimer.current = setTimeout(() => {
+                longPressed.current = true
+                onOpenMenu(card)
+              }, 450)
+            }}
+            onPointerUp={() => {
+              if (pressTimer.current) clearTimeout(pressTimer.current)
+            }}
+            title={card.name}
+          >
+            <img className="hand-card-art" src={img} alt={card.name} onError={(e) => (e.currentTarget.style.visibility = 'hidden')} />
+            <span className="hand-card-name">{card.name}</span>
+          </button>
+        )
+      })}
+    </div>
   )
 }
 
