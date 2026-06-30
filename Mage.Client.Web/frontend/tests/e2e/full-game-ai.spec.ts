@@ -47,7 +47,6 @@ test('full game vs AI plays through to game over', async ({ page }) => {
 
   // the live 3D board opens
   await expect(page.locator('.board3d canvas')).toBeVisible({ timeout: 45_000 })
-  page.on('dialog', (d) => d.accept().catch(() => {})) // auto-accept the concede confirm
 
   // Exercise real turns first: decline mulligans and keep passing/skipping priority
   // so turns actually advance and the AI takes its turns. F9 ("My turn") fast-
@@ -65,6 +64,8 @@ test('full game vs AI plays through to game over', async ({ page }) => {
       const c = page.getByRole('button', { name: 'Concede' })
       if (await c.isVisible().catch(() => false)) {
         await c.click().catch(() => {})
+        // confirm the in-app concede dialog
+        await page.locator('.confirm-overlay').getByRole('button', { name: 'Concede' }).click().catch(() => {})
         conceded = true
       }
     }

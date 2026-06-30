@@ -51,9 +51,6 @@ test('full PvP game: two humans create + join a table and play to game over', as
   const ctxB = await browser.newContext()
   const a = await ctxA.newPage()
   const b = await ctxB.newPage()
-  // accept the "Concede this game?" confirm dialog (used to force a finish)
-  a.on('dialog', (d) => d.accept().catch(() => {}))
-  b.on('dialog', (d) => d.accept().catch(() => {}))
 
   try {
     await connect(a, host)
@@ -100,6 +97,7 @@ test('full PvP game: two humans create + join a table and play to game over', as
         const c = b.getByRole('button', { name: 'Concede' })
         if (await c.isVisible().catch(() => false)) {
           await c.click().catch(() => {})
+          await b.locator('.confirm-overlay').getByRole('button', { name: 'Concede' }).click().catch(() => {})
           conceded = true
         }
       }
