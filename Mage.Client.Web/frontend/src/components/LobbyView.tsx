@@ -552,7 +552,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
             <ChatPanel lines={chat} log={activeGameId ? gameLog : undefined} onSend={handleSendChat} />
           </div>
         ) : (
-          <button className="btn chat-reopen" onClick={() => setChatOpen(true)} title="Show chat">
+          <button className="btn chat-reopen" onClick={() => setChatOpen(true)} title="Show chat" aria-label="Show chat">
             💬
           </button>
         )}

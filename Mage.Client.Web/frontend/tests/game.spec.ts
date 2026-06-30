@@ -289,6 +289,19 @@ test.describe('Game board (3D)', () => {
     expect(wLarge).toBeGreaterThan(wMed + 10)
   })
 
+  test('clicking a player (no targeting) focuses the camera on their board', async ({ page }) => {
+    // mulligan = an "ask" prompt, so the player strip isn't in targeting mode
+    await gotoScreen(page, 'mulligan')
+    await expect(page.locator('.board3d canvas')).toBeVisible()
+    await page.waitForFunction(() => !!(window as unknown as { __board3d?: unknown }).__board3d, null, { timeout: 15000 })
+    const mode = () => page.evaluate(() => (window as unknown as { __board3d: { mode(): string } }).__board3d.mode())
+    // desktop default is the cinematic Auto cam
+    await expect.poll(mode).toBe('auto')
+    // clicking the opponent swings to the manual 3D seat view
+    await page.locator('.pstat', { hasText: 'Computer' }).click()
+    await expect.poll(mode).toBe('3d')
+  })
+
   test('hand fan: arrow keys move focus between cards', async ({ page }) => {
     await gotoScreen(page, 'game')
     const fan = page.locator('.hand-fan')

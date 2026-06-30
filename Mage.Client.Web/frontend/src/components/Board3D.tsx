@@ -1054,12 +1054,16 @@ export function Board3D({
   onHoverCard,
   onOpenMenu,
   targets,
+  focusSeat,
 }: {
   game: GameState
   cardProps: CardProps
   onHoverCard?: (c: GameCard | null) => void
   onOpenMenu?: (c: GameCard, members?: GameCard[]) => void
   targets?: string[]
+  // a request to swing the 3D camera to a given player's seat (the nonce lets the
+  // same player be focused repeatedly)
+  focusSeat?: { name: string; n: number } | null
 }) {
   const { prefs } = usePrefs()
   const chroma = CHROMA_FAMILY[prefs.theme]
@@ -1125,6 +1129,16 @@ export function Board3D({
   useEffect(() => {
     if (view >= views.length) setView(spectating ? 0 : 1)
   }, [views.length, view, spectating])
+
+  // clicking a player in the strip swings the manual 3D camera to their seat
+  useEffect(() => {
+    if (!focusSeat) return
+    const idx = seats.findIndex((s) => s.player.name === focusSeat.name)
+    if (idx >= 0) {
+      setMode('3d')
+      setView(idx + 1) // views[0] is Overview, then one per seat in `seats` order
+    }
+  }, [focusSeat, seats])
 
   const [zoom, setZoom] = useState(ZOOM_DEFAULT)
 

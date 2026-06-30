@@ -58,6 +58,8 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
   }, [game])
   const [menu, setMenu] = useState<MenuState | null>(null)
   const [confirmConcede, setConfirmConcede] = useState(false)
+  // clicking a player in the strip swings the camera to their board (multiplayer)
+  const [focusSeat, setFocusSeat] = useState<{ name: string; n: number } | null>(null)
   // the last battlefield card the viewer clicked to activate — used to anchor the
   // ability picker menu to the card the abilities came from (xmage doesn't tell us)
   const lastActivatedRef = useRef<{ card: CardType; t: number } | null>(null)
@@ -247,7 +249,12 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
             <button
               key={p.id}
               className={`pstat${p.name === game.activePlayer ? ' active' : ''}${canTarget ? ' targetable' : ''}`}
-              onClick={canTarget ? () => onRespond('uuid', p.id) : undefined}
+              title={canTarget ? `Target ${p.name}` : `Focus ${p.name}'s board`}
+              onClick={
+                canTarget
+                  ? () => onRespond('uuid', p.id)
+                  : () => setFocusSeat((prev) => ({ name: p.name, n: (prev?.n ?? 0) + 1 }))
+              }
             >
               <span className="pstat-name">{p.name}</span>
               <LifeTotal life={p.life} />
@@ -289,6 +296,7 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
           onHoverCard={handleHoverCard}
           onOpenMenu={handleOpenMenu}
           targets={prompt?.kind === 'target' ? prompt.targets : undefined}
+          focusSeat={focusSeat}
         />
         <CardPreview card={preview} />
         <CardZoomOverlay card={pressedCard} />
