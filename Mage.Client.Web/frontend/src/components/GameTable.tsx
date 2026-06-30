@@ -496,8 +496,19 @@ function HandFan({
 }) {
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const longPressed = useRef(false)
+  const fanRef = useRef<HTMLDivElement>(null)
+  // ←/→ move focus between hand cards; Enter/Space activates (native button)
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+    const btns = Array.from(fanRef.current?.querySelectorAll<HTMLButtonElement>('.hand-card') ?? [])
+    const idx = btns.indexOf(document.activeElement as HTMLButtonElement)
+    if (idx < 0) return
+    e.preventDefault()
+    const next = e.key === 'ArrowRight' ? Math.min(btns.length - 1, idx + 1) : Math.max(0, idx - 1)
+    btns[next]?.focus()
+  }
   return (
-    <div className="hand-fan" role="group" aria-label="Your hand">
+    <div className="hand-fan" role="group" aria-label="Your hand" ref={fanRef} onKeyDown={onKeyDown}>
       {cards.map((card, i) => {
         const { highlight, onClick } = cardProps(card)
         const cost = (card.manaCost?.match(/\{([^}]+)\}/g) ?? []).map((s) => s.slice(1, -1))
@@ -509,6 +520,7 @@ function HandFan({
             key={card.id}
             className={`hand-card${highlight === 'play' ? ' playable' : ''}${highlight === 'target' ? ' targetable' : ''}`}
             style={{ zIndex: i }}
+            aria-label={`${card.name}${highlight === 'play' ? ', playable' : ''}`}
             onMouseEnter={() => onHoverCard(card)}
             onMouseLeave={() => onHoverCard(null)}
             onClick={() => {

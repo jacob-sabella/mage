@@ -270,6 +270,22 @@ test.describe('Game board (3D)', () => {
     await expect.poll(() => played).toBe('h1')
   })
 
+  test('hand fan: arrow keys move focus between cards', async ({ page }) => {
+    await gotoScreen(page, 'game')
+    const fan = page.locator('.hand-fan')
+    await expect(fan).toBeVisible()
+    const cards = fan.locator('.hand-card')
+    await cards.nth(0).focus()
+    await expect(cards.nth(0)).toBeFocused()
+    await page.keyboard.press('ArrowRight')
+    await expect(cards.nth(1)).toBeFocused()
+    await page.keyboard.press('ArrowLeft')
+    await expect(cards.nth(0)).toBeFocused()
+    // doesn't wrap past the first card
+    await page.keyboard.press('ArrowLeft')
+    await expect(cards.nth(0)).toBeFocused()
+  })
+
   test('view menu offers Auto / 2D / 3D / free camera modes', async ({ page }) => {
     await gotoScreen(page, 'game')
     await page.locator('.view-fab').click()

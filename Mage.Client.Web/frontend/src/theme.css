@@ -1492,6 +1492,13 @@ input:focus {
 }
 /* in maximized mode the control dock floats over the board, so lift the fan clear */
 html.board-max .hand-fan { bottom: 88px; }
+
+/* respect a reduced-motion preference: keep the lift readable but cut the animation */
+@media (prefers-reduced-motion: reduce) {
+  .hand-card { transition: none; }
+  .hand-card:hover, .hand-card:focus-visible { transform: translateY(-18px); }
+  .confirm-card, .card-action-sheet { animation: none; }
+}
 /* a min flex-basis so a cramped action-bar wraps to its OWN full-width line
    (keeping Done/Pass visible) instead of shrinking + clipping the buttons */
 .control-dock .action-bar { background: transparent; border: none; box-shadow: none; padding: 0; flex: 1 1 340px; min-width: 300px; }
