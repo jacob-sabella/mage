@@ -201,7 +201,7 @@ function CardPile({
             <meshBasicMaterial map={back} toneMapped={false} transparent depthWrite={false} />
           </mesh>
         ))}
-      <Html position={[0, 0.34, CARD_H * 0.62]} center distanceFactor={10} zIndexRange={[15, 0]} className="c3d-badge c3d-zone">
+      <Html position={[0, 0.34, CARD_H * 0.62]} center distanceFactor={10} zIndexRange={[15, 0]} occlude className="c3d-badge c3d-zone">
         {label} {count}
       </Html>
     </group>
@@ -385,6 +385,7 @@ function Card3D({
             center
             distanceFactor={9}
             zIndexRange={[20, 0]}
+            occlude
             className="c3d-badge c3d-pt"
           >
             {card.power}/{card.toughness}
@@ -396,6 +397,7 @@ function Card3D({
             center
             distanceFactor={9}
             zIndexRange={[20, 0]}
+            occlude
             className="c3d-badge c3d-loy"
           >
             {card.loyalty}
@@ -407,6 +409,7 @@ function Card3D({
             center
             distanceFactor={8}
             zIndexRange={[16, 0]}
+            occlude
             className="c3d-badge c3d-mana"
           >
             {manaSymbols(card.manaCost).map((s, i) => (
@@ -422,6 +425,7 @@ function Card3D({
             center
             distanceFactor={9}
             zIndexRange={[20, 0]}
+            occlude
             className="c3d-badge c3d-stack"
           >
             ×{stackCount}
@@ -532,13 +536,15 @@ function SeatMat({ color, active }: { color: string; active: boolean }) {
     <group rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.012, MAT_Z]}>
       {/* polygonOffset gives each layer a stable depth bias so the near-coplanar
           mat / frame / table don't z-fight (which caused the flicker) */}
-      <mesh geometry={frame}>
+      {/* renderOrder forces the mat to draw before the cards regardless of
+          distance sorting, so a far/back-row card never ends up painted under it */}
+      <mesh geometry={frame} renderOrder={-3}>
         <meshBasicMaterial
           color={color} transparent opacity={active ? 0.42 : 0.2} toneMapped={false}
           depthWrite={false} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1}
         />
       </mesh>
-      <mesh geometry={fill}>
+      <mesh geometry={fill} renderOrder={-2}>
         <meshBasicMaterial
           color="#0a0c12" transparent opacity={0.5} toneMapped={false}
           depthWrite={false} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2}
