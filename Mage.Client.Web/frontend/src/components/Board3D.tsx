@@ -519,13 +519,13 @@ function roundedRectShape(w: number, h: number, r: number): THREE.Shape {
   return s
 }
 
-const MAT_W = 12.6
-const MAT_H = 6.6 // deep enough for three rows (creatures · others · lands)
+const MAT_W = 14.6
+const MAT_H = 7.6 // deep enough for three rows (creatures · others · lands)
 const MAT_Z = 0.35 // pushed slightly toward the player's back row
 // Everything that "sits on the table" (playmats + their cards, the centre rings,
 // the active-seat glow, the hand) is lifted by this much so the whole play layer
 // floats above the bare table surface as one consistent plane.
-const TABLE_LIFT = 0.14
+const TABLE_LIFT = 0.09
 
 /** A subtle playmat under a seat's zone: a dark fill + a thin coloured frame, so
  *  each player's area reads as one tidy region instead of cards floating loose. */
@@ -534,7 +534,7 @@ function SeatMat({ color, active }: { color: string; active: boolean }) {
   const frame = useMemo(() => new THREE.ShapeGeometry(roundedRectShape(MAT_W + 0.18, MAT_H + 0.18, 0.56)), [])
   useEffect(() => () => { fill.dispose(); frame.dispose() }, [fill, frame])
   return (
-    <group rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.012, MAT_Z]}>
+    <group rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.006, MAT_Z]}>
       {/* polygonOffset gives each layer a stable depth bias so the near-coplanar
           mat / frame / table don't z-fight (which caused the flicker) */}
       {/* renderOrder forces the mat to draw before the cards regardless of
