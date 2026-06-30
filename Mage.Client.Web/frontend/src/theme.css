@@ -645,6 +645,16 @@ input::placeholder { color: var(--text-dim); }
 }
 .chat-log { color: var(--text-dim); font-size: 12.5px; line-height: 1.5; gap: 1px; }
 .chat-log .game-log-line:last-child { color: var(--text); }
+/* turn separator in the game log */
+.game-log-turn {
+  display: flex; align-items: center; gap: 8px; margin: 7px 0 3px;
+  font-size: 11px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;
+  color: var(--accent-2);
+}
+.game-log-turn::before, .game-log-turn::after {
+  content: ''; flex: 1; height: 1px;
+  background: color-mix(in srgb, var(--accent-2) 40%, transparent);
+}
 .chat-messages {
   flex: 1;
   overflow-y: auto;

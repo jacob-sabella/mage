@@ -30,6 +30,8 @@ test.describe('Game board (3D)', () => {
     // the game log now lives as a tab in the chat panel, not floating on the board
     await page.getByRole('tab', { name: 'Game log' }).click()
     await expect(page.locator('.chat-log')).toContainText('Precombat Main')
+    // entries are grouped under a turn separator (game is on turn 3)
+    await expect(page.locator('.game-log-turn')).toContainText('Turn 3')
   })
 
   test('passing priority sends a respond and is accepted', async ({ page }) => {

@@ -72,11 +72,22 @@ export function ChatPanel({ lines, log = [], onSend }: Props) {
       {tab === 'log' ? (
         <div className="chat-messages chat-log" ref={logRef}>
           {log.length === 0 && <p className="muted chat-empty">No log yet.</p>}
-          {log.map((l, i) => (
-            <div className="game-log-line" key={i}>
-              {plain(l)}
-            </div>
-          ))}
+          {log.map((l, i) => {
+            // turn-separator sentinel injected by LobbyView when the turn advances
+            const turn = l.startsWith('❖TURN❖') ? l.slice('❖TURN❖'.length) : null
+            if (turn !== null) {
+              return (
+                <div className="game-log-turn" key={i}>
+                  <span>Turn {turn}</span>
+                </div>
+              )
+            }
+            return (
+              <div className="game-log-line" key={i}>
+                {plain(l)}
+              </div>
+            )
+          })}
         </div>
       ) : (
         <>

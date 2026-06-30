@@ -101,6 +101,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   const activeRef = useRef<string | null>(null)
   // last active player we toasted for, so "Your turn" fires once per turn
   const lastActiveRef = useRef<string | null>(null)
+  const lastTurnRef = useRef<number | null>(null)
 
   const toggleHistory = useCallback(() => {
     setShowHistory((prev) => {
@@ -163,6 +164,12 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
           playCue('turn')
         }
         lastActiveRef.current = g.activePlayer ?? null
+        // drop a turn separator into the game log when the turn advances, so the
+        // log reads as grouped rounds (sentinel prefix rendered as a divider)
+        if (typeof g.turn === 'number' && g.turn !== lastTurnRef.current) {
+          lastTurnRef.current = g.turn
+          setGameLog((prev) => [...prev.slice(-299), '❖TURN❖' + g.turn])
+        }
         setGame(g)
       }
       setPrompt(e.prompt ?? null)
@@ -329,6 +336,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
     setGame(null)
     setPrompt(null)
     setGameLog([])
+    lastTurnRef.current = null
     setPendingPlay(false)
     setPlayStatus(null)
     setGameOver(null)
@@ -343,6 +351,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
     setGame(null)
     setPrompt(null)
     setGameLog([])
+    lastTurnRef.current = null
     setGameOver(null)
     setPendingPlay(true)
     setPlayStatus('Starting rematch…')
