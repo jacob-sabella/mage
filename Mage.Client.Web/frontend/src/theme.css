@@ -1504,12 +1504,16 @@ html[data-hand-size='large'] .hand-card { width: 128px; height: 179px; margin: 0
 .seg-btn:hover { color: var(--text); }
 .seg-btn.active { color: var(--text); background: color-mix(in srgb, var(--accent) 28%, transparent); }
 
-/* respect a reduced-motion preference: keep the lift readable but cut the animation */
+/* respect a reduced-motion preference (OS setting OR the in-app Reduce-motion
+   toggle, which sets html.reduce-motion): keep the lift readable but cut animation */
 @media (prefers-reduced-motion: reduce) {
   .hand-card { transition: none; }
   .hand-card:hover, .hand-card:focus-visible { transform: translateY(-18px); }
   .confirm-card, .card-action-sheet { animation: none; }
 }
+html.reduce-motion .hand-card { transition: none; }
+html.reduce-motion .hand-card:hover, html.reduce-motion .hand-card:focus-visible { transform: translateY(-18px); }
+html.reduce-motion .confirm-card, html.reduce-motion .card-action-sheet { animation: none; }
 /* a min flex-basis so a cramped action-bar wraps to its OWN full-width line
    (keeping Done/Pass visible) instead of shrinking + clipping the buttons */
 .control-dock .action-bar { background: transparent; border: none; box-shadow: none; padding: 0; flex: 1 1 340px; min-width: 300px; }

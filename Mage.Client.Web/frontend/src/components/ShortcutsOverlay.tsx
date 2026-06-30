@@ -12,14 +12,16 @@ const GROUPS: { title: string; items: { keys: string; label: string }[] }[] = [
       { keys: 'F6', label: 'Cancel skips' },
       { keys: 'D', label: 'Done / confirm selection' },
       { keys: 'P / Space', label: 'Pass priority' },
-      { keys: 'Y / N', label: 'Answer yes / no' },
+      { keys: 'Y / N', label: 'Answer yes / no (Mulligan / Keep)' },
+      { keys: '← / →', label: 'Move between hand cards' },
+      { keys: 'Enter', label: 'Play the focused hand card' },
     ],
   },
   {
     title: 'General',
     items: [
       { keys: '?', label: 'Toggle this help' },
-      { keys: 'Esc', label: 'Close dialogs' },
+      { keys: 'Esc', label: 'Close dialogs / exit maximized board' },
     ],
   },
 ]
