@@ -1493,6 +1493,17 @@ input:focus {
 /* in maximized mode the control dock floats over the board, so lift the fan clear */
 html.board-max .hand-fan { bottom: 88px; }
 
+/* hand-fan size preference (default = medium, the values above) */
+html[data-hand-size='small'] .hand-card { width: 84px; height: 117px; margin: 0 -18px; }
+html[data-hand-size='large'] .hand-card { width: 128px; height: 179px; margin: 0 -26px; }
+
+/* segmented control (settings) */
+.seg-control { display: inline-flex; border: 1px solid var(--stroke); border-radius: 10px; overflow: hidden; background: var(--bg-raised); }
+.seg-btn { padding: 8px 14px; font-size: 13px; font-weight: 700; color: var(--text-dim); background: transparent; border: 0; cursor: pointer; }
+.seg-btn:not(:last-child) { border-right: 1px solid var(--stroke); }
+.seg-btn:hover { color: var(--text); }
+.seg-btn.active { color: var(--text); background: color-mix(in srgb, var(--accent) 28%, transparent); }
+
 /* respect a reduced-motion preference: keep the lift readable but cut the animation */
 @media (prefers-reduced-motion: reduce) {
   .hand-card { transition: none; }

@@ -85,6 +85,24 @@ function SettingsView() {
             onChange={(e) => setPref('manaIcons', e.target.checked)}
           />
         </label>
+        <div className="setting-row">
+          <span>
+            <strong>Hand size</strong>
+            <span className="muted setting-hint">How big your hand cards are at the bottom of the board</span>
+          </span>
+          <div className="seg-control" role="group" aria-label="Hand size">
+            {(['small', 'medium', 'large'] as const).map((s) => (
+              <button
+                key={s}
+                className={`seg-btn${prefs.handSize === s ? ' active' : ''}`}
+                aria-pressed={prefs.handSize === s}
+                onClick={() => setPref('handSize', s)}
+              >
+                {s[0].toUpperCase() + s.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
         <label className="setting-row">
           <span>
             <strong>Reduce motion</strong>

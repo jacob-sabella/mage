@@ -271,6 +271,22 @@ test.describe('Game board (3D)', () => {
     await expect.poll(() => played).toBe('h1')
   })
 
+  test('hand size preference scales the hand fan', async ({ page }) => {
+    await gotoScreen(page, 'game')
+    const card = page.locator('.hand-card').first()
+    await expect(card).toBeVisible()
+    const wMed = (await card.boundingBox())!.width
+
+    // bump it to Large in Settings, then return to the board
+    await page.getByRole('button', { name: 'Settings' }).click()
+    await page.getByRole('button', { name: 'Large' }).click()
+    await expect(page.locator('html[data-hand-size="large"]')).toHaveCount(1)
+    await page.getByRole('button', { name: 'Play', exact: true }).click()
+
+    const wLarge = (await page.locator('.hand-card').first().boundingBox())!.width
+    expect(wLarge).toBeGreaterThan(wMed + 10)
+  })
+
   test('hand fan: arrow keys move focus between cards', async ({ page }) => {
     await gotoScreen(page, 'game')
     const fan = page.locator('.hand-fan')
