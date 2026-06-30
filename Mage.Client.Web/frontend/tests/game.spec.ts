@@ -44,6 +44,29 @@ test.describe('Game board (3D)', () => {
     await expect.poll(() => responded).toBe(true)
   })
 
+  test('concede asks for confirmation in-app; confirming sends concede', async ({ page }) => {
+    await gotoScreen(page, 'game')
+    let conceded = false
+    await page.route('**/api/game/respond', (route) => {
+      const b = JSON.parse(route.request().postData() || '{}')
+      if (b.kind === 'concede') conceded = true
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
+    })
+    await page.getByRole('button', { name: 'Concede' }).click()
+    // a styled dialog appears (not a native confirm) and nothing is sent yet
+    const dialog = page.locator('.confirm-overlay')
+    await expect(dialog).toBeVisible()
+    expect(conceded).toBe(false)
+    // cancelling closes it without conceding
+    await dialog.getByRole('button', { name: 'Cancel' }).click()
+    await expect(dialog).toHaveCount(0)
+    expect(conceded).toBe(false)
+    // re-open and confirm → concede is sent
+    await page.getByRole('button', { name: 'Concede' }).click()
+    await page.locator('.confirm-overlay').getByRole('button', { name: 'Concede' }).click()
+    await expect.poll(() => conceded).toBe(true)
+  })
+
   test('playable bar lists castable cards and plays one by name', async ({ page }) => {
     await gotoScreen(page, 'game')
     const bar = page.locator('.playable-bar')

@@ -1297,6 +1297,26 @@ input::placeholder { color: var(--text-dim); }
 .game-over-title { font-size: 24px; font-weight: 800; }
 .game-over-msg { font-size: 16px; color: var(--text-dim); }
 
+/* in-app confirm modal (replaces window.confirm) */
+.confirm-overlay {
+  position: fixed; inset: 0; z-index: 60;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(8, 10, 14, 0.66); backdrop-filter: blur(3px);
+}
+.confirm-card {
+  padding: 24px 28px; display: flex; flex-direction: column; gap: 14px;
+  min-width: 300px; max-width: 420px; animation: sheet-rise 0.18s cubic-bezier(0.2, 0.9, 0.3, 1.08);
+}
+.confirm-title { font-size: 18px; font-weight: 800; }
+.confirm-msg { font-size: 14px; color: var(--text-dim); line-height: 1.45; }
+.confirm-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+.confirm-actions .btn { padding: 10px 18px; font-weight: 700; }
+.btn.danger {
+  background: color-mix(in srgb, var(--danger) 88%, #000); color: #fff;
+  border-color: color-mix(in srgb, var(--danger) 60%, var(--stroke));
+}
+.btn.danger:hover { background: var(--danger); }
+
 /* ----- turn / phase progression ----- */
 .turn-label { font-size: 15px; }
 .turn-label b { font-size: 16px; color: var(--text); }

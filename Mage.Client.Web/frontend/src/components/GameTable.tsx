@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Board3D } from './Board3D'
+import { ConfirmDialog } from './ConfirmDialog'
 import type { RespondKind } from '../api'
 import { plain } from '../text'
 import type { GameCard as CardType, GameState, Prompt } from '../types'
@@ -56,6 +57,7 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
     return (id: string) => m.get(id) ?? id
   }, [game])
   const [menu, setMenu] = useState<MenuState | null>(null)
+  const [confirmConcede, setConfirmConcede] = useState(false)
   // the last battlefield card the viewer clicked to activate — used to anchor the
   // ability picker menu to the card the abilities came from (xmage doesn't tell us)
   const lastActivatedRef = useRef<{ card: CardType; t: number } | null>(null)
@@ -231,12 +233,7 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
           </span>
         )}
         {interactive && (
-          <button
-            className="btn ghost concede"
-            onClick={() => {
-              if (confirm('Concede this game?')) onRespond('concede')
-            }}
-          >
+          <button className="btn ghost concede" onClick={() => setConfirmConcede(true)}>
             Concede
           </button>
         )}
@@ -389,6 +386,20 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
               </div>
             </div>
           </div>
+        )}
+
+        {confirmConcede && (
+          <ConfirmDialog
+            title="Concede this game?"
+            message="You'll forfeit the match and return to the lobby."
+            confirmLabel="Concede"
+            danger
+            onConfirm={() => {
+              setConfirmConcede(false)
+              onRespond('concede')
+            }}
+            onCancel={() => setConfirmConcede(false)}
+          />
         )}
       </div>
 
