@@ -4,6 +4,7 @@ import type { ChatLine } from '../types'
 
 interface Props {
   lines: ChatLine[]
+  log?: string[]
   onSend: (message: string) => void
 }
 
@@ -16,14 +17,27 @@ const COLOR: Record<string, string> = {
   YELLOW: '#d9c45a',
 }
 
-export function ChatPanel({ lines, onSend }: Props) {
+export function ChatPanel({ lines, log = [], onSend }: Props) {
   const [draft, setDraft] = useState('')
+  const [tab, setTab] = useState<'chat' | 'log'>('chat')
   const scrollRef = useRef<HTMLDivElement>(null)
+  const logRef = useRef<HTMLDivElement>(null)
+  const hasLog = log.length > 0
 
   useEffect(() => {
     const el = scrollRef.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [lines])
+  }, [lines, tab])
+
+  useEffect(() => {
+    const el = logRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [log, tab])
+
+  // If the log goes away (left the game), fall back to chat.
+  useEffect(() => {
+    if (!hasLog && tab === 'log') setTab('chat')
+  }, [hasLog, tab])
 
   function submit() {
     const text = draft.trim()
@@ -34,33 +48,66 @@ export function ChatPanel({ lines, onSend }: Props) {
 
   return (
     <aside className="panel chat-panel">
-      <div className="chat-header">Chat</div>
-      <div className="chat-messages" ref={scrollRef}>
-        {lines.length === 0 && <p className="muted chat-empty">No messages yet.</p>}
-        {lines.map((l, i) => (
-          <div className="chat-line" key={i}>
-            {l.user && (
-              <span className="chat-user" style={{ color: l.color ? COLOR[l.color] : undefined }}>
-                {l.user}:{' '}
-              </span>
-            )}
-            <span className="chat-text" style={!l.user && l.color ? { color: COLOR[l.color] } : undefined}>
-              {plain(l.text)}
-            </span>
-          </div>
-        ))}
-      </div>
-      <div className="chat-input">
-        <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && submit()}
-          placeholder="Message the room…"
-        />
-        <button className="btn primary" onClick={submit}>
-          Send
+      <div className="chat-tabs" role="tablist">
+        <button
+          role="tab"
+          aria-selected={tab === 'chat'}
+          className={`chat-tab${tab === 'chat' ? ' active' : ''}`}
+          onClick={() => setTab('chat')}
+        >
+          Chat
         </button>
+        {hasLog && (
+          <button
+            role="tab"
+            aria-selected={tab === 'log'}
+            className={`chat-tab${tab === 'log' ? ' active' : ''}`}
+            onClick={() => setTab('log')}
+          >
+            Game log
+          </button>
+        )}
       </div>
+
+      {tab === 'log' ? (
+        <div className="chat-messages chat-log" ref={logRef}>
+          {log.length === 0 && <p className="muted chat-empty">No log yet.</p>}
+          {log.map((l, i) => (
+            <div className="game-log-line" key={i}>
+              {plain(l)}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <>
+          <div className="chat-messages" ref={scrollRef}>
+            {lines.length === 0 && <p className="muted chat-empty">No messages yet.</p>}
+            {lines.map((l, i) => (
+              <div className="chat-line" key={i}>
+                {l.user && (
+                  <span className="chat-user" style={{ color: l.color ? COLOR[l.color] : undefined }}>
+                    {l.user}:{' '}
+                  </span>
+                )}
+                <span className="chat-text" style={!l.user && l.color ? { color: COLOR[l.color] } : undefined}>
+                  {plain(l.text)}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="chat-input">
+            <input
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && submit()}
+              placeholder="Message the room…"
+            />
+            <button className="btn primary" onClick={submit}>
+              Send
+            </button>
+          </div>
+        </>
+      )}
     </aside>
   )
 }

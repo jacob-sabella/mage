@@ -68,6 +68,34 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   const [chatOpen, setChatOpen] = useState(
     () => !(typeof window !== 'undefined' && window.matchMedia('(max-width: 760px), (max-height: 540px)').matches),
   )
+  // desktop "maximize within the tab": the board fills the whole window and the
+  // site chrome / outer backdrop hide, so the board's own in-canvas scene reads as
+  // one continuous thing. Not browser-fullscreen — just an in-tab layout mode.
+  const [maximized, setMaximized] = useState(false)
+  const toggleMaximized = useCallback(() => {
+    setMaximized((m) => {
+      const next = !m
+      if (next) setChatOpen(false) // collapse chat to its floating toggle
+      return next
+    })
+  }, [])
+  useEffect(() => {
+    document.documentElement.classList.toggle('board-max', maximized)
+    return () => document.documentElement.classList.remove('board-max')
+  }, [maximized])
+  // Esc exits maximized
+  useEffect(() => {
+    if (!maximized) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMaximized(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [maximized])
+  // never stay maximized once we're no longer at a game board
+  useEffect(() => {
+    if (!activeGameId && maximized) setMaximized(false)
+  }, [activeGameId, maximized])
   // synchronous mirror of activeGameId so back-to-back gameStart+game frames in
   // one event-loop tick don't read a stale value (which clobbered interactive)
   const activeRef = useRef<string | null>(null)
@@ -271,6 +299,29 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
     [session.token, activeGameId],
   )
 
+  // "Tap N lands from a stack": xmage taps one permanent per priority round, so we
+  // queue the chosen land ids and feed them in one at a time as priority returns.
+  const tapQueueRef = useRef<string[]>([])
+  const handleTapMany = useCallback(
+    (ids: string[]) => {
+      if (!ids.length) return
+      tapQueueRef.current = ids.slice(1)
+      handleRespond('uuid', ids[0])
+    },
+    [handleRespond],
+  )
+  // drain the queue: send the next land each time we get priority back; abandon the
+  // rest if any other decision interrupts (a target prompt, a triggered ability, …)
+  useEffect(() => {
+    if (!tapQueueRef.current.length) return
+    if (prompt?.kind === 'select') {
+      const next = tapQueueRef.current.shift()!
+      handleRespond('uuid', next)
+    } else if (prompt) {
+      tapQueueRef.current = []
+    }
+  }, [prompt, handleRespond])
+
   const handleLeaveGame = useCallback(() => {
     activeRef.current = null
     setActiveGameId(null)
@@ -394,9 +445,11 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
               game={game}
               prompt={prompt}
               interactive={interactive}
-              log={gameLog}
               result={gameOver}
               onRespond={handleRespond}
+              onTapMany={handleTapMany}
+              maximized={maximized}
+              onToggleMaximize={toggleMaximized}
               onLeave={handleLeaveGame}
               onPlayAgain={lastCreate ? handlePlayAgain : undefined}
             />
@@ -487,7 +540,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
             <button className="btn ghost chat-toggle" onClick={() => setChatOpen(false)} title="Hide chat">
               Chat ✕
             </button>
-            <ChatPanel lines={chat} onSend={handleSendChat} />
+            <ChatPanel lines={chat} log={activeGameId ? gameLog : undefined} onSend={handleSendChat} />
           </div>
         ) : (
           <button className="btn chat-reopen" onClick={() => setChatOpen(true)} title="Show chat">

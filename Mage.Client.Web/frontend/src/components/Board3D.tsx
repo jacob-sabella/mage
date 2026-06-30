@@ -34,8 +34,10 @@ const MAX_PER_ROW = 12
 /** X-position of the zone piles (library/GY on the right, exile on the left).
  *  Must be > MAX_ROW_W/2 + CARD_W/2 to keep piles clear of the battlefield rows. */
 const PILE_X = 3.5
-/** A card or a named land stack — same name lands collapse into one slot with a count. */
-type RowItem = { card: GameCard; stackCount?: number }
+/** A card or a named land stack — same name lands collapse into one slot with a count.
+ *  `members` carries the individual collapsed cards (only set for real stacks) so the
+ *  card menu can tap a chosen number of the still-untapped ones. */
+type RowItem = { card: GameCard; stackCount?: number; members?: GameCard[] }
 const COLOR_BG: Record<string, string> = { W: '#cfc9a8', U: '#3b6ea5', B: '#3a3340', R: '#a53b3b', G: '#3a7a52' }
 
 function bg(colors?: string | null) {
@@ -213,20 +215,20 @@ function Card3D({
   standing,
   showCost,
   stackCount,
+  members,
   cardProps,
   onHoverCard,
-  onPressCard,
-  onLongPressCard,
+  onOpenMenu,
 }: {
   card: GameCard
   position: [number, number, number]
   standing?: boolean
   showCost?: boolean
   stackCount?: number
+  members?: GameCard[]
   cardProps: CardProps
   onHoverCard?: (c: GameCard | null) => void
-  onPressCard?: (c: GameCard | null) => void
-  onLongPressCard?: (c: GameCard) => void
+  onOpenMenu?: (c: GameCard, members?: GameCard[]) => void
 }) {
   const [art, setArt] = useState<THREE.Texture | null>(null)
   const [hover, setHover] = useState(false)
@@ -319,12 +321,12 @@ function Card3D({
           if (pressTimer.current) clearTimeout(pressTimer.current)
         }}
         onPointerDown={(e) => {
-          // touch only: hold to open action sheet, quick tap falls through to onClick (play)
+          // touch only: hold to open the card menu, quick tap falls through to onClick (play)
           if (e.pointerType !== 'touch') return
           longPressed.current = false
           pressTimer.current = setTimeout(() => {
             longPressed.current = true
-            onLongPressCard?.(card)
+            onOpenMenu?.(card, members)
           }, 450)
         }}
         onPointerUp={() => {
@@ -340,10 +342,10 @@ function Card3D({
           onClick?.(card) // tap / left-click plays — preview never hijacks it
         }}
         onContextMenu={(e) => {
-          // desktop: right-click previews the card (big zoom)
+          // desktop: right-click opens the card menu (play / abilities / land-stack tap)
           e.stopPropagation()
           e.nativeEvent.preventDefault()
-          onPressCard?.(card)
+          onOpenMenu?.(card, members)
         }}
       >
         <planeGeometry args={[CARD_W, CARD_H]} />
@@ -441,28 +443,29 @@ function row(items: RowItem[], cx: number, cz: number, gap = 1.45, maxW = MAX_RO
   const w = (n - 1) * effectiveGap
   // Tiny per-card y stagger prevents coplanar z-fighting when adjacent cards share
   // edge pixels under MSAA — visually imperceptible at this scale.
-  return items.map(({ card, stackCount }, i) => ({
+  return items.map(({ card, stackCount, members }, i) => ({
     card,
     stackCount,
+    members,
     pos: [cx - w / 2 + i * effectiveGap, i * 0.001, cz] as [number, number, number],
   }))
 }
 
 /** Group same-named lands into stacks (Arena-style), preserving first-seen order. */
 function groupLands(lands: GameCard[]): RowItem[] {
-  const map = new Map<string, { card: GameCard; count: number }>()
+  const map = new Map<string, { card: GameCard; members: GameCard[] }>()
   const order: string[] = []
   for (const c of lands) {
     if (map.has(c.name)) {
-      map.get(c.name)!.count++
+      map.get(c.name)!.members.push(c)
     } else {
-      map.set(c.name, { card: c, count: 1 })
+      map.set(c.name, { card: c, members: [c] })
       order.push(c.name)
     }
   }
   return order.map((name) => {
-    const { card, count } = map.get(name)!
-    return { card, stackCount: count > 1 ? count : undefined }
+    const { card, members } = map.get(name)!
+    return { card, stackCount: members.length > 1 ? members.length : undefined, members: members.length > 1 ? members : undefined }
   })
 }
 
@@ -514,6 +517,10 @@ function roundedRectShape(w: number, h: number, r: number): THREE.Shape {
 const MAT_W = 8.8
 const MAT_H = 4.7 // deep enough for three rows (creatures · others · lands)
 const MAT_Z = 0.35 // pushed slightly toward the player's back row
+// Everything that "sits on the table" (playmats + their cards, the centre rings,
+// the active-seat glow, the hand) is lifted by this much so the whole play layer
+// floats above the bare table surface as one consistent plane.
+const TABLE_LIFT = 0.14
 
 /** A subtle playmat under a seat's zone: a dark fill + a thin coloured frame, so
  *  each player's area reads as one tidy region instead of cards floating loose. */
@@ -547,16 +554,14 @@ function PlayerZone({
   matColor,
   cardProps,
   onHoverCard,
-  onPressCard,
-  onLongPressCard,
+  onOpenMenu,
 }: {
   seat: Seat
   active: boolean
   matColor: string
   cardProps: CardProps
   onHoverCard?: (c: GameCard | null) => void
-  onPressCard?: (c: GameCard | null) => void
-  onLongPressCard?: (c: GameCard) => void
+  onOpenMenu?: (c: GameCard, members?: GameCard[]) => void
 }) {
   const [expanded, setExpanded] = useState(false)
 
@@ -608,10 +613,10 @@ function PlayerZone({
   }
 
   return (
-    <group position={[seat.x, 0, seat.z]} rotation={[0, seat.yaw, 0]}>
+    <group position={[seat.x, TABLE_LIFT, seat.z]} rotation={[0, seat.yaw, 0]}>
       <SeatMat color={matColor} active={active} />
-      {placed.map(({ card, pos, stackCount }) => (
-        <Card3D key={card.id} card={card} position={pos} stackCount={stackCount} cardProps={cardProps} onHoverCard={onHoverCard} onPressCard={onPressCard} onLongPressCard={onLongPressCard} />
+      {placed.map(({ card, pos, stackCount, members }) => (
+        <Card3D key={card.id} card={card} position={pos} stackCount={stackCount} members={members} cardProps={cardProps} onHoverCard={onHoverCard} onOpenMenu={onOpenMenu} />
       ))}
       {/* overflow badges: show +N when a row is clipped */}
       {!expanded &&
@@ -654,7 +659,7 @@ function seatPlayers(players: GamePlayer[], me?: string | null): { seats: Seat[]
   const n = ordered.length
   // push seats further apart as the table fills so a busy multiplayer board has
   // breathing room (an 8.8-wide playmat needs the seats well separated)
-  const radius = Math.max(3.4, 1.9 + n * 1.05)
+  const radius = Math.max(4.3, 2.5 + n * 1.35)
   const seats = ordered.map((player, i) => {
     const theta = Math.PI / 2 + (i * 2 * Math.PI) / n // front seat at +z
     return {
@@ -765,7 +770,7 @@ function ActiveSeatGlow({ seat }: { seat: Seat }) {
     m.scale.set(s, s, s)
   })
   return (
-    <mesh ref={ref} rotation={[-Math.PI / 2, 0, 0]} position={[seat.x * 0.66, 0.015, seat.z * 0.66]}>
+    <mesh ref={ref} rotation={[-Math.PI / 2, 0, 0]} position={[seat.x * 0.66, TABLE_LIFT + 0.015, seat.z * 0.66]}>
       <ringGeometry args={[1.75, 2.05, 64]} />
       <meshBasicMaterial color="#ffce54" transparent opacity={0.4} toneMapped={false} depthWrite={false} />
     </mesh>
@@ -789,7 +794,7 @@ function Arrow({ from, to, kind }: { from: THREE.Vector3; to: THREE.Vector3; kin
   useEffect(() => () => tube.dispose(), [tube])
   const color = ARROW_COLOR[kind] ?? '#ffffff'
   return (
-    <group>
+    <group userData={{ arrowKind: kind, arrowHead: headPos.toArray() }}>
       <mesh geometry={tube}>
         <meshBasicMaterial color={color} transparent opacity={0.92} toneMapped={false} depthTest={false} />
       </mesh>
@@ -918,6 +923,22 @@ function BoardDebug({ zoom, mode, look }: { zoom: number; mode: ViewMode; look: 
       },
       cards,
       cardScreenPos: (id: string) => cards().find((c) => c.id === id) ?? null,
+      // action arrows currently in the scene (attack / block / target), tagged via
+      // userData.arrowKind on each Arrow group. Each entry reports the kind plus the
+      // arrowhead's projected screen position + visibility, so tests can assert the
+      // arrows not only exist but actually land on-screen.
+      arrows: () => {
+        const { three } = ref.current
+        const out: { kind: string; x: number; y: number; onScreen: boolean }[] = []
+        three.scene.traverse((o) => {
+          const kind = o.userData?.arrowKind as string | undefined
+          const head = o.userData?.arrowHead as [number, number, number] | undefined
+          if (!kind || !head) return
+          const p = project(new THREE.Vector3(head[0], head[1], head[2]))
+          out.push({ kind, x: p.x, y: p.y, onScreen: p.z < 1 && p.x >= 0 && p.y >= 0 && p.x <= p.w && p.y <= p.h })
+        })
+        return out
+      },
     }
     ;(window as unknown as { __board3d?: typeof api }).__board3d = api
     return () => {
@@ -1024,15 +1045,13 @@ export function Board3D({
   game,
   cardProps,
   onHoverCard,
-  onPressCard,
-  onLongPressCard,
+  onOpenMenu,
   targets,
 }: {
   game: GameState
   cardProps: CardProps
   onHoverCard?: (c: GameCard | null) => void
-  onPressCard?: (c: GameCard | null) => void
-  onLongPressCard?: (c: GameCard) => void
+  onOpenMenu?: (c: GameCard, members?: GameCard[]) => void
   targets?: string[]
 }) {
   const { prefs } = usePrefs()
@@ -1089,7 +1108,7 @@ export function Board3D({
   )
   // Small screens default to free mode: a flat top-down board you pan with one
   // finger and pinch to zoom — a large zoomable/pannable canvas (rotate locked).
-  const [mode, setMode] = useState<ViewMode>(() => (isMobile ? 'free' : '3d'))
+  const [mode, setMode] = useState<ViewMode>(() => (isMobile ? 'free' : 'auto'))
   const TOP_DOWN: ViewTarget = useMemo(
     () => ({ pos: new THREE.Vector3(0, 15 + seats.length * 0.8, 2.2), look: new THREE.Vector3(0, 0, 0) }),
     [seats.length],
@@ -1151,19 +1170,19 @@ export function Board3D({
 
         {/* play surface: a dark pad with a glowing perimeter in the family colours */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]} receiveShadow>
-          <planeGeometry args={[15, 11.5]} />
+          <planeGeometry args={[20, 15.5]} />
           <meshStandardMaterial color={scene.table} roughness={0.6} metalness={0.2} transparent opacity={scene.grid ? 0.62 : 0.92} />
         </mesh>
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.012, 0]}>
-          <circleGeometry args={[5.2, 64]} />
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, TABLE_LIFT - 0.012, 0]}>
+          <circleGeometry args={[6.9, 64]} />
           <meshBasicMaterial color={scene.ring2} transparent opacity={0.06} toneMapped={false} />
         </mesh>
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
-          <ringGeometry args={[5.05, 5.2, 96]} />
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, TABLE_LIFT - 0.01, 0]}>
+          <ringGeometry args={[6.7, 6.9, 96]} />
           <meshBasicMaterial color={scene.ring} transparent opacity={0.38} toneMapped={false} />
         </mesh>
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.008, 0]}>
-          <ringGeometry args={[2.55, 2.62, 96]} />
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, TABLE_LIFT - 0.008, 0]}>
+          <ringGeometry args={[3.0, 3.08, 96]} />
           <meshBasicMaterial color={scene.ring2} transparent opacity={0.16} toneMapped={false} />
         </mesh>
 
@@ -1175,8 +1194,7 @@ export function Board3D({
             matColor={s.isViewer ? scene.ring : scene.ring2}
             cardProps={cardProps}
             onHoverCard={onHoverCard}
-            onPressCard={onPressCard}
-            onLongPressCard={onLongPressCard}
+            onOpenMenu={onOpenMenu}
           />
         ))}
 
@@ -1189,16 +1207,25 @@ export function Board3D({
         {/* action-direction arrows: attackers→defender, blockers→attacker, targeting */}
         <BoardArrows seats={seats} combat={game.combat} targets={targets} />
 
-        {/* stack (standing, center) — Billboard keeps each card facing the camera */}
-        {stack.map(({ card, pos }) => (
-          <Billboard key={card.id} lockX lockZ position={[pos[0], 0, 0]}>
-            <Card3D card={card} position={[0, 0, 0]} standing showCost cardProps={cardProps} onHoverCard={onHoverCard} onPressCard={onPressCard} onLongPressCard={onLongPressCard} />
-          </Billboard>
-        ))}
+        {/* stack (center) — a full Billboard squares each card to the camera like an
+            old billboard sprite (no axis locks), floated above the table and oversized
+            so the spell(s) currently resolving read clearly from any seat. */}
+        {stack.map(({ card, pos }, i) => {
+          // the middle card(s) sit closest to the camera and biggest; outer ones
+          // step back + down a touch so a multi-spell stack still fans readably.
+          const mid = (stack.length - 1) / 2
+          const off = Math.abs(i - mid)
+          const scale = 1.5 - off * 0.18
+          return (
+            <Billboard key={card.id} position={[pos[0] * 1.3, TABLE_LIFT + 0.55 - off * 0.12, 0]} scale={scale}>
+              <Card3D card={card} position={[0, 0, 0]} standing showCost cardProps={cardProps} onHoverCard={onHoverCard} onOpenMenu={onOpenMenu} />
+            </Billboard>
+          )
+        })}
 
         {/* my hand: laid flat in front of the viewer, slightly raised */}
         {hand.map(({ card, pos }) => (
-          <Card3D key={card.id} card={card} position={[pos[0], 0.06, pos[2]]} showCost cardProps={cardProps} onHoverCard={onHoverCard} onPressCard={onPressCard} onLongPressCard={onLongPressCard} />
+          <Card3D key={card.id} card={card} position={[pos[0], TABLE_LIFT + 0.06, pos[2]]} showCost cardProps={cardProps} onHoverCard={onHoverCard} onOpenMenu={onOpenMenu} />
         ))}
 
         {/* free cam → user orbits/pans; otherwise the camera is driven to the

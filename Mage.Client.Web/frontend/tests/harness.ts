@@ -117,6 +117,8 @@ export type Scenario =
   | 'game4p'
   | 'arrows'
   | 'stack'
+  | 'landstack'
+  | 'ability'
 
 const DRAFT = {
   booster: [
@@ -141,6 +143,23 @@ buffed.toughness = '6'
 const GAME_ARROWS = JSON.parse(JSON.stringify(SAMPLE.game)) as typeof SAMPLE.game
 GAME_ARROWS.step = 'Declare Blockers'
 GAME_ARROWS.combat = [{ attackers: ['b3'], blockers: ['a2'], defender: 'Computer', blocked: true }] as unknown[]
+
+// the viewer controls a stack of 5 same-named Forests — 3 untapped (fl1..fl3),
+// 2 tapped (fl4, fl5) — collapsed into one slot. Exercises the card menu's
+// "tap N from a stack" + undo controls. All untapped lands are playable (tappable).
+const GAME_LANDSTACK = JSON.parse(JSON.stringify(SAMPLE.game)) as typeof SAMPLE.game
+{
+  const you = GAME_LANDSTACK.players.find((p) => p.name === 'You')!
+  you.battlefield = [
+    card('fl1', 'Forest', ['Land'], { colors: 'G' }),
+    card('fl2', 'Forest', ['Land'], { colors: 'G' }),
+    card('fl3', 'Forest', ['Land'], { colors: 'G' }),
+    card('fl4', 'Forest', ['Land'], { colors: 'G', tapped: true }),
+    card('fl5', 'Forest', ['Land'], { colors: 'G', tapped: true }),
+    card('b3', 'Serra Angel', ['Creature'], { power: '4', toughness: '4', colors: 'W' }),
+  ]
+  GAME_LANDSTACK.canPlay = ['fl1', 'fl2', 'fl3', 'b3']
+}
 
 // a four-player Free For All board to exercise radial seating + multiplayer UI
 const GAME_MULTI = JSON.parse(JSON.stringify(SAMPLE.game)) as typeof SAMPLE.game
@@ -279,6 +298,7 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
     : scenario === 'game4p' ? GAME_4P_MAX
     : scenario === 'arrows' ? GAME_ARROWS
     : scenario === 'stack' ? GAME_STACK
+    : scenario === 'landstack' || scenario === 'ability' ? GAME_LANDSTACK
     : SAMPLE.game
   const isDraft = scenario === 'draft'
   const isConstruct = scenario === 'construct'
@@ -303,6 +323,10 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
             this.emit({ type: 'ready', payload: 'connected' })
             this.emit({ type: 'chat', user: 'System', text: 'Welcome.', color: 'BLUE', time: Date.now() })
             if (isGame) {
+              // test hook: re-push a game state with an arbitrary prompt (or the
+              // current one) so tests can drive the tap-queue drain / ability picker
+              ;(window as unknown as { __push: (p?: unknown) => void }).__push = (p?: unknown) =>
+                this.emit({ type: 'game', gameId: 'g-1', game, prompt: p === undefined ? prompt : p })
               setTimeout(() => {
                 this.emit({ type: 'gameStart', gameId: 'g-1' })
                 this.emit({ type: 'log', text: 'Precombat Main — your turn' })

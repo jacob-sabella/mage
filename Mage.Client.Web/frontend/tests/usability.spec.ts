@@ -83,7 +83,7 @@ type Screen = {
 // other. We measure the `.overlay-tr` rail (the scroll-clipped container that
 // bounds stack+combat) rather than the inner panels, whose layout boxes ignore
 // the rail's overflow clip and would over-report an overlap that's not visible.
-const GAME_PANELS = ['.overlay-tr', '.board-wrap .game-log', '.player-strip']
+const GAME_PANELS = ['.overlay-tr', '.player-strip']
 const GAME_CONTROLS = (p: Page) => [
   { label: 'Pass', loc: p.getByRole('button', { name: /^Pass/ }) },
   { label: 'Done', loc: p.getByRole('button', { name: /^Done/ }) },

@@ -12,8 +12,10 @@ test.describe('Game board (3D)', () => {
     await expect(page.locator('.pstat', { hasText: 'Computer' })).toContainText('18')
     await expect(page.locator('.pstat', { hasText: 'You' })).toContainText('20')
 
-    // snap-view controls live in the radial view menu (collapsed by default)
+    // snap-view controls live in the radial view menu (collapsed by default); the
+    // per-seat Focus row only applies to the manual 3D camera, so select it first
     await page.locator('.view-fab').click()
+    await page.locator('.view-radial.mode', { hasText: '3D' }).click()
     await expect(page.getByRole('button', { name: 'Overview' })).toBeVisible()
 
     // floating mana pool shown as pips for the viewer ({U}{U}{R} -> 3 pips)
@@ -25,7 +27,9 @@ test.describe('Game board (3D)', () => {
     await expect(page.getByRole('button', { name: 'Pass' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Done' })).toBeVisible()
     await expect(page.getByRole('button', { name: /Next turn/ })).toBeVisible()
-    await expect(page.locator('.game-log')).toBeVisible()
+    // the game log now lives as a tab in the chat panel, not floating on the board
+    await page.getByRole('tab', { name: 'Game log' }).click()
+    await expect(page.locator('.chat-log')).toContainText('Precombat Main')
   })
 
   test('passing priority sends a respond and is accepted', async ({ page }) => {
@@ -90,6 +94,19 @@ test.describe('Game board (3D)', () => {
     await expect(combat).toBeVisible()
     await expect(combat).toContainText('Computer')
     await expect(combat).toContainText(/blocked by/)
+
+    // the actual on-board 3D arrows must render too: Serra Angel (b3) attacks the
+    // Computer (attack arrow), blocked by Goblin Guide (a2) (block arrow), and the
+    // paired target prompt draws a targeting arrow — three in all.
+    const readArrows = () =>
+      page.evaluate(
+        () =>
+          (window as unknown as { __board3d?: { arrows: () => { kind: string; onScreen: boolean }[] } }).__board3d?.arrows() ??
+          [],
+      )
+    await expect.poll(async () => (await readArrows()).map((a) => a.kind).sort()).toEqual(['attack', 'block', 'target'])
+    // and they must actually land on-screen, not just exist in the scene graph
+    expect((await readArrows()).every((a) => a.onScreen)).toBe(true)
   })
 
   test('pile choice shows both piles and picks one (boolean)', async ({ page }) => {
@@ -176,9 +193,37 @@ test.describe('Game board (3D)', () => {
   test('snap-view buttons switch the active view', async ({ page }) => {
     await gotoScreen(page, 'game')
     await page.locator('.view-fab').click()
+    await page.locator('.view-radial.mode', { hasText: '3D' }).click()
     const overview = page.getByRole('button', { name: 'Overview' })
     await overview.click()
     await expect(overview).toHaveClass(/active/)
+  })
+
+  test('desktop maximize: hides the site chrome and fills the window; Esc exits', async ({ page }) => {
+    await gotoScreen(page, 'game')
+    await expect(page.locator('.board3d canvas')).toBeVisible()
+
+    const maxBtn = page.getByRole('button', { name: 'Maximize board' })
+    await expect(maxBtn).toBeVisible()
+    await maxBtn.click()
+
+    await expect(page.locator('html.board-max')).toHaveCount(1)
+    // website chrome + the separate outer backdrop canvas are gone
+    await expect(page.locator('.topbar')).toBeHidden()
+    await expect(page.locator('.app-nav')).toBeHidden()
+    await expect(page.locator('.lobby-header')).toBeHidden()
+    await expect(page.locator('.scene-bg')).toBeHidden()
+
+    // the board fills the whole viewport
+    const vp = page.viewportSize()!
+    const box = (await page.locator('.board-wrap').boundingBox())!
+    expect(box.width).toBeGreaterThan(vp.width - 4)
+    expect(box.height).toBeGreaterThan(vp.height - 4)
+
+    // Esc leaves maximized and the chrome comes back
+    await page.keyboard.press('Escape')
+    await expect(page.locator('html.board-max')).toHaveCount(0)
+    await expect(page.locator('.topbar')).toBeVisible()
   })
 
   test('view menu offers Auto / 2D / 3D / free camera modes', async ({ page }) => {
@@ -219,8 +264,9 @@ test.describe('Multiplayer (Free For All)', () => {
     await expect(page.locator('.pstat', { hasText: 'Teferi' })).toContainText('22')
     await expect(page.locator('.pstat', { hasText: 'Vraska' })).toContainText('14')
 
-    // a snap-view per seat (Overview + 4 players) inside the radial menu
+    // a snap-view per seat (Overview + 4 players) inside the radial menu's 3D Focus row
     await page.locator('.view-fab').click()
+    await page.locator('.view-radial.mode', { hasText: '3D' }).click()
     await expect(page.getByRole('button', { name: 'Overview' })).toBeVisible()
     await expect(page.locator('.view-menu .view-radial.focus')).toHaveCount(5)
   })
@@ -228,6 +274,7 @@ test.describe('Multiplayer (Free For All)', () => {
   test('can target any opponent in a multiplayer game', async ({ page }) => {
     await gotoScreen(page, 'multiplayer')
     await page.locator('.view-fab').click()
+    await page.locator('.view-radial.mode', { hasText: '3D' }).click()
     // the active player can switch the camera to each opponent's seat
     await page.locator('.view-radial', { hasText: 'Vraska' }).click()
     await expect(page.locator('.view-radial.active', { hasText: 'Vraska' })).toBeVisible()

@@ -8,11 +8,26 @@ interface Props {
   game: GameState | null
   prompt: Prompt | null
   interactive: boolean
-  log?: string[]
   result?: string | null
   onRespond: (kind: RespondKind, value?: string) => void
+  // tap several lands from a same-named stack in sequence (one priority round each)
+  onTapMany?: (ids: string[]) => void
+  // desktop in-tab "maximize the board" mode (owned by LobbyView so it can also
+  // collapse the chat column)
+  maximized?: boolean
+  onToggleMaximize?: () => void
   onLeave: () => void
   onPlayAgain?: () => void
+}
+
+// What the contextual card menu is currently showing. `members` is the collapsed
+// land stack (when opened on one); `abilities` is the xmage ability-picker list,
+// set only when the menu auto-opened anchored to a just-activated card.
+type MenuState = {
+  card: CardType
+  members?: CardType[]
+  abilities?: { key: string; label: string }[]
+  choiceKind?: string
 }
 
 // F-key skip shortcuts -> PlayerAction names sent via /api/game/respond (action).
@@ -31,7 +46,7 @@ const SKIP_BUTTONS = [
   { label: 'Cancel skips', key: 'F6', action: 'PASS_PRIORITY_CANCEL_ALL_ACTIONS' },
 ]
 
-export function GameTable({ game, prompt, interactive, log = [], result, onRespond, onLeave, onPlayAgain }: Props) {
+export function GameTable({ game, prompt, interactive, result, onRespond, onTapMany, maximized, onToggleMaximize, onLeave, onPlayAgain }: Props) {
   const [preview, setPreview] = useState<CardType | null>(null)
   const [pressedCard, setPressedCard] = useState<CardType | null>(null)
   // resolve combat card ids → names (defenders may be a player name, left as-is)
@@ -40,7 +55,10 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
     game?.players.forEach((p) => p.battlefield.forEach((c) => m.set(c.id, c.name)))
     return (id: string) => m.get(id) ?? id
   }, [game])
-  const [actionSheetCard, setActionSheetCard] = useState<CardType | null>(null)
+  const [menu, setMenu] = useState<MenuState | null>(null)
+  // the last battlefield card the viewer clicked to activate — used to anchor the
+  // ability picker menu to the card the abilities came from (xmage doesn't tell us)
+  const lastActivatedRef = useRef<{ card: CardType; t: number } | null>(null)
   // the floating Stack/Combat panels crowd the board on phones — collapse them by
   // default there (tap the header to expand); leave them open on roomy screens
   const compact =
@@ -86,10 +104,25 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
     return () => document.removeEventListener('fullscreenchange', onFs)
   }, [])
 
-  const handleLongPress = useCallback((card: CardType) => {
+  const handleOpenMenu = useCallback((card: CardType, members?: CardType[]) => {
     if (navigator.vibrate) navigator.vibrate(30)
-    setActionSheetCard(card)
+    setMenu({ card, members })
   }, [])
+
+  // Anchor the xmage ability picker (a uuid `choice` prompt) to the card the
+  // viewer just activated, so its options appear as a menu on that card rather
+  // than only as buttons in the bottom bar. Closes the ability menu when the
+  // picker goes away. Manually-opened menus (no `abilities`) are left alone.
+  useEffect(() => {
+    if (prompt?.kind === 'choice' && prompt.choiceKind === 'uuid') {
+      const la = lastActivatedRef.current
+      if (la && Date.now() - la.t < 5000) {
+        setMenu({ card: la.card, abilities: prompt.choices, choiceKind: prompt.choiceKind })
+      }
+    } else {
+      setMenu((m) => (m?.abilities ? null : m))
+    }
+  }, [prompt])
 
   // Debounce clearing the preview so rapid enter/leave events (from 3D raycasting)
   // don't cause a 1-frame flash of null between cards.
@@ -167,7 +200,15 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
       return { highlight: 'target', onClick: () => onRespond('uuid', card.id) }
     }
     if (game?.canPlay.includes(card.id)) {
-      return { highlight: 'play', onClick: () => onRespond('uuid', card.id) }
+      return {
+        highlight: 'play',
+        onClick: () => {
+          // remember what we just activated so an ability-picker prompt that comes
+          // back can anchor its menu to this card
+          lastActivatedRef.current = { card, t: Date.now() }
+          onRespond('uuid', card.id)
+        },
+      }
     }
     return {}
   }
@@ -232,25 +273,37 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
         {boardFocus ? '✕' : '⛶'}
       </button>
 
+      {/* desktop in-tab maximize: board fills the window, site chrome hides */}
+      {onToggleMaximize && (
+        <button
+          className="maximize-toggle"
+          onClick={onToggleMaximize}
+          title={maximized ? 'Exit maximized board (Esc)' : 'Maximize board'}
+          aria-label={maximized ? 'Exit maximized board' : 'Maximize board'}
+        >
+          {maximized ? '✕' : '⛶'}
+        </button>
+      )}
+
       <div className="board-wrap">
         <Board3D
           game={game}
           cardProps={cardProps}
           onHoverCard={handleHoverCard}
-          onPressCard={setPressedCard}
-          onLongPressCard={handleLongPress}
+          onOpenMenu={handleOpenMenu}
           targets={prompt?.kind === 'target' ? prompt.targets : undefined}
         />
         <CardPreview card={preview} />
         <CardZoomOverlay card={pressedCard} />
-        {actionSheetCard && (
-          <CardActionSheet
-            card={actionSheetCard}
+        {menu && (
+          <CardMenu
+            menu={menu}
             game={game}
             prompt={prompt}
             interactive={interactive}
             onRespond={onRespond}
-            onClose={() => setActionSheetCard(null)}
+            onTapMany={onTapMany}
+            onClose={() => setMenu(null)}
           />
         )}
 
@@ -313,8 +366,6 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
           </div>
         )}
 
-        {log.length > 0 && <GameLog lines={log} />}
-
         {result && (
           <div className="game-over-overlay">
             <div className="game-over-card panel">
@@ -352,7 +403,9 @@ export function GameTable({ game, prompt, interactive, log = [], result, onRespo
           </div>
           {prompt?.kind === 'select' && <PlayableBar game={game} onRespond={onRespond} onHoverCard={handleHoverCard} onPressCard={setPressedCard} />}
           <span className="spacer" />
-          <ActionBar prompt={prompt} onRespond={onRespond} />
+          {/* when the ability picker is anchored to a card menu, don't also list
+              the same options in the bottom bar */}
+          <ActionBar prompt={prompt} onRespond={onRespond} hideChoice={!!menu?.abilities} />
         </div>
       )}
       {!interactive && !result && game.me && (
@@ -511,21 +564,27 @@ function CardZoomOverlay({ card }: { card: CardType | null }) {
   )
 }
 
-function CardActionSheet({
-  card,
+/** Contextual card menu — one surface reused for a card's primary action (play /
+ *  target), an xmage ability picker anchored to the card, and tapping/undoing a
+ *  chosen number of lands from a same-named stack. */
+function CardMenu({
+  menu,
   game,
   prompt,
   interactive,
   onRespond,
+  onTapMany,
   onClose,
 }: {
-  card: CardType
+  menu: MenuState
   game: GameState | null
   prompt: Prompt | null
   interactive: boolean
   onRespond: (kind: RespondKind, value?: string) => void
+  onTapMany?: (ids: string[]) => void
   onClose: () => void
 }) {
+  const { card, members, abilities, choiceKind } = menu
   const img = `/api/cardimg?set=${encodeURIComponent(card.set ?? '')}&num=${encodeURIComponent(
     card.num ?? '',
   )}&name=${encodeURIComponent(card.name)}`
@@ -534,10 +593,17 @@ function CardActionSheet({
   const canTarget = interactive && prompt?.kind === 'target'
   const isCreature = card.types?.includes('Creature')
 
-  // A touch long-press opens this sheet while the finger is still down; lifting
-  // the finger then fires a synthetic `click` on the full-screen backdrop, which
-  // would instantly close the just-opened sheet. Ignore backdrop clicks that
-  // arrive within a short grace window of opening so long-press preview is usable.
+  // land-stack controls: which of the collapsed lands are still untappable / tapped
+  const untapped = useMemo(() => (members ?? []).filter((m) => !m.tapped), [members])
+  const tappedCount = (members?.length ?? 0) - untapped.length
+  const isStack = (members?.length ?? 0) > 1
+  const [n, setN] = useState(1)
+  const tapCount = Math.min(Math.max(1, n), Math.max(1, untapped.length))
+
+  // A touch long-press opens this menu while the finger is still down; lifting the
+  // finger then fires a synthetic `click` on the full-screen backdrop, which would
+  // instantly close the just-opened menu. Ignore backdrop clicks within a short
+  // grace window of opening so long-press stays usable.
   const openedAt = useRef(Date.now())
   const onBackdrop = () => {
     if (Date.now() - openedAt.current < 400) return
@@ -572,13 +638,77 @@ function CardActionSheet({
                 {card.damage > 0 && <span style={{ color: 'var(--danger)' }}> −{card.damage}</span>}
               </div>
             )}
-            {card.tapped && <div className="card-action-status muted">Tapped</div>}
+            {isStack && (
+              <div className="card-action-status muted">
+                {untapped.length} untapped · {tappedCount} tapped
+              </div>
+            )}
+            {!isStack && card.tapped && <div className="card-action-status muted">Tapped</div>}
           </div>
         </div>
+
+        {/* xmage ability picker, anchored to this card */}
+        {abilities && abilities.length > 0 && (
+          <div className="card-action-abilities">
+            {abilities.map((a) => (
+              <button
+                key={a.key}
+                className="btn"
+                onClick={() => {
+                  onRespond((choiceKind as RespondKind) ?? 'uuid', a.key)
+                  onClose()
+                }}
+              >
+                {plain(a.label)}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* land-stack tap / undo controls */}
+        {isStack && interactive && (
+          <div className="card-action-stack">
+            {untapped.length > 0 && onTapMany && (
+              <div className="stack-tap-row">
+                <div className="stack-stepper" role="group" aria-label="Lands to tap">
+                  <button className="btn ghost" aria-label="Fewer" disabled={tapCount <= 1} onClick={() => setN((v) => Math.max(1, v - 1))}>
+                    −
+                  </button>
+                  <span className="stack-stepper-n">{tapCount}</span>
+                  <button
+                    className="btn ghost"
+                    aria-label="More"
+                    disabled={tapCount >= untapped.length}
+                    onClick={() => setN((v) => Math.min(untapped.length, v + 1))}
+                  >
+                    +
+                  </button>
+                </div>
+                <button
+                  className="btn primary"
+                  onClick={() => {
+                    onTapMany(untapped.slice(0, tapCount).map((m) => m.id))
+                    onClose()
+                  }}
+                >
+                  Tap {tapCount}
+                </button>
+              </div>
+            )}
+            {tappedCount > 0 && (
+              // xmage UNDO reverts the most-recent floated mana (repeatable), not a
+              // specific permanent — so this is "undo my last tap", not a per-land untap
+              <button className="btn" onClick={() => onRespond('action', 'UNDO')}>
+                Undo tap
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="card-action-buttons">
           {canPlay && (
             <button className="btn primary" onClick={() => { onRespond('uuid', card.id); onClose() }}>
-              Play
+              {isStack ? 'Tap 1' : 'Play'}
             </button>
           )}
           {canTarget && (
@@ -593,33 +723,7 @@ function CardActionSheet({
   )
 }
 
-function GameLog({ lines }: { lines: string[] }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [collapsed, setCollapsed] = useState(false)
-  useEffect(() => {
-    const el = ref.current
-    if (el && !collapsed) el.scrollTop = el.scrollHeight
-  }, [lines, collapsed])
-  return (
-    <div className={`game-log panel${collapsed ? ' collapsed' : ''}`}>
-      <button className="game-log-head" onClick={() => setCollapsed((c) => !c)} title={collapsed ? 'Expand log' : 'Collapse log'}>
-        <span className="stack-title">Game log</span>
-        <span className="game-log-toggle" aria-hidden>{collapsed ? '▸' : '▾'}</span>
-      </button>
-      {!collapsed && (
-        <div className="game-log-body" ref={ref}>
-          {lines.map((l, i) => (
-            <div className="game-log-line" key={i}>
-              {plain(l)}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function ActionBar({ prompt, onRespond }: { prompt: Prompt | null; onRespond: (kind: RespondKind, value?: string) => void }) {
+function ActionBar({ prompt, onRespond, hideChoice }: { prompt: Prompt | null; onRespond: (kind: RespondKind, value?: string) => void; hideChoice?: boolean }) {
   const [amount, setAmount] = useState('')
 
   if (!prompt) {
@@ -691,7 +795,7 @@ function ActionBar({ prompt, onRespond }: { prompt: Prompt | null; onRespond: (k
         </>
       )}
 
-      {prompt.kind === 'choice' && (
+      {prompt.kind === 'choice' && !hideChoice && (
         <div className="choice-list">
           {prompt.choices.map((c) => (
             <button key={c.key} className="btn" onClick={() => onRespond(prompt.choiceKind ?? 'string', c.key)}>

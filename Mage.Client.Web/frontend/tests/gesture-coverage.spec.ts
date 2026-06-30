@@ -334,7 +334,12 @@ suite('Gesture · DOM zoom controls', () => {
   test('mouse: +/- and reset change the custom zoom factor AND the camera distance', async ({ page }) => {
     await gotoScreen(page, 'game')
     await waitBoard(page)
-    expect(await readMode(page)).toBe('3d') // desktop default — the zoom strip is shown
+    // the manual 3D camera is the one whose distance tracks the zoom factor; the
+    // desktop default is now the cinematic Auto cam, so select 3D first
+    await page.locator('.view-fab').click()
+    await page.getByRole('button', { name: '3D', exact: true }).click()
+    await page.locator('.view-fab').click()
+    await expect.poll(() => readMode(page)).toBe('3d')
     expect(await readZoom(page)).toBeCloseTo(0.75, 2)
     const dist0 = (await readCam(page)).distance
 

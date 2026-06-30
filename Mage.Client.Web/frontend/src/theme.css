@@ -620,6 +620,31 @@ input::placeholder { color: var(--text-dim); }
   background: var(--bg-raised);
   border-bottom: 1px solid var(--stroke);
 }
+.chat-tabs {
+  display: flex;
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--stroke);
+}
+.chat-tab {
+  flex: 1;
+  padding: 12px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+.chat-tab:hover { color: var(--text); }
+.chat-tab.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+.chat-log { color: var(--text-dim); font-size: 12.5px; line-height: 1.5; gap: 1px; }
+.chat-log .game-log-line:last-child { color: var(--text); }
 .chat-messages {
   flex: 1;
   overflow-y: auto;
@@ -1835,6 +1860,71 @@ html, body { overflow-x: hidden; }
   .board-focus .focus-toggle { top: 50%; bottom: auto; right: 6px; transform: translateY(-50%); }
 }
 
+/* ===== desktop "maximize within the tab" =====================================
+   The board fills the whole window and the website chrome + outer backdrop hide,
+   so the board's own in-canvas scene becomes the entire view — one continuous
+   thing, no second-canvas seam. Not browser-fullscreen; purely an in-tab layout.
+   Desktop only (phones already have the .board-focus immersive HUD). */
+.maximize-toggle { display: none; }
+@media (min-width: 761px) and (min-height: 541px) {
+  .maximize-toggle {
+    display: flex; align-items: center; justify-content: center;
+    position: fixed; top: 72px; right: 16px; z-index: 40;
+    width: 40px; height: 40px; border-radius: 50%; cursor: pointer;
+    color: var(--text); font-size: 17px;
+    background: rgba(14, 16, 22, 0.72); backdrop-filter: blur(6px);
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--stroke));
+    box-shadow: 0 0 calc(12px * var(--glow-strength, 1)) color-mix(in srgb, var(--accent) 50%, transparent);
+    transition: background 0.15s, transform 0.15s;
+  }
+  .maximize-toggle:hover { background: rgba(20, 24, 34, 0.9); transform: scale(1.06); }
+
+  /* hide the website chrome + the separate outer three.js backdrop */
+  html.board-max .topbar,
+  html.board-max .app-nav,
+  html.board-max .lobby-header,
+  html.board-max .scene-bg,
+  html.board-max .help-fab { display: none; }
+  html.board-max #app { padding: 0; margin: 0; overflow: hidden; }
+  html.board-max .lobby-view { padding: 0; gap: 0; }
+
+  /* the board owns the entire window */
+  html.board-max .lobby-body,
+  html.board-max .lobby-main,
+  html.board-max .game-table { height: 100vh; min-height: 100vh; gap: 0; }
+  html.board-max .board-wrap,
+  html.board-max .board3d { position: fixed; inset: 0; height: 100vh; min-height: 0; z-index: 1; }
+
+  /* turn / phase → slim translucent top bar */
+  html.board-max .game-toolbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 22; margin: 0;
+    padding: 7px 64px 7px 14px; gap: 12px; /* right pad clears the exit ✕ */
+    background: linear-gradient(rgba(8, 10, 16, 0.82), rgba(8, 10, 16, 0));
+    backdrop-filter: blur(5px);
+  }
+  /* player life strip → top HUD just under the turn bar */
+  html.board-max .player-strip {
+    position: fixed; top: 46px; left: 16px; right: 70px; z-index: 22;
+    background: transparent; padding: 0; margin: 0;
+  }
+  /* controls → translucent dock pinned to the bottom */
+  html.board-max .control-dock {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 22; margin: 0;
+    background: linear-gradient(rgba(8, 10, 16, 0), rgba(8, 10, 16, 0.9));
+    backdrop-filter: blur(5px);
+  }
+  /* the exit button moves up into the now-empty top-right corner */
+  html.board-max .maximize-toggle { top: 8px; right: 16px; }
+
+  /* chat collapses to its floating toggle; reopening it floats over the board
+     instead of taking a docked column */
+  html.board-max .chat-col {
+    position: fixed; top: 92px; right: 16px; bottom: 96px; width: min(360px, 30vw);
+    z-index: 30; margin: 0;
+  }
+  html.board-max .chat-reopen { z-index: 30; }
+}
+
 /* deck 4-copy-limit warning */
 .deck-limit-warn { font-size: 12px; color: #ffb13b; font-weight: 600; margin: 2px 0 0; }
 .deck-entry.over-limit .deck-entry-count { color: #ffb13b; font-weight: 800; }
@@ -2043,6 +2133,19 @@ html, body { overflow-x: hidden; }
   border-top: 1px solid var(--stroke); padding-top: 14px;
 }
 .card-action-buttons .btn { flex: 1; min-width: 90px; padding: 13px 16px; font-size: 15px; font-weight: 700; }
+
+/* ability picker, anchored in the card menu */
+.card-action-abilities { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.card-action-abilities .btn { text-align: left; padding: 12px 14px; font-size: 14px; }
+
+/* land-stack tap / undo controls */
+.card-action-stack { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+.stack-tap-row { display: flex; gap: 10px; align-items: center; flex: 1; min-width: 0; }
+.stack-tap-row .btn.primary { flex: 1; min-width: 90px; padding: 13px 16px; font-size: 15px; font-weight: 700; }
+.stack-stepper { display: flex; align-items: center; gap: 2px; background: var(--bg-raised); border: 1px solid var(--stroke); border-radius: 10px; padding: 4px; }
+.stack-stepper .btn { padding: 8px 14px; font-size: 18px; font-weight: 800; line-height: 1; min-width: 0; }
+.stack-stepper-n { min-width: 28px; text-align: center; font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.card-action-stack > .btn { padding: 13px 16px; font-size: 15px; font-weight: 700; }
 
 .game-over-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 
