@@ -377,24 +377,33 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
           </div>
         )}
 
-        {result && (
-          <div className="game-over-overlay">
-            <div className="game-over-card panel">
-              <div className="game-over-title">{/won|win/i.test(result) ? '🏆 ' : ''}Game over</div>
-              <div className="game-over-msg">{plain(result)}</div>
-              <div className="game-over-actions">
-                {onPlayAgain && (
-                  <button className="btn primary" onClick={onPlayAgain}>
-                    Play again
-                  </button>
-                )}
-                <button className={`btn${onPlayAgain ? ' ghost' : ' primary'}`} onClick={onLeave}>
-                  Back to lobby
-                </button>
+        {result &&
+          (() => {
+            const won = /won|win|victor/i.test(result)
+            const lost = /lost|lose|defeat|conced/i.test(result)
+            const outcome = won ? 'win' : lost ? 'loss' : 'neutral'
+            return (
+              <div className="game-over-overlay">
+                <div className={`game-over-card panel game-over-${outcome}`}>
+                  <div className="game-over-emoji" aria-hidden>
+                    {won ? '🏆' : lost ? '☠️' : '🎴'}
+                  </div>
+                  <div className="game-over-title">{won ? 'Victory' : lost ? 'Defeat' : 'Game over'}</div>
+                  <div className="game-over-msg">{plain(result)}</div>
+                  <div className="game-over-actions">
+                    {onPlayAgain && (
+                      <button className="btn primary" onClick={onPlayAgain}>
+                        Play again
+                      </button>
+                    )}
+                    <button className={`btn${onPlayAgain ? ' ghost' : ' primary'}`} onClick={onLeave}>
+                      Back to lobby
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        )}
+            )
+          })()}
 
         {confirmConcede && (
           <ConfirmDialog

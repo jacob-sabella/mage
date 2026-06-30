@@ -1311,9 +1311,27 @@ input::placeholder { color: var(--text-dim); }
   display: flex; align-items: center; justify-content: center;
   background: rgba(8, 10, 14, 0.66); backdrop-filter: blur(3px);
 }
-.game-over-card { padding: 28px 34px; text-align: center; display: flex; flex-direction: column; gap: 14px; min-width: 320px; }
-.game-over-title { font-size: 24px; font-weight: 800; }
-.game-over-msg { font-size: 16px; color: var(--text-dim); }
+.game-over-card {
+  padding: 28px 34px 26px; text-align: center; display: flex; flex-direction: column;
+  align-items: center; gap: 8px; min-width: 340px;
+  border-width: 2px; animation: game-over-pop 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.12);
+}
+@keyframes game-over-pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.game-over-emoji { font-size: 52px; line-height: 1; margin-bottom: 2px; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5)); }
+.game-over-title { font-size: 30px; font-weight: 900; letter-spacing: 1px; }
+.game-over-msg { font-size: 15px; color: var(--text-dim); }
+.game-over-actions { margin-top: 12px; }
+/* outcome accents */
+.game-over-win { border-color: #e8c35a; box-shadow: 0 0 60px color-mix(in srgb, #e8c35a 32%, transparent); }
+.game-over-win .game-over-title { color: #f4d678; text-shadow: 0 0 22px color-mix(in srgb, #e8c35a 60%, transparent); }
+.game-over-win .game-over-emoji { animation: game-over-bounce 1.6s ease-in-out infinite; }
+@keyframes game-over-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.game-over-loss { border-color: color-mix(in srgb, var(--danger) 60%, var(--stroke)); }
+.game-over-loss .game-over-title { color: var(--danger); }
+@media (prefers-reduced-motion: reduce) {
+  .game-over-card, .game-over-win .game-over-emoji { animation: none; }
+}
+html.reduce-motion .game-over-card, html.reduce-motion .game-over-win .game-over-emoji { animation: none; }
 
 /* in-app confirm modal (replaces window.confirm) */
 .confirm-overlay {

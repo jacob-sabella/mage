@@ -356,6 +356,9 @@ test.describe('Game over', () => {
     await gotoScreen(page, 'gameOver')
     const overlay = page.locator('.game-over-overlay')
     await expect(overlay).toBeVisible()
+    // a win reads as "Victory" (not the generic "Game over"), with the detail below
+    await expect(overlay.locator('.game-over-title')).toHaveText('Victory')
+    await expect(overlay.locator('.game-over-card')).toHaveClass(/game-over-win/)
     await expect(overlay).toContainText('You have won the game')
     await overlay.getByRole('button', { name: 'Back to lobby' }).click()
     // back to the lobby
