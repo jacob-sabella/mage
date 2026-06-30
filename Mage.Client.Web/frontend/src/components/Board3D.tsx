@@ -154,6 +154,7 @@ function CardPile({
   label,
   cardProps,
   onHoverCard,
+  occludeBadges,
 }: {
   position: [number, number] // local x, z
   count: number
@@ -162,6 +163,7 @@ function CardPile({
   label: string
   cardProps: CardProps
   onHoverCard?: (c: GameCard | null) => void
+  occludeBadges?: boolean
 }) {
   const back = useMemo(makeCardBack, [])
   const { gl } = useThree()
@@ -201,7 +203,7 @@ function CardPile({
             <meshBasicMaterial map={back} toneMapped={false} transparent depthWrite={false} />
           </mesh>
         ))}
-      <Html position={[0, 0.34, CARD_H * 0.62]} center distanceFactor={10} zIndexRange={[15, 0]} occlude className="c3d-badge c3d-zone">
+      <Html position={[0, 0.34, CARD_H * 0.62]} center distanceFactor={10} zIndexRange={[15, 0]} occlude={occludeBadges} className="c3d-badge c3d-zone">
         {label} {count}
       </Html>
     </group>
@@ -219,6 +221,7 @@ function Card3D({
   cardProps,
   onHoverCard,
   onOpenMenu,
+  occludeBadges,
 }: {
   card: GameCard
   position: [number, number, number]
@@ -229,6 +232,9 @@ function Card3D({
   cardProps: CardProps
   onHoverCard?: (c: GameCard | null) => void
   onOpenMenu?: (c: GameCard, members?: GameCard[]) => void
+  // only raycast-occlude the DOM badges when there's a central stack to hide them
+  // behind — avoids per-frame badge flicker the rest of the time
+  occludeBadges?: boolean
 }) {
   const [art, setArt] = useState<THREE.Texture | null>(null)
   const [hover, setHover] = useState(false)
@@ -386,7 +392,7 @@ function Card3D({
             center
             distanceFactor={9}
             zIndexRange={[20, 0]}
-            occlude
+            occlude={occludeBadges}
             className="c3d-badge c3d-pt"
           >
             {card.power}/{card.toughness}
@@ -398,7 +404,7 @@ function Card3D({
             center
             distanceFactor={9}
             zIndexRange={[20, 0]}
-            occlude
+            occlude={occludeBadges}
             className="c3d-badge c3d-loy"
           >
             {card.loyalty}
@@ -410,7 +416,7 @@ function Card3D({
             center
             distanceFactor={8}
             zIndexRange={[16, 0]}
-            occlude
+            occlude={occludeBadges}
             className="c3d-badge c3d-mana"
           >
             {manaSymbols(card.manaCost).map((s, i) => (
@@ -426,7 +432,7 @@ function Card3D({
             center
             distanceFactor={9}
             zIndexRange={[20, 0]}
-            occlude
+            occlude={occludeBadges}
             className="c3d-badge c3d-stack"
           >
             ×{stackCount}
@@ -562,6 +568,7 @@ function PlayerZone({
   cardProps,
   onHoverCard,
   onOpenMenu,
+  occludeBadges,
 }: {
   seat: Seat
   active: boolean
@@ -569,6 +576,7 @@ function PlayerZone({
   cardProps: CardProps
   onHoverCard?: (c: GameCard | null) => void
   onOpenMenu?: (c: GameCard, members?: GameCard[]) => void
+  occludeBadges?: boolean
 }) {
   const [expanded, setExpanded] = useState(false)
 
@@ -623,7 +631,7 @@ function PlayerZone({
     <group position={[seat.x, TABLE_LIFT, seat.z]} rotation={[0, seat.yaw, 0]}>
       <SeatMat color={matColor} active={active} />
       {placed.map(({ card, pos, stackCount, members }) => (
-        <Card3D key={card.id} card={card} position={pos} stackCount={stackCount} members={members} cardProps={cardProps} onHoverCard={onHoverCard} onOpenMenu={onOpenMenu} />
+        <Card3D key={card.id} card={card} position={pos} stackCount={stackCount} members={members} cardProps={cardProps} onHoverCard={onHoverCard} onOpenMenu={onOpenMenu} occludeBadges={occludeBadges} />
       ))}
       {/* overflow badges: show +N when a row is clipped */}
       {!expanded &&
@@ -647,9 +655,9 @@ function PlayerZone({
       {/* zone piles — standard playmat: library + graveyard to the player's
           right, exile set apart on the left ("outside the game").
           PILE_X keeps piles clear of the MAX_ROW_W battlefield rows. */}
-      <CardPile position={[PILE_X, 1.7]} count={p.libraryCount} faceUp={false} label="Lib" cardProps={cardProps} onHoverCard={onHoverCard} />
-      <CardPile position={[PILE_X, 0.0]} count={p.graveyardCount} top={gy} faceUp label="GY" cardProps={cardProps} onHoverCard={onHoverCard} />
-      <CardPile position={[-PILE_X, 1.7]} count={p.exile.length} top={ex} faceUp label="Exile" cardProps={cardProps} onHoverCard={onHoverCard} />
+      <CardPile position={[PILE_X, 1.7]} count={p.libraryCount} faceUp={false} label="Lib" cardProps={cardProps} onHoverCard={onHoverCard} occludeBadges={occludeBadges} />
+      <CardPile position={[PILE_X, 0.0]} count={p.graveyardCount} top={gy} faceUp label="GY" cardProps={cardProps} onHoverCard={onHoverCard} occludeBadges={occludeBadges} />
+      <CardPile position={[-PILE_X, 1.7]} count={p.exile.length} top={ex} faceUp label="Exile" cardProps={cardProps} onHoverCard={onHoverCard} occludeBadges={occludeBadges} />
     </group>
   )
 }
@@ -1149,6 +1157,9 @@ export function Board3D({
   // the hand is no longer laid on the table — it's a fixed screen-space fan at the
   // bottom of the screen (HandFan in GameTable), the way other MTG clients do it
   const stack = useMemo(() => row(game.stack.map((c) => ({ card: c })), 0, 0.6, 1.4), [game.stack])
+  // only raycast-occlude DOM badges when there's a central stack to hide them behind;
+  // the rest of the time it just risks per-frame badge flicker for no benefit
+  const occludeBadges = game.stack.length > 0
 
   return (
     <div className="board3d">
@@ -1215,6 +1226,7 @@ export function Board3D({
             cardProps={cardProps}
             onHoverCard={onHoverCard}
             onOpenMenu={onOpenMenu}
+            occludeBadges={occludeBadges}
           />
         ))}
 
