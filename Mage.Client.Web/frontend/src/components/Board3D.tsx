@@ -186,7 +186,7 @@ function CardPile({
       {Array.from({ length: Math.max(0, layers - 1) }).map((_, i) => (
         <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[0.012 * i, 0.012 + i * step, 0.012 * i]}>
           <planeGeometry args={[CARD_W, CARD_H]} />
-          <meshBasicMaterial map={back} toneMapped={false} transparent />
+          <meshBasicMaterial map={back} toneMapped={false} transparent depthWrite={false} />
         </mesh>
       ))}
       {/* top of the pile */}
@@ -196,7 +196,7 @@ function CardPile({
         ) : (
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, topY, 0]}>
             <planeGeometry args={[CARD_W, CARD_H]} />
-            <meshBasicMaterial map={back} toneMapped={false} transparent />
+            <meshBasicMaterial map={back} toneMapped={false} transparent depthWrite={false} />
           </mesh>
         ))}
       <Html position={[0, 0.34, CARD_H * 0.62]} center distanceFactor={10} zIndexRange={[15, 0]} className="c3d-badge c3d-zone">
@@ -373,7 +373,7 @@ function Card3D({
           <planeGeometry args={[CARD_W, CARD_H]} />
           {/* unlit + toneMapped off → card art shows at full, vivid, readable colour
               instead of being washed out by the scene lighting */}
-          <meshBasicMaterial map={tex} color="#ffffff" toneMapped={false} transparent />
+          <meshBasicMaterial map={tex} color="#ffffff" toneMapped={false} transparent depthWrite={false} />
         </mesh>
 
         {/* crisp DOM indicators anchored to the card — readable at any zoom/angle */}
@@ -444,7 +444,7 @@ function row(items: RowItem[], cx: number, cz: number, gap = 1.45, maxW = MAX_RO
   return items.map(({ card, stackCount }, i) => ({
     card,
     stackCount,
-    pos: [cx - w / 2 + i * effectiveGap, i * 0.0002, cz] as [number, number, number],
+    pos: [cx - w / 2 + i * effectiveGap, i * 0.001, cz] as [number, number, number],
   }))
 }
 
