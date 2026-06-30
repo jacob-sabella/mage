@@ -398,6 +398,19 @@ function Card3D({
             {card.power}/{card.toughness}
           </Html>
         )}
+        {/* marked combat damage on a creature (reduces effective toughness) */}
+        {isType(card, /creature/i) && card.damage > 0 && (
+          <Html
+            position={[CARD_W * 0.34, 0.14, -CARD_H * 0.04]}
+            center
+            distanceFactor={9}
+            zIndexRange={[20, 0]}
+            occlude={occludeBadges}
+            className="c3d-badge c3d-damage"
+          >
+            −{card.damage}
+          </Html>
+        )}
         {isType(card, /planeswalker/i) && card.loyalty != null && (
           <Html
             position={[CARD_W * 0.34, 0.14, CARD_H * 0.3]}

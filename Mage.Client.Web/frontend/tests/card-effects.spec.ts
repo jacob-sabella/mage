@@ -85,6 +85,17 @@ test.describe('Card-effect visual verification (1v1)', () => {
     await expect(page.locator('.c3d-pt')).toHaveCount(2)
   })
 
+  test('a damaged creature shows its marked combat damage on the board', async ({ page }) => {
+    await boot(page, {
+      myField: [
+        card('d1', 'Hurt Bear', ['Creature'], { power: '4', toughness: '4', damage: 3, colors: 'G' }),
+        card('d2', 'Fine Bear', ['Creature'], { power: '2', toughness: '2', damage: 0, colors: 'G' }),
+      ],
+    })
+    await expect(page.locator('.c3d-damage', { hasText: '−3' })).toHaveCount(1)
+    await expect(page.locator('.c3d-damage')).toHaveCount(1) // only the damaged one
+  })
+
   test('planeswalkers show their loyalty badge', async ({ page }) => {
     await boot(page, {
       myField: [card('p1', 'Garruk Wildspeaker', ['Planeswalker'], { loyalty: '3', colors: 'G' })],

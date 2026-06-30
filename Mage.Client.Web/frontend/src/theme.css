@@ -1163,6 +1163,11 @@ input::placeholder { color: var(--text-dim); }
   padding: 1px 8px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.25);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6); white-space: nowrap;
 }
+.c3d-damage {
+  background: var(--danger); color: #fff; font-weight: 800; font-size: 14px;
+  padding: 0 7px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6); white-space: nowrap;
+}
 .c3d-mana { display: flex; gap: 2px; }
 .c3d-pip {
   width: 18px; height: 18px; border-radius: 50%;
