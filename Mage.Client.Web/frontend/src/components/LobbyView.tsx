@@ -45,6 +45,7 @@ interface Props {
 export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   const [tables, setTables] = useState<TableDto[]>([])
   const [refreshing, setRefreshing] = useState(false)
+  const [tablesLoaded, setTablesLoaded] = useState(false)
   const [chat, setChat] = useState<ChatLine[]>([])
   const [activeGameId, setActiveGameId] = useState<string | null>(null)
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null)
@@ -119,6 +120,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
       /* keep last known tables */
     } finally {
       setRefreshing(false)
+      setTablesLoaded(true) // only show the empty state after a real fetch, not on first paint
     }
   }, [session.token])
 
@@ -537,8 +539,15 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
                   ))}
                 </tbody>
               </table>
-              {tables.length === 0 && (
-                <p className="empty">No open tables right now. Create one or refresh.</p>
+              {tables.length === 0 && tablesLoaded && (
+                <div className="empty-state">
+                  <div className="empty-state-icon" aria-hidden>🃏</div>
+                  <p className="empty-state-title">No open tables right now</p>
+                  <p className="empty-state-sub muted">Start a game against the AI, or open a table for other players to join.</p>
+                  <button className="btn primary" onClick={handleNewGame}>
+                    New game
+                  </button>
+                </div>
               )}
             </div>
           )}

@@ -450,6 +450,14 @@ input::placeholder { color: var(--text-dim); }
 .data-table tbody tr:last-child td { border-bottom: none; }
 .data-table tbody tr:hover { background: var(--bg-hover); }
 .empty { padding: 28px 16px; text-align: center; color: var(--text-dim); }
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 40px 20px; text-align: center;
+}
+.empty-state-icon { font-size: 40px; opacity: 0.85; line-height: 1; margin-bottom: 4px; }
+.empty-state-title { font-size: 17px; font-weight: 800; margin: 0; }
+.empty-state-sub { font-size: 14px; margin: 0; max-width: 360px; line-height: 1.45; }
+.empty-state .btn { margin-top: 10px; padding: 11px 22px; }
 
 /* ----- lobby body (tables + chat) ----- */
 .lobby-body {

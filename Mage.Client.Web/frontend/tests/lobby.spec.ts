@@ -27,6 +27,21 @@ test.describe('Lobby', () => {
     await expect(page.locator('.table-setup')).toBeVisible()
   })
 
+  test('empty table list shows a friendly empty state with a New game CTA', async ({ page }) => {
+    await gotoScreen(page, 'lobby')
+    // override the tables endpoint to return none (registered after gotoScreen so it wins)
+    await page.route('**/api/tables?**', (route) =>
+      route.fulfill({ contentType: 'application/json', body: '[]' }),
+    )
+    await page.getByRole('button', { name: 'Refresh' }).click()
+    const empty = page.locator('.empty-state')
+    await expect(empty).toBeVisible()
+    await expect(empty).toContainText('No open tables')
+    // its CTA opens the table setup
+    await empty.getByRole('button', { name: 'New game' }).click()
+    await expect(page.locator('.table-setup')).toBeVisible()
+  })
+
   test('History shows finished matches', async ({ page }) => {
     await gotoScreen(page, 'lobby')
     await page.getByRole('button', { name: 'History' }).click()
