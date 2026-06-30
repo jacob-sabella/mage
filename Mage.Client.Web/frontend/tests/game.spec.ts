@@ -170,9 +170,9 @@ test.describe('Game board (3D)', () => {
 
   test('hand cards show mana-cost pips', async ({ page }) => {
     await gotoScreen(page, 'game')
-    // Counterspell {U}{U} → two pips; Lightning Bolt {R} → one
-    await expect(page.locator('.c3d-mana .c3d-pip').first()).toBeVisible()
-    await expect(page.locator('.c3d-pip', { hasText: 'U' }).first()).toBeVisible()
+    // mana cost shows on each hand-fan card: Counterspell {U}{U}, Lightning Bolt {R}
+    await expect(page.locator('.hand-card-cost .mana-pip').first()).toBeVisible()
+    await expect(page.locator('.hand-card-cost .mana-pip', { hasText: 'U' }).first()).toBeVisible()
   })
 
   test('hovering a card shows a large readable preview (name, type, P/T)', async ({ page }) => {

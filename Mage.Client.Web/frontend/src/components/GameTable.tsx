@@ -489,6 +489,7 @@ function HandFan({
     <div className="hand-fan" role="group" aria-label="Your hand">
       {cards.map((card, i) => {
         const { highlight, onClick } = cardProps(card)
+        const cost = (card.manaCost?.match(/\{([^}]+)\}/g) ?? []).map((s) => s.slice(1, -1))
         const img = `/api/cardimg?set=${encodeURIComponent(card.set ?? '')}&num=${encodeURIComponent(
           card.num ?? '',
         )}&name=${encodeURIComponent(card.name)}`
@@ -524,6 +525,15 @@ function HandFan({
             title={card.name}
           >
             <img className="hand-card-art" src={img} alt={card.name} onError={(e) => (e.currentTarget.style.visibility = 'hidden')} />
+            {cost.length > 0 && (
+              <span className="hand-card-cost">
+                {cost.map((s, j) => (
+                  <span key={j} className="mana-pip" style={{ background: MANA_COLOR[s] ?? '#9aa0ad' }}>
+                    {s}
+                  </span>
+                ))}
+              </span>
+            )}
             <span className="hand-card-name">{card.name}</span>
           </button>
         )
