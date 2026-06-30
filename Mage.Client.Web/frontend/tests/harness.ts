@@ -19,7 +19,7 @@ type C = {
   tapped?: boolean
   damage?: number
 }
-const card = (
+export const card = (
   id: string,
   name: string,
   types: string[],
@@ -265,7 +265,11 @@ const TINY_JPEG = Buffer.from(
 )
 
 /** Install REST stubs + a mock WebSocket so the app runs with no real backend. */
-export async function installMocks(page: Page, scenario: Scenario, opts: { resume?: boolean } = {}) {
+export async function installMocks(
+  page: Page,
+  scenario: Scenario,
+  opts: { resume?: boolean; game?: unknown; prompt?: unknown } = {},
+) {
   // resume = pre-seed a session so the app lands on the lobby (skip login).
   const resume = opts.resume ?? true
 
@@ -293,13 +297,14 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
               : 'select'
   const second = scenario === 'ptUpdate' ? GAME_BUFFED : null
   const gameState =
-    scenario === 'multiplayer' ? GAME_MULTI
+    opts.game ??
+    (scenario === 'multiplayer' ? GAME_MULTI
     : scenario === 'game3p' ? GAME_3P_MAX
     : scenario === 'game4p' ? GAME_4P_MAX
     : scenario === 'arrows' ? GAME_ARROWS
     : scenario === 'stack' ? GAME_STACK
     : scenario === 'landstack' || scenario === 'ability' ? GAME_LANDSTACK
-    : SAMPLE.game
+    : SAMPLE.game)
   const isDraft = scenario === 'draft'
   const isConstruct = scenario === 'construct'
   // a small drafted pool for the construct screen
@@ -365,7 +370,9 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
     },
     [
       gameState,
-      scenario === 'arrows'
+      opts.prompt !== undefined
+        ? opts.prompt
+        : scenario === 'arrows'
         ? { ...SAMPLE.prompts.target, targets: ['a2'] }
         : (SAMPLE.prompts as Record<string, unknown>)[promptKey],
       scenario !== 'lobby' && !isDraft && !isConstruct,
@@ -427,5 +434,13 @@ export async function installMocks(page: Page, scenario: Scenario, opts: { resum
 /** Navigate and land on the requested screen with minimal setup. */
 export async function gotoScreen(page: Page, scenario: Scenario) {
   await installMocks(page, scenario)
+  await page.goto('/')
+}
+
+/** Boot straight into the interactive board with a hand-crafted game state (and an
+ *  optional prompt). Used by the card-effects visual-verification suite to push
+ *  arbitrary 1v1 boards and assert the rendered visuals match the state. */
+export async function gotoCustomGame(page: Page, game: unknown, prompt?: unknown) {
+  await installMocks(page, 'game', { game, prompt: prompt ?? SAMPLE.prompts.select })
   await page.goto('/')
 }

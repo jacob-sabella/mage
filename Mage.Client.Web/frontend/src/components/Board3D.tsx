@@ -921,9 +921,31 @@ function BoardDebug({ zoom, mode, look }: { zoom: number; mode: ViewMode; look: 
       })
       return out
     }
+    // every rendered card with the visual facts a verifier needs: on-screen, and
+    // whether it's drawn tapped (the flat card mesh rotates ~90° on Z when tapped)
+    const rendered = () => {
+      const { three } = ref.current
+      const out: { id: string; x: number; y: number; onScreen: boolean; tapped: boolean }[] = []
+      three.scene.traverse((o) => {
+        const id = o.userData?.cardId as string | undefined
+        if (!id) return
+        const wp = new THREE.Vector3()
+        o.getWorldPosition(wp)
+        const p = project(wp)
+        out.push({
+          id,
+          x: p.x,
+          y: p.y,
+          onScreen: p.z < 1 && p.x >= 0 && p.y >= 0 && p.x <= p.w && p.y <= p.h,
+          tapped: Math.abs((o as THREE.Object3D).rotation.z) > 0.5,
+        })
+      })
+      return out
+    }
     const api = {
       mode: () => ref.current.mode,
       zoom: () => ref.current.zoom,
+      rendered,
       camera: () => {
         const { three, look } = ref.current
         // free mode → OrbitControls owns the orbit target; otherwise use the
