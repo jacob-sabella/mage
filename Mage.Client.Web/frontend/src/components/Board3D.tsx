@@ -374,8 +374,9 @@ function Card3D({
         >
           <planeGeometry args={[CARD_W, CARD_H]} />
           {/* unlit + toneMapped off → card art shows at full, vivid, readable colour
-              instead of being washed out by the scene lighting */}
-          <meshBasicMaterial map={tex} color="#ffffff" toneMapped={false} transparent depthWrite={false} />
+              instead of being washed out by the scene lighting. Tapped permanents are
+              dimmed (in addition to the 90° rotation) so they read as "used" at a glance. */}
+          <meshBasicMaterial map={tex} color={card.tapped && !standing ? '#7a7a82' : '#ffffff'} toneMapped={false} transparent depthWrite={false} />
         </mesh>
 
         {/* crisp DOM indicators anchored to the card — readable at any zoom/angle */}
