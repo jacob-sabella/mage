@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { checkSession } from './api'
 import { TopBar } from './components/TopBar'
+import { ConfirmDialog } from './components/ConfirmDialog'
 import { LoginView } from './components/LoginView'
 import { LobbyView } from './components/LobbyView'
 import { DeckEditor } from './components/DeckEditor'
@@ -27,6 +28,7 @@ type View = 'play' | 'decks' | 'settings'
 
 function SettingsView() {
   const { prefs, setPref, reset } = usePrefs()
+  const [confirmReset, setConfirmReset] = useState(false)
   return (
     <section className="view settings-view">
       <div className="panel settings-card">
@@ -153,17 +155,25 @@ function SettingsView() {
         </label>
         <p className="muted setting-hint">Profile changes apply on your next connect.</p>
         <div className="settings-reset">
-          <button
-            className="btn ghost"
-            onClick={() => {
-              if (window.confirm('Reset all preferences to defaults?')) reset()
-            }}
-          >
+          <button className="btn ghost" onClick={() => setConfirmReset(true)}>
             Reset preferences
           </button>
         </div>
       </div>
       <ImageCacheCard />
+      {confirmReset && (
+        <ConfirmDialog
+          title="Reset preferences?"
+          message="All settings return to their defaults. This can't be undone."
+          confirmLabel="Reset"
+          danger
+          onConfirm={() => {
+            setConfirmReset(false)
+            reset()
+          }}
+          onCancel={() => setConfirmReset(false)}
+        />
+      )}
     </section>
   )
 }

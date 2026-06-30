@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { importDeck, loadDeck, saveDeck, searchCards, uploadDeck } from '../api'
 import { useEscapeClose } from '../useEscapeClose'
 import { DeckPicker } from './DeckPicker'
+import { ConfirmDialog } from './ConfirmDialog'
 import { ManaCost } from './ManaCost'
 import type { CardInfoDto, DeckCardEntry } from '../types'
 import { getCachedUrl, preloadImage } from '../imageCache'
@@ -95,6 +96,7 @@ export function DeckEditor() {
   const [deckName, setDeckName] = useState(draft0?.name ?? 'My Deck')
   const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<string | null>(null)
+  const [confirmNew, setConfirmNew] = useState(false)
   // hover a card (search result or deck entry) to preview its art
   const [preview, setPreview] = useState<PreviewCard | null>(null)
   const previewClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -232,14 +234,17 @@ export function DeckEditor() {
   }, [])
 
   // start a fresh deck (clears the auto-saved draft)
-  const onNewDeck = useCallback(() => {
-    if (deck.length && !window.confirm('Clear the current deck and start a new one?')) return
+  const doNewDeck = useCallback(() => {
     setDeck([])
     setSideboard([])
     setDeckName('My Deck')
     setUnresolved([])
     setSaveStatus(null)
-  }, [deck.length])
+  }, [])
+  const onNewDeck = useCallback(() => {
+    if (deck.length) setConfirmNew(true)
+    else doNewDeck()
+  }, [deck.length, doNewDeck])
 
   const doLoad = useCallback(async (path: string) => {
     setPickerOpen(false)
@@ -668,6 +673,20 @@ export function DeckEditor() {
             </div>
           </div>
         </div>
+      )}
+
+      {confirmNew && (
+        <ConfirmDialog
+          title="Start a new deck?"
+          message="This clears the current deck and its auto-saved draft."
+          confirmLabel="New deck"
+          danger
+          onConfirm={() => {
+            setConfirmNew(false)
+            doNewDeck()
+          }}
+          onCancel={() => setConfirmNew(false)}
+        />
       )}
     </div>
   )
