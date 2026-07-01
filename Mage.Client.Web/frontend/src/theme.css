@@ -1799,10 +1799,17 @@ html, body { overflow-x: hidden; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* sample-hand modal */
-.sample-hand-modal { width: 760px; max-width: 100%; }
-.sample-hand { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin: 6px 0 4px; }
+.sample-hand-modal, .goldfish-modal { width: 820px; max-width: 100%; }
+.sample-hand, .goldfish-hand { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin: 6px 0 4px; }
+.goldfish-hand { grid-auto-rows: 1fr; }
 .sample-card { width: 100%; aspect-ratio: 488 / 680; object-fit: cover; border-radius: 7px; background: #11141b; box-shadow: 0 3px 10px rgba(0,0,0,0.5); }
-@media (max-width: 720px) { .sample-hand { grid-template-columns: repeat(4, 1fr); } }
+.goldfish-hand.bottoming .sample-card { cursor: pointer; outline: 1px solid transparent; transition: outline-color 0.12s, transform 0.12s; }
+.goldfish-hand.bottoming .sample-card:hover { outline-color: var(--danger); transform: translateY(3px); }
+.goldfish-head { display: flex; align-items: baseline; gap: 12px; }
+.goldfish-meta { font-size: 13px; }
+.goldfish-hint { font-size: 13px; color: var(--accent); margin: 2px 0 0; }
+.goldfish-actions { align-items: center; }
+@media (max-width: 760px) { .sample-hand, .goldfish-hand { grid-template-columns: repeat(4, 1fr); } }
 
 /* login hero (first impression) */
 .login-stack { display: flex; flex-direction: column; align-items: center; gap: 22px; max-width: 100%; }

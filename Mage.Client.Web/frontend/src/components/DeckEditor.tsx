@@ -753,8 +753,8 @@ export function DeckEditor() {
           <button className="btn ghost block" onClick={onDownloadTxt} disabled={deck.length === 0}>
             Download .txt
           </button>
-          <button className="btn ghost block" onClick={() => setSampleOpen(true)} disabled={total < 7}>
-            Sample hand
+          <button className="btn ghost block" onClick={() => setSampleOpen(true)} disabled={deck.length === 0}>
+            Goldfish (playtest)
           </button>
           {saveStatus && <p className="deck-save-status muted">{saveStatus}</p>}
           {unresolved.length > 0 && <p className="deck-error">Not found: {unresolved.join(', ')}</p>}
@@ -765,7 +765,7 @@ export function DeckEditor() {
         <DeckPicker title="Open a deck" onPick={(d) => doLoad(d.path)} onClose={() => setPickerOpen(false)} />
       )}
 
-      {sampleOpen && <SampleHandModal deck={deck} onClose={() => setSampleOpen(false)} />}
+      {sampleOpen && <GoldfishModal deck={deck} onClose={() => setSampleOpen(false)} />}
 
       {importOpen && (
         <div className="modal-backdrop" onClick={() => setImportOpen(false)}>
@@ -831,36 +831,97 @@ function shuffle<T>(a: T[]): T[] {
   return r
 }
 
-/** Draw a random opening hand from the deck (weighted by copies) to test it. */
-function SampleHandModal({ deck, onClose }: { deck: DeckCardEntry[]; onClose: () => void }) {
+interface GoldfishState {
+  hand: DeckCardEntry[]
+  library: DeckCardEntry[]
+  turn: number
+  mull: number
+  pendingBottom: number // London: cards still owed to the bottom after a mulligan
+}
+
+/** Goldfish playtest: shuffle the deck, keep/mulligan an opening hand (London —
+ *  bottom N after N mulligans), then draw through it turn by turn. */
+function GoldfishModal({ deck, onClose }: { deck: DeckCardEntry[]; onClose: () => void }) {
   useEscapeClose(onClose)
   const pool = useMemo(() => deck.flatMap((e) => Array(e.count).fill(e) as DeckCardEntry[]), [deck])
-  const [hand, setHand] = useState<DeckCardEntry[]>(() => shuffle(pool).slice(0, 7))
+  const deal = useCallback(
+    (mulls: number): Pick<GoldfishState, 'hand' | 'library' | 'pendingBottom'> => {
+      const s = shuffle(pool)
+      return { hand: s.slice(0, 7), library: s.slice(7), pendingBottom: mulls }
+    },
+    [pool],
+  )
+  const [st, setSt] = useState<GoldfishState>(() => ({ ...deal(0), turn: 1, mull: 0 }))
+  const { hand, library, turn, mull, pendingBottom } = st
+  const busy = pendingBottom > 0
+
+  const draw = () =>
+    setSt((s) => (s.library.length ? { ...s, hand: [...s.hand, s.library[0]], library: s.library.slice(1) } : s))
+  const nextTurn = () =>
+    setSt((s) => ({
+      ...s,
+      turn: s.turn + 1,
+      ...(s.library.length ? { hand: [...s.hand, s.library[0]], library: s.library.slice(1) } : {}),
+    }))
+  const mulligan = () => setSt((s) => ({ ...deal(s.mull + 1), turn: 1, mull: s.mull + 1 }))
+  const newGame = () => setSt({ ...deal(0), turn: 1, mull: 0 })
+  const bottomCard = (idx: number) =>
+    setSt((s) =>
+      s.pendingBottom <= 0
+        ? s
+        : {
+            ...s,
+            hand: s.hand.filter((_, i) => i !== idx),
+            library: [...s.library, s.hand[idx]],
+            pendingBottom: s.pendingBottom - 1,
+          },
+    )
+
   return createPortal(
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal panel sample-hand-modal" role="dialog" aria-label="Sample hand" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-head">
-          <h2 className="h1">Sample hand</h2>
+      <div className="modal panel goldfish-modal" role="dialog" aria-label="Goldfish playtest" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head goldfish-head">
+          <h2 className="h1">Goldfish</h2>
+          <span className="muted goldfish-meta">
+            Turn {turn} · Library {library.length} · Hand {hand.length}
+            {mull > 0 ? ` · Mulligan ${mull}` : ''}
+          </span>
         </div>
-        <div className="sample-hand">
+        {busy && (
+          <p className="goldfish-hint">
+            Put {pendingBottom} card{pendingBottom > 1 ? 's' : ''} on the bottom — click a card to bottom it.
+          </p>
+        )}
+        <div className={`goldfish-hand${busy ? ' bottoming' : ''}`}>
           {hand.map((c, i) => (
             <img
-              key={i}
+              key={`${c.name}-${i}`}
               className="sample-card"
               loading="lazy"
               src={`/api/cardimg?set=&num=&name=${encodeURIComponent(c.name)}`}
               alt={c.name}
-              title={c.name}
+              title={busy ? `Bottom ${c.name}` : c.name}
+              onClick={busy ? () => bottomCard(i) : undefined}
               onError={(e) => (e.currentTarget.style.visibility = 'hidden')}
             />
           ))}
         </div>
-        <div className="modal-actions">
+        <div className="modal-actions goldfish-actions">
           <button className="btn ghost" onClick={onClose}>
             Close
           </button>
-          <button className="btn primary" onClick={() => setHand(shuffle(pool).slice(0, 7))}>
+          <span className="spacer" />
+          <button className="btn ghost" onClick={mulligan} title="London mulligan">
+            Mulligan
+          </button>
+          <button className="btn ghost" onClick={newGame}>
             New hand
+          </button>
+          <button className="btn ghost" onClick={draw} disabled={busy || library.length === 0}>
+            Draw
+          </button>
+          <button className="btn primary" onClick={nextTurn} disabled={busy}>
+            Next turn
           </button>
         </div>
       </div>

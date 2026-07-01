@@ -337,7 +337,7 @@ suite('Deck editor · modalities', () => {
 
   test('keyboard: "/" focuses the search; Add card via Enter; Search via Enter', async ({ page }) => {
     await openDeckEditor(page)
-    const search = page.getByPlaceholder(/Search cards by name/)
+    const search = page.getByPlaceholder(/Search/)
     await page.locator('.brand-name').click() // blur any autofocused field
     await page.keyboard.press('/')
     await expect(search).toBeFocused()
@@ -350,16 +350,16 @@ suite('Deck editor · modalities', () => {
     await expect(page.locator('.deck-entry', { hasText: 'Serra Angel' })).toBeVisible()
   })
 
-  test('keyboard: Sample hand opens once the deck is large enough', async ({ page }) => {
+  test('keyboard: Goldfish playtest opens and closes on Escape', async ({ page }) => {
     await openDeckEditor(page)
     await page.getByRole('button', { name: 'Open' }).click() // loads Mono Red (24 cards)
     await page.getByRole('button', { name: /Mono Red Aggro/ }).click()
-    const sample = page.getByRole('button', { name: 'Sample hand' })
-    await expect(sample).toBeEnabled() // deck load is async — wait until 7+ cards
-    await pressKey(page, sample)
-    await expect(page.getByRole('dialog', { name: 'Sample hand' })).toBeVisible()
+    const gf = page.getByRole('button', { name: 'Goldfish (playtest)' })
+    await expect(gf).toBeEnabled() // deck load is async
+    await pressKey(page, gf)
+    await expect(page.getByRole('dialog', { name: 'Goldfish playtest' })).toBeVisible()
     await page.keyboard.press('Escape')
-    await expect(page.getByRole('dialog', { name: 'Sample hand' })).toHaveCount(0)
+    await expect(page.getByRole('dialog', { name: 'Goldfish playtest' })).toHaveCount(0)
   })
 
   test('mouse: hovering a search result drives the preview', async ({ page }) => {
