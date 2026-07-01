@@ -80,14 +80,16 @@ public class GameDto {
 
         static CombatDto from(mage.view.CombatGroupView cg) {
             CombatDto dto = new CombatDto();
+            // Use the card id (not the name): the web board keys battlefield cards
+            // by id, so the arrow renderer resolves attacker/blocker positions by id.
             if (cg.getAttackers() != null) {
                 for (CardView c : cg.getAttackers().values()) {
-                    dto.attackers.add(c.getName());
+                    if (c.getId() != null) dto.attackers.add(c.getId().toString());
                 }
             }
             if (cg.getBlockers() != null) {
                 for (CardView c : cg.getBlockers().values()) {
-                    dto.blockers.add(c.getName());
+                    if (c.getId() != null) dto.blockers.add(c.getId().toString());
                 }
             }
             dto.defender = cg.getDefenderName();
