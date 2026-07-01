@@ -7,5 +7,5 @@ test('"/" focuses the card search in the deck editor', async ({ page }) => {
   await page.locator('.deck-stats, .deck-list-body').first().click({ force: true }) // blur any input
   await page.keyboard.press('/')
   const focused = await page.evaluate(() => (document.activeElement as HTMLInputElement)?.placeholder || '')
-  expect(focused).toContain('Search cards')
+  expect(focused).toContain('Search')
 })

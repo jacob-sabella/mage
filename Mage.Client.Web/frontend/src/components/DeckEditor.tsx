@@ -16,6 +16,29 @@ const COLOR_HEX: Record<string, string> = {
   C: '#9aa3b2',
 }
 const TYPE_ORDER = ['Creature', 'Planeswalker', 'Instant', 'Sorcery', 'Artifact', 'Enchantment', 'Battle', 'Land']
+
+// one-tap starting points that show off the query syntax
+const QUICK_SEARCHES: { label: string; q: string }[] = [
+  { label: 'Creatures', q: 't:creature' },
+  { label: 'Card draw', q: 'o:"draw a card"' },
+  { label: 'Removal', q: 'o:"destroy target"' },
+  { label: 'Counters', q: 'o:"counter target spell"' },
+  { label: 'Cheap', q: 'mv<=2' },
+  { label: 'Bombs', q: 'mv>=6' },
+  { label: 'Big beaters', q: 't:creature pow>=5' },
+]
+
+// the search grammar, surfaced in the "?" popover; examples are click-to-run
+const SYNTAX_ROWS: { token: string; desc: string; example: string }[] = [
+  { token: 'name', desc: 'name contains (bare words, ANDed)', example: 'lightning' },
+  { token: 't:', desc: 'type · subtype · supertype', example: 't:goblin' },
+  { token: 'o:', desc: 'oracle / rules text', example: 'o:"draw a card"' },
+  { token: 'mv: cmc:', desc: 'mana value — also >= <= > <', example: 'mv>=3' },
+  { token: 'pow: tou:', desc: 'power / toughness — with >= <= > <', example: 'pow>=4' },
+  { token: 'c: color:', desc: 'colors (WUBRGC)', example: 'c:rg' },
+  { token: 'r:', desc: 'rarity (common/uncommon/rare/mythic)', example: 'r:mythic' },
+  { token: 's: set:', desc: 'set code', example: 's:mh3' },
+]
 const BASICS: { c: string; name: string }[] = [
   { c: 'W', name: 'Plains' }, { c: 'U', name: 'Island' }, { c: 'B', name: 'Swamp' }, { c: 'R', name: 'Mountain' }, { c: 'G', name: 'Forest' },
 ]
@@ -97,6 +120,7 @@ export function DeckEditor() {
   const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<string | null>(null)
   const [confirmNew, setConfirmNew] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
   // hover a card (search result or deck entry) to preview its art
   const [preview, setPreview] = useState<PreviewCard | null>(null)
   const previewClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -328,7 +352,7 @@ export function DeckEditor() {
           <input
             ref={searchRef}
             type="text"
-            placeholder="Search cards by name…  ( / )"
+            placeholder={'Search — name, t:creature, o:"draw a card", mv>=3, c:rg …  ( / )'}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
@@ -339,9 +363,39 @@ export function DeckEditor() {
               }
             }}
           />
+          <button
+            className={`btn ghost deck-syntax-btn${helpOpen ? ' active' : ''}`}
+            title="Search syntax"
+            aria-label="Search syntax help"
+            aria-expanded={helpOpen}
+            onClick={() => setHelpOpen((o) => !o)}
+          >
+            ?
+          </button>
           <button className="btn primary" onClick={runSearch} disabled={searching}>
             {searching ? 'Searching…' : 'Search'}
           </button>
+        </div>
+        {helpOpen && (
+          <SearchSyntaxHelp
+            onExample={(q) => {
+              setQuery(q)
+              setHelpOpen(false)
+              searchRef.current?.focus()
+            }}
+          />
+        )}
+        <div className="deck-quick-chips" role="group" aria-label="Quick searches">
+          {QUICK_SEARCHES.map((c) => (
+            <button
+              key={c.q}
+              className={`deck-chip${query === c.q ? ' on' : ''}`}
+              title={c.q}
+              onClick={() => setQuery(c.q)}
+            >
+              {c.label}
+            </button>
+          ))}
         </div>
         <div className="deck-filters">
           {(['W', 'U', 'B', 'R', 'G', 'C'] as const).map((c) => (
@@ -741,6 +795,28 @@ function SampleHandModal({ deck, onClose }: { deck: DeckCardEntry[]; onClose: ()
 
 type PreviewCard = { name: string; set?: string | null; num?: string | null; manaCost?: string | null; types?: string[] }
 const PIP_COLOR: Record<string, string> = { W: '#e9e3c0', U: '#4a90e2', B: '#6b5b73', R: '#e0555f', G: '#3aa55f', C: '#9aa0ad' }
+
+/** Popover documenting the search grammar; each row's example is click-to-run. */
+function SearchSyntaxHelp({ onExample }: { onExample: (q: string) => void }) {
+  return (
+    <div className="deck-syntax-help panel" role="dialog" aria-label="Search syntax">
+      <p className="deck-syntax-lead muted">
+        Combine tokens freely — <code>t:creature c:rg mv&lt;=3</code>. Tap an example to try it.
+      </p>
+      <ul className="deck-syntax-list">
+        {SYNTAX_ROWS.map((r) => (
+          <li key={r.token} className="deck-syntax-row">
+            <code className="deck-syntax-token">{r.token}</code>
+            <span className="deck-syntax-desc muted">{r.desc}</span>
+            <button className="deck-chip deck-syntax-eg" onClick={() => onExample(r.example)} title={`Search ${r.example}`}>
+              {r.example}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
 
 /** A clickable card-art tile in the search grid: click the art to add a copy,
  *  shows a copies-in-deck badge + a remove button, and drives the hover preview. */

@@ -441,42 +441,35 @@ public class WebClientApp {
         }
         query = query.trim();
 
+        // Fold the legacy structured params (older filter rail) into the query
+        // string so there is a single parse path for everything.
+        StringBuilder qb = new StringBuilder(query);
+        String legacyType = ctx.queryParam("type");
+        if (legacyType != null && !legacyType.isEmpty()) qb.append(" t:").append(legacyType);
+        String legacyCmc = ctx.queryParam("cmc");
+        if (legacyCmc != null && !legacyCmc.isEmpty()) qb.append(" mv:").append(legacyCmc);
+        String legacyColors = ctx.queryParam("colors");
+        if (legacyColors != null && !legacyColors.isEmpty()) qb.append(" c:").append(legacyColors);
+
         List<CardInfoDto> results = new ArrayList<>();
         try {
+            CardSearchQuery sq = CardSearchQuery.parse(qb.toString());
             CardCriteria criteria = new CardCriteria();
-            if (!query.isEmpty()) {
-                criteria.nameContains(query);
-            }
-            // type + cmc filter reliably in the DB query
-            String type = ctx.queryParam("type");
-            if (type != null && !type.isEmpty()) {
-                try {
-                    criteria.types(mage.constants.CardType.valueOf(type.toUpperCase()));
-                } catch (IllegalArgumentException ignored) {
-                    // unknown type filter -> ignore
-                }
-            }
-            String cmc = ctx.queryParam("cmc");
-            if (cmc != null && !cmc.isEmpty()) {
-                try {
-                    criteria.manaValue(Integer.parseInt(cmc));
-                } catch (NumberFormatException ignored) {
-                    // ignore bad cmc
-                }
-            }
-            // color is filtered post-query: the DB color flags are unreliable
-            // (red(true) returns off-color cards), so match on the real color.
-            String colors = ctx.queryParam("colors");
-            String colorFilter = colors == null ? "" : colors.toUpperCase();
-            criteria.count(colorFilter.isEmpty() ? 100L : 400L);
+            if (!sq.nameWords.isEmpty()) criteria.nameContains(sq.nameWords.get(0));
+            if (sq.oracle != null) criteria.rules(sq.oracle);
+            if (!sq.types.isEmpty()) criteria.types(sq.types.toArray(new mage.constants.CardType[0]));
+            if (!sq.subtypes.isEmpty()) criteria.subtypes(sq.subtypes.toArray(new mage.constants.SubType[0]));
+            if (!sq.supertypes.isEmpty()) criteria.supertypes(sq.supertypes.toArray(new mage.constants.SuperType[0]));
+            if (!sq.rarities.isEmpty()) criteria.rarities(sq.rarities.toArray(new mage.constants.Rarity[0]));
+            if (!sq.sets.isEmpty()) criteria.setCodes(sq.sets.toArray(new String[0]));
+            if (sq.mvExact != null) criteria.manaValue(sq.mvExact);
+            // widen the DB fetch when post-filters (colour / ranges / P·T) still apply
+            criteria.count(sq.needsPostFilter() ? 2000L : 200L);
 
             List<CardInfo> cards = CardRepository.instance.findCards(criteria);
             if (cards != null) {
                 for (CardInfo card : cards) {
-                    if (card == null) {
-                        continue;
-                    }
-                    if (!colorFilter.isEmpty() && !matchesColorFilter(card, colorFilter)) {
+                    if (card == null || !sq.matches(card)) {
                         continue;
                     }
                     results.add(CardInfoDto.from(card));
@@ -839,21 +832,6 @@ public class WebClientApp {
             out.add(m);
         }
         return out;
-    }
-
-    // card matches if it shares any requested color, or is colorless when "C" asked
-    private static boolean matchesColorFilter(CardInfo card, String filter) {
-        mage.ObjectColor c = card.getColor();
-        if (c == null) {
-            return filter.contains("C");
-        }
-        if (filter.contains("W") && c.isWhite()) return true;
-        if (filter.contains("U") && c.isBlue()) return true;
-        if (filter.contains("B") && c.isBlack()) return true;
-        if (filter.contains("R") && c.isRed()) return true;
-        if (filter.contains("G") && c.isGreen()) return true;
-        if (filter.contains("C") && c.isColorless()) return true;
-        return false;
     }
 
     private static String colorLetters(mage.ObjectColor color) {
