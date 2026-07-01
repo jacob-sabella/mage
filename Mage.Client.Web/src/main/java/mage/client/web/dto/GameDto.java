@@ -179,6 +179,11 @@ public class GameDto {
         public String sourceName;
         public String sourceSet;
         public String sourceNum;
+        // For a spell/ability on the stack: the ids it targets (drives the board's
+        // source→target arrows). sourceId is the battlefield source of an ability,
+        // so the arrow can start from the actual permanent.
+        public List<String> targets = new ArrayList<>();
+        public String sourceId;
 
         static CardDto from(CardView card) {
             CardDto dto = new CardDto();
@@ -207,6 +212,13 @@ public class GameDto {
                     dto.sourceName = source.getName();
                     dto.sourceSet = source.getExpansionSetCode();
                     dto.sourceNum = source.getCardNumber();
+                    dto.sourceId = source.getId() == null ? null : source.getId().toString();
+                }
+            }
+            // targets of a spell/ability on the stack (populated by CardView.addTargets)
+            if (card.getTargets() != null) {
+                for (UUID t : card.getTargets()) {
+                    if (t != null) dto.targets.add(t.toString());
                 }
             }
             return dto;

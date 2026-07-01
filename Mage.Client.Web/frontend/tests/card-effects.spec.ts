@@ -197,6 +197,20 @@ test.describe('Card-effect visual verification (1v1)', () => {
       .toEqual(['attack', 'block'])
   })
 
+  test('a spell on the stack draws an arrow to its target (no prompt needed)', async ({ page }) => {
+    await boot(page, {
+      oppField: [card('victim', 'Goblin Guide', ['Creature'], { power: '2', toughness: '2', colors: 'R' })],
+      stack: [card('bolt', 'Lightning Bolt', ['Instant'], { colors: 'R', targets: ['victim'] })],
+    })
+    await expect
+      .poll(async () =>
+        (
+          (await page.evaluate(() => (window as unknown as { __board3d: { arrows(): { kind: string }[] } }).__board3d.arrows())) ?? []
+        ).some((a) => a.kind === 'target'),
+      )
+      .toBe(true)
+  })
+
   test('a target prompt draws a targeting arrow', async ({ page }) => {
     await boot(
       page,

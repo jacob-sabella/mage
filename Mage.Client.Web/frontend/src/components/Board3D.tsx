@@ -915,7 +915,17 @@ function Arrow({ from, to, kind, bend = 1 }: { from: THREE.Vector3; to: THREE.Ve
 
 /** Arena/xmage-style action arrows: attackers→defender, blockers→attacker, and
  *  (when targeting) the stack→each selected target. Derived from combat + prompt. */
-function BoardArrows({ seats, combat, targets }: { seats: Seat[]; combat: GameState['combat']; targets?: string[] }) {
+function BoardArrows({
+  seats,
+  combat,
+  targets,
+  stack,
+}: {
+  seats: Seat[]
+  combat: GameState['combat']
+  targets?: string[]
+  stack?: GameState['stack']
+}) {
   const arrows = useMemo(() => {
     // id → world position: battlefield cards by id, plus each player's seat centre
     const pos = new Map<string, THREE.Vector3>()
@@ -939,15 +949,26 @@ function BoardArrows({ seats, combat, targets }: { seats: Seat[]; combat: GameSt
         }
       }
     }
+    const stackCentre = new THREE.Vector3(0, 1.0, 0) // where the stack floats
+    // persistent arrows for every spell/ability on the stack → what it targets.
+    // Abilities start from their source permanent; spells from the stack centre.
+    for (const item of stack ?? []) {
+      if (!item.targets || !item.targets.length) continue
+      const from = (item.sourceId && pos.get(item.sourceId)) || stackCentre
+      for (const t of item.targets) {
+        const tp = pos.get(t) ?? pos.get('P:' + t)
+        if (tp) out.push({ from, to: tp, kind: 'target' })
+      }
+    }
+    // arrows for the target you're actively choosing (before it's on the stack)
     if (targets && targets.length) {
-      const src = new THREE.Vector3(0, 1.0, 0) // the stack, centre of the table
       for (const t of targets) {
         const tp = pos.get(t) ?? pos.get('P:' + t)
-        if (tp) out.push({ from: src, to: tp, kind: 'target' })
+        if (tp) out.push({ from: stackCentre, to: tp, kind: 'target' })
       }
     }
     return out
-  }, [seats, combat, targets])
+  }, [seats, combat, targets, stack])
 
   return (
     <>
@@ -1355,7 +1376,7 @@ export function Board3D({
         })()}
 
         {/* action-direction arrows: attackers→defender, blockers→attacker, targeting */}
-        <BoardArrows seats={seats} combat={game.combat} targets={targets} />
+        <BoardArrows seats={seats} combat={game.combat} targets={targets} stack={game.stack} />
 
         {/* stack (center) — a full Billboard squares each card to the camera like an
             old billboard sprite (no axis locks), floated above the table and oversized

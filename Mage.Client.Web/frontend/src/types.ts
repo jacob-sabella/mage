@@ -95,6 +95,10 @@ export interface GameCard {
   sourceName?: string | null
   sourceSet?: string | null
   sourceNum?: string | null
+  // For a spell/ability on the stack: ids it targets, + the battlefield source id
+  // of an ability. Drives the board's source→target arrows.
+  targets?: string[]
+  sourceId?: string | null
 }
 
 export interface GamePlayer {

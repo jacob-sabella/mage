@@ -24,7 +24,7 @@ export const card = (
   name: string,
   types: string[],
   o: Partial<C> = {},
-): C => ({ id, name, set: o.set ?? 'M21', num: o.num ?? '1', types, power: o.power ?? null, toughness: o.toughness ?? null, loyalty: o.loyalty ?? null, manaCost: o.manaCost ?? '', colors: o.colors ?? '', tapped: !!o.tapped, damage: o.damage ?? 0 })
+): C => ({ id, name, set: o.set ?? 'M21', num: o.num ?? '1', types, power: o.power ?? null, toughness: o.toughness ?? null, loyalty: o.loyalty ?? null, manaCost: o.manaCost ?? '', colors: o.colors ?? '', tapped: !!o.tapped, damage: o.damage ?? 0, targets: o.targets, sourceId: o.sourceId })
 
 export const SAMPLE = {
   tables: [
