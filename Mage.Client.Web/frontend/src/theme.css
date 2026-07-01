@@ -1816,6 +1816,12 @@ html, body { overflow-x: hidden; }
 @media (max-width: 480px) { .login-hero-title { font-size: 40px; letter-spacing: 5px; } }
 
 /* quick-add basic lands */
+.deck-format-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.deck-format-label { font-size: 12px; font-weight: 700; }
+.deck-format-row .filter-select { min-width: 148px; }
+.deck-format-blurb { font-size: 11px; flex: 1 1 100%; }
+.deck-move-btn { font-size: 13px; opacity: 0.7; }
+.deck-move-btn:hover { opacity: 1; color: var(--accent); }
 .deck-basics { display: flex; align-items: center; gap: 6px; font-size: 12px; }
 .basic-btn {
   width: 24px; height: 24px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.35);

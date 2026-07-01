@@ -47,13 +47,39 @@ const BASIC_LANDS = new Set(['plains', 'island', 'swamp', 'mountain', 'forest', 
 function isBasic(e: DeckCardEntry) {
   return BASIC_LANDS.has(e.name.toLowerCase()) || (e.types ?? []).some((t) => t.toLowerCase() === 'basic')
 }
-/** A non-basic card past the 4-copy constructed limit. */
-function overLimit(e: DeckCardEntry) {
-  return e.count > 4 && !isBasic(e)
-}
-
 function isLand(e: DeckCardEntry) {
   return (e.types ?? []).some((t) => t.toLowerCase() === 'land')
+}
+
+// Deck-building formats. A format only drives *guidance* (legality bar, copy
+// limits, singleton, the side/command zone) — nothing is ever blocked.
+type FormatId = 'constructed' | 'commander' | 'limited' | 'freeform'
+interface DeckFormat {
+  id: FormatId
+  label: string
+  minMain: number // legality target (0 = no minimum)
+  copyLimit: number // max copies of a non-basic (99 ≈ unlimited)
+  singleton: boolean // 1-of everything except basics
+  hasCommander: boolean
+  sideLabel: string // heading for the secondary zone
+  sideMax: number // 0 = no cap shown
+  blurb: string
+}
+const FORMATS: DeckFormat[] = [
+  { id: 'constructed', label: 'Constructed', minMain: 60, copyLimit: 4, singleton: false, hasCommander: false, sideLabel: 'Sideboard', sideMax: 15, blurb: '60+ cards · max 4 copies · 15-card sideboard' },
+  { id: 'commander', label: 'Commander', minMain: 100, copyLimit: 1, singleton: true, hasCommander: true, sideLabel: 'Command zone', sideMax: 2, blurb: '100 cards · singleton · a commander' },
+  { id: 'limited', label: 'Limited / Cube', minMain: 40, copyLimit: 99, singleton: false, hasCommander: false, sideLabel: 'Sideboard', sideMax: 0, blurb: '40+ cards from a limited pool' },
+  { id: 'freeform', label: 'Freeform', minMain: 0, copyLimit: 99, singleton: false, hasCommander: false, sideLabel: 'Sideboard', sideMax: 0, blurb: 'No deck-building restrictions' },
+]
+const FORMAT_BY_ID = Object.fromEntries(FORMATS.map((f) => [f.id, f])) as Record<FormatId, DeckFormat>
+
+/** Max copies of this card allowed by the format (basics are always unlimited). */
+function copyMax(e: DeckCardEntry, fmt: DeckFormat): number {
+  if (isBasic(e)) return Infinity
+  return fmt.singleton ? 1 : fmt.copyLimit
+}
+function overLimitFor(e: DeckCardEntry, fmt: DeckFormat): boolean {
+  return e.count > copyMax(e, fmt)
 }
 
 const TYPE_LABEL: Record<string, string> = {
@@ -83,6 +109,7 @@ interface DeckDraft {
   deck: DeckCardEntry[]
   sideboard: DeckCardEntry[]
   name: string
+  format?: FormatId
 }
 function loadDraft(): DeckDraft | null {
   try {
@@ -117,6 +144,8 @@ export function DeckEditor() {
   const [deck, setDeck] = useState<DeckCardEntry[]>(draft0?.deck ?? [])
   const [sideboard, setSideboard] = useState<DeckCardEntry[]>(draft0?.sideboard ?? [])
   const [deckName, setDeckName] = useState(draft0?.name ?? 'My Deck')
+  const [format, setFormat] = useState<FormatId>(draft0?.format ?? 'constructed')
+  const fmt = FORMAT_BY_ID[format]
   const [saving, setSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<string | null>(null)
   const [confirmNew, setConfirmNew] = useState(false)
@@ -135,16 +164,16 @@ export function DeckEditor() {
 
   const total = deck.reduce((s, e) => s + e.count, 0)
   const deckCount = useMemo(() => Object.fromEntries(deck.map((e) => [e.name, e.count])), [deck])
-  const overLimitNames = useMemo(() => deck.filter(overLimit).map((e) => e.name), [deck])
+  const overLimitNames = useMemo(() => deck.filter((e) => overLimitFor(e, fmt)).map((e) => e.name), [deck, fmt])
 
   // persist the in-progress deck on every change
   useEffect(() => {
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({ deck, sideboard, name: deckName }))
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ deck, sideboard, name: deckName, format }))
     } catch {
       /* storage full / unavailable — non-fatal */
     }
-  }, [deck, sideboard, deckName])
+  }, [deck, sideboard, deckName, format])
 
   const runSearch = useCallback(async () => {
     setSearching(true)
@@ -170,24 +199,37 @@ export function DeckEditor() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, fColors, fType, fCmc])
 
-  // playset=true (shift-click) tops the card up to a 4-of; otherwise adds one
+  // playset=true (shift-click) tops the card up to a 4-of; otherwise adds one.
+  // Both respect the format's copy cap (1 for singleton, exempting basics).
   const addCard = useCallback((card: CardInfoDto, playset = false) => {
     setDeck((prev) => {
       const ex = prev.find((e) => e.name === card.name)
-      if (ex) return prev.map((e) => (e.name === card.name ? { ...e, count: playset ? Math.max(e.count, 4) : e.count + 1 } : e))
-      return [
-        ...prev,
-        { name: card.name, count: playset ? 4 : 1, manaValue: card.manaValue, colors: card.colors, types: card.types, manaCost: card.manaCost },
-      ]
+      const entry: DeckCardEntry = ex ?? { name: card.name, count: 0, manaValue: card.manaValue, colors: card.colors, types: card.types, manaCost: card.manaCost }
+      const cap = copyMax(entry, fmt)
+      const count = playset ? Math.min(cap, Math.max(entry.count, 4)) : Math.min(cap, entry.count + 1)
+      if (ex) return prev.map((e) => (e.name === card.name ? { ...e, count } : e))
+      return [...prev, { ...entry, count }]
     })
-  }, [])
+  }, [fmt])
 
   const incName = useCallback((name: string) => {
-    setDeck((prev) => prev.map((e) => (e.name === name ? { ...e, count: e.count + 1 } : e)))
-  }, [])
+    setDeck((prev) => prev.map((e) => (e.name === name ? { ...e, count: Math.min(copyMax(e, fmt), e.count + 1) } : e)))
+  }, [fmt])
   const decName = useCallback((name: string) => {
     setDeck((prev) => prev.map((e) => (e.name === name ? { ...e, count: e.count - 1 } : e)).filter((e) => e.count > 0))
   }, [])
+
+  // move one copy between the maindeck and the side/command zone
+  const moveEntry = useCallback((name: string, from: 'deck' | 'side') => {
+    const [src, setSrc, setDst] = from === 'deck' ? ([deck, setDeck, setSideboard] as const) : ([sideboard, setSideboard, setDeck] as const)
+    const e = src.find((x) => x.name === name)
+    if (!e) return
+    setSrc((prev) => prev.map((x) => (x.name === name ? { ...x, count: x.count - 1 } : x)).filter((x) => x.count > 0))
+    setDst((prev) => {
+      const ex = prev.find((x) => x.name === name)
+      return ex ? prev.map((x) => (x.name === name ? { ...x, count: x.count + 1 } : x)) : [...prev, { ...e, count: 1 }]
+    })
+  }, [deck, sideboard])
 
   const [pickerOpen, setPickerOpen] = useState(false)
   const [sampleOpen, setSampleOpen] = useState(false)
@@ -578,6 +620,22 @@ export function DeckEditor() {
           <input ref={fileInputRef} type="file" accept=".dck" style={{ display: 'none' }} onChange={onUpload} />
         </div>
 
+        <div className="deck-format-row">
+          <label className="muted deck-format-label" htmlFor="deck-format">Format</label>
+          <select
+            id="deck-format"
+            className="filter-select"
+            value={format}
+            onChange={(e) => setFormat(e.target.value as FormatId)}
+            aria-label="Deck format"
+          >
+            {FORMATS.map((f) => (
+              <option key={f.id} value={f.id}>{f.label}</option>
+            ))}
+          </select>
+          <span className="muted deck-format-blurb">{fmt.blurb}</span>
+        </div>
+
         <div className="deck-basics">
           <span className="muted">Add basics</span>
           {BASICS.map((b) => (
@@ -594,19 +652,27 @@ export function DeckEditor() {
           ))}
         </div>
 
-        {deck.length > 0 && (
-          <div className={`deck-legality${total >= 60 ? ' ok' : ''}`} title="Constructed decks need at least 60 cards">
+        {deck.length > 0 && fmt.minMain > 0 && (
+          <div className={`deck-legality${total >= fmt.minMain ? ' ok' : ''}`} title={`${fmt.label} decks want at least ${fmt.minMain} cards`}>
             <div className="deck-legality-bar">
-              <div className="deck-legality-fill" style={{ width: `${Math.min(100, (total / 60) * 100)}%` }} />
+              <div className="deck-legality-fill" style={{ width: `${Math.min(100, (total / fmt.minMain) * 100)}%` }} />
             </div>
             <span className="deck-legality-label muted">
-              {total} / 60 {total >= 60 ? '· ready' : `· ${60 - total} to go`}
+              {total} / {fmt.minMain} {total >= fmt.minMain ? '· ready' : `· ${fmt.minMain - total} to go`}
             </span>
           </div>
         )}
+        {deck.length > 0 && fmt.minMain === 0 && (
+          <div className="deck-legality ok">
+            <span className="deck-legality-label muted">{total} cards</span>
+          </div>
+        )}
         {overLimitNames.length > 0 && (
-          <p className="deck-limit-warn" title="Constructed decks allow at most 4 copies of a card (basic lands are exempt)">
-            ⚠ Over the 4-copy limit: {overLimitNames.join(', ')}
+          <p
+            className="deck-limit-warn"
+            title={fmt.singleton ? 'Singleton: at most 1 of each non-basic card' : `At most ${fmt.copyLimit} copies of a card (basic lands are exempt)`}
+          >
+            ⚠ {fmt.singleton ? 'Singleton — extra copies of' : `Over the ${fmt.copyLimit}-copy limit:`} {overLimitNames.join(', ')}
           </p>
         )}
 
@@ -626,7 +692,7 @@ export function DeckEditor() {
                     {g.entries.map((e) => (
                       <li
                         key={e.name}
-                        className={`deck-entry${overLimit(e) ? ' over-limit' : ''}`}
+                        className={`deck-entry${overLimitFor(e, fmt) ? ' over-limit' : ''}`}
                         onMouseEnter={() => showPreview(e)}
                         onMouseLeave={() => showPreview(null)}
                         onClick={() => showPreview(e)}
@@ -635,6 +701,9 @@ export function DeckEditor() {
                         <span className="deck-entry-name">{e.name}</span>
                         {e.manaCost && <ManaCost cost={e.manaCost} className="deck-entry-cost" />}
                         <span className="deck-entry-actions">
+                          <button className="btn ghost deck-mini-btn deck-move-btn" aria-label={`Move ${e.name} to ${fmt.sideLabel}`} title={`Move to ${fmt.sideLabel}`} onClick={() => moveEntry(e.name, 'deck')}>
+                            ⇥
+                          </button>
                           <button className="btn ghost deck-mini-btn" aria-label={`Decrease ${e.name}`} onClick={() => decName(e.name)}>
                             −
                           </button>
@@ -653,13 +722,20 @@ export function DeckEditor() {
           {sideboard.length > 0 && (
             <>
               <div className="zone-row-title deck-side-title">
-                Sideboard / Commander ({sideboard.reduce((s, e) => s + e.count, 0)})
+                {fmt.sideLabel} ({sideboard.reduce((s, e) => s + e.count, 0)}
+                {fmt.sideMax ? ` / ${fmt.sideMax}` : ''})
               </div>
               <ul className="deck-entries">
                 {sideboard.map((e) => (
-                  <li key={e.name} className="deck-entry" onMouseEnter={() => showPreview(e)} onClick={() => showPreview(e)}>
+                  <li key={e.name} className="deck-entry" onMouseEnter={() => showPreview(e)} onMouseLeave={() => showPreview(null)} onClick={() => showPreview(e)}>
                     <span className="deck-entry-count">{e.count}×</span>
                     <span className="deck-entry-name">{e.name}</span>
+                    {e.manaCost && <ManaCost cost={e.manaCost} className="deck-entry-cost" />}
+                    <span className="deck-entry-actions">
+                      <button className="btn ghost deck-mini-btn deck-move-btn" aria-label={`Move ${e.name} to maindeck`} title="Move to maindeck" onClick={() => moveEntry(e.name, 'side')}>
+                        ⇤
+                      </button>
+                    </span>
                   </li>
                 ))}
               </ul>
