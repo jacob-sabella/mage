@@ -150,6 +150,13 @@ export function DeckEditor() {
   const [saveStatus, setSaveStatus] = useState<string | null>(null)
   const [confirmNew, setConfirmNew] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
+  // maindeck shown as a text list or a grid of card images (persisted)
+  const [deckView, setDeckView] = useState<'list' | 'visual'>(
+    () => (localStorage.getItem('mage.deckListView') === 'visual' ? 'visual' : 'list'),
+  )
+  useEffect(() => {
+    localStorage.setItem('mage.deckListView', deckView)
+  }, [deckView])
   // hover a card (search result or deck entry) to preview its art
   const [preview, setPreview] = useState<PreviewCard | null>(null)
   const previewClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -678,9 +685,66 @@ export function DeckEditor() {
 
         {deck.length > 0 && <DeckStats stats={stats} />}
 
+        {deck.length > 0 && (
+          <div className="view-switch deck-view-switch" role="group" aria-label="Deck view">
+            <button
+              className={`view-switch-btn${deckView === 'list' ? ' active' : ''}`}
+              onClick={() => setDeckView('list')}
+              aria-pressed={deckView === 'list'}
+            >
+              ☰ List
+            </button>
+            <button
+              className={`view-switch-btn${deckView === 'visual' ? ' active' : ''}`}
+              onClick={() => setDeckView('visual')}
+              aria-pressed={deckView === 'visual'}
+            >
+              ▦ Visual
+            </button>
+          </div>
+        )}
+
         <div className="deck-list-body">
           {deck.length === 0 ? (
             <p className="empty">No cards yet. Click a card on the left, or Import / Open a deck.</p>
+          ) : deckView === 'visual' ? (
+            <div className="deck-visual">
+              {groups.map((g) => (
+                <div className="deck-visual-group" key={g.type}>
+                  <div className="deck-group-title">
+                    {TYPE_LABEL[g.type] ?? g.type} <span className="muted">{g.count}</span>
+                  </div>
+                  <div className="deck-visual-grid">
+                    {g.entries.map((e) => (
+                      <div
+                        key={e.name}
+                        className={`deck-visual-card${overLimitFor(e, fmt) ? ' over-limit' : ''}`}
+                        onMouseEnter={() => showPreview(e)}
+                        onMouseLeave={() => showPreview(null)}
+                        title={`${e.count}× ${e.name}`}
+                      >
+                        <img
+                          className="deck-visual-img"
+                          loading="lazy"
+                          src={`/api/cardimg?set=&num=&name=${encodeURIComponent(e.name)}`}
+                          alt={e.name}
+                          onError={(ev) => (ev.currentTarget.style.visibility = 'hidden')}
+                        />
+                        <span className="deck-visual-count">{e.count}×</span>
+                        <div className="deck-visual-ctrl">
+                          <button className="btn ghost deck-mini-btn" aria-label={`Decrease ${e.name}`} onClick={() => decName(e.name)}>
+                            −
+                          </button>
+                          <button className="btn ghost deck-mini-btn" aria-label={`Increase ${e.name}`} onClick={() => incName(e.name)}>
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="deck-groups">
               {groups.map((g) => (

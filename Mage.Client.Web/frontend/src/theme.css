@@ -1756,6 +1756,25 @@ html, body { overflow-x: hidden; }
    always show it for in-deck tiles when the pointer is coarse / hover-incapable */
 @media (hover: none) { .card-tile .card-tile-remove { opacity: 1; } }
 .deck-groups { display: flex; flex-direction: column; gap: 12px; }
+
+/* visual deck view — the maindeck as card images */
+.deck-view-switch { flex: 0 0 auto; align-self: flex-start; margin: 8px 0 4px; font-size: 12px; }
+.deck-visual { display: flex; flex-direction: column; gap: 12px; }
+.deck-visual-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; margin-top: 4px; }
+.deck-visual-card { position: relative; border-radius: 7px; overflow: hidden; }
+.deck-visual-card.over-limit { outline: 2px solid var(--danger); outline-offset: 1px; }
+.deck-visual-img { width: 100%; aspect-ratio: 488 / 680; object-fit: cover; display: block; background: #11141b; box-shadow: 0 3px 8px rgba(0,0,0,0.5); }
+.deck-visual-count {
+  position: absolute; top: 4px; left: 4px; font-size: 12px; font-weight: 800; color: #fff;
+  background: rgba(8, 10, 16, 0.86); border: 1px solid rgba(255,255,255,0.28);
+  padding: 0 6px; border-radius: 7px; pointer-events: none;
+}
+.deck-visual-ctrl {
+  position: absolute; bottom: 0; left: 0; right: 0; display: flex; justify-content: center; gap: 6px;
+  padding: 5px 0; background: linear-gradient(transparent, rgba(8,10,16,0.9));
+  opacity: 0; transition: opacity 0.12s;
+}
+.deck-visual-card:hover .deck-visual-ctrl { opacity: 1; }
 .deck-group-title {
   display: flex; justify-content: space-between; align-items: baseline;
   font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
