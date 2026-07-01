@@ -1360,7 +1360,7 @@ html.reduce-motion .game-over-card, html.reduce-motion .game-over-win .game-over
 }
 .confirm-card {
   padding: 24px 28px; display: flex; flex-direction: column; gap: 14px;
-  min-width: 300px; max-width: 420px; animation: sheet-rise 0.18s cubic-bezier(0.2, 0.9, 0.3, 1.08);
+  min-width: 300px; max-width: 420px; animation: card-pop 0.18s cubic-bezier(0.2, 0.9, 0.3, 1.08);
 }
 .confirm-title { font-size: 18px; font-weight: 800; }
 .confirm-msg { font-size: 14px; color: var(--text-dim); line-height: 1.45; }
@@ -1478,8 +1478,8 @@ input:focus {
 }
 .board-wrap .card-preview {
   position: fixed; bottom: 20px; left: 20px; z-index: 1000;
-  width: 260px; max-width: 260px;
-  flex: 0 0 auto; height: 320px; /* fixed size on the board (not in a flex column) */
+  width: 330px; max-width: 330px;
+  flex: 0 0 auto; height: 420px; /* fixed size on the board (not in a flex column) */
   animation: card-preview-pop 0.18s ease both;
 }
 
@@ -2253,24 +2253,24 @@ html, body { overflow-x: hidden; }
 .card-action-backdrop {
   position: fixed; inset: 0; z-index: 9990;
   background: rgba(0, 0, 0, 0.68); backdrop-filter: blur(4px);
-  display: flex; align-items: flex-end; justify-content: center;
+  display: flex; align-items: center; justify-content: center;
 }
 .card-action-sheet {
-  width: 100%; max-width: 540px; padding: 18px 18px 24px;
-  border-bottom-left-radius: 0; border-bottom-right-radius: 0;
-  animation: sheet-rise 0.24s cubic-bezier(0.2, 0.9, 0.3, 1.08);
+  width: 100%; max-width: 380px; padding: 18px;
+  animation: card-pop 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.1);
 }
-@keyframes sheet-rise {
-  from { transform: translateY(100%); opacity: 0; }
-  to   { transform: translateY(0); opacity: 1; }
+@keyframes card-pop {
+  from { transform: scale(0.92); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
 }
-.card-action-content { display: flex; gap: 14px; margin-bottom: 14px; align-items: flex-start; }
+/* big card image on top, details below — a proper card preview */
+.card-action-content { display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; align-items: center; }
 .card-action-art {
-  width: 110px; flex-shrink: 0; border-radius: 10px; display: block;
-  background: #11141b; min-height: 154px; object-fit: cover;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+  width: 260px; aspect-ratio: 63 / 88; height: auto; border-radius: 13px; display: block;
+  background: #11141b; object-fit: contain;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
 }
-.card-action-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.card-action-info { width: 100%; min-width: 0; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
 .card-action-name { font-size: 17px; font-weight: 800; line-height: 1.2; }
 .card-action-cost { display: flex; flex-wrap: wrap; gap: 3px; }
 .card-action-type { font-size: 13px; }

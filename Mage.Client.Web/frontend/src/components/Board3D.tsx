@@ -46,7 +46,12 @@ function bg(colors?: string | null) {
   return COLOR_BG[colors] ?? '#54596b'
 }
 function imgUrl(c: GameCard) {
-  return `/api/cardimg?set=${encodeURIComponent(c.set ?? '')}&num=${encodeURIComponent(c.num ?? '')}&name=${encodeURIComponent(c.name)}`
+  // an ability on the stack has no art of its own — fall back to its source card's
+  // image (same as the hover preview) so it isn't a blank card
+  const set = c.sourceSet ?? c.set
+  const num = c.sourceNum ?? c.num
+  const name = c.sourceName ?? c.name
+  return `/api/cardimg?set=${encodeURIComponent(set ?? '')}&num=${encodeURIComponent(num ?? '')}&name=${encodeURIComponent(name)}`
 }
 
 /** Draw a readable card face on a canvas (name / type / P-T) so a card is never
@@ -84,7 +89,8 @@ function makeCardTexture(card: GameCard): THREE.Texture {
   g.fillStyle = '#f4f1e8'
   g.textBaseline = 'middle'
   g.font = 'bold 20px "Segoe UI", system-ui, sans-serif'
-  g.fillText(fit(card.name, w - 44), 22, 33)
+  // for a stack ability, name it after its source card, not the generic "Ability"
+  g.fillText(fit(card.sourceName ?? card.name, w - 44), 22, 33)
   // type line
   g.fillStyle = 'rgba(0,0,0,0.45)'
   g.fillRect(14, h - 64, w - 28, 28)
@@ -295,8 +301,10 @@ function Card3D({
   const rot: [number, number, number] = standing
     ? [0, 0, 0]
     : [-Math.PI / 2, 0, card.tapped ? -Math.PI / 2 : 0]
-  const lift = hover ? 0.7 : 0
-  const scale = hover ? 1.35 : 1
+  // a gentle hover pop (the full-size read is the big bottom-left preview) — a big
+  // lift/scale would rise up over neighbours whose DOM P/T badges then bleed on top
+  const lift = hover ? 0.28 : 0
+  const scale = hover ? 1.14 : 1
   const glow = highlight === 'play' ? '#21e6ff' : highlight === 'target' ? '#ff2e97' : '#ffffff'
   // Fixed y for hit detection — does not move when card lifts on hover.
   // Keeping the interactive mesh stable prevents the feedback loop where lifting
@@ -1204,9 +1212,9 @@ export function Board3D({
   // the hand is no longer laid on the table — it's a fixed screen-space fan at the
   // bottom of the screen (HandFan in GameTable), the way other MTG clients do it
   const stack = useMemo(() => row(game.stack.map((c) => ({ card: c })), 0, 0.6, 1.4), [game.stack])
-  // only raycast-occlude DOM badges when there's a central stack to hide them behind;
-  // the rest of the time it just risks per-frame badge flicker for no benefit
-  const occludeBadges = game.stack.length > 0
+  // raycast-occlude the DOM badges so a card in front (the centre stack card, or a
+  // hovered/lifted card, or a nearer row) hides the badges of cards behind it
+  const occludeBadges = true
 
   return (
     <div className="board3d">
