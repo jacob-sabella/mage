@@ -807,28 +807,39 @@ function ActiveSeatGlow({ seat }: { seat: Seat }) {
 
 const ARROW_COLOR: Record<string, string> = { attack: '#ff3b3b', block: '#ffb13b', target: '#3bd6ff' }
 
-/** A single arced 3D arrow (tube shaft + cone head) from `from` to `to`. */
-function Arrow({ from, to, kind }: { from: THREE.Vector3; to: THREE.Vector3; kind: string }) {
-  const { tube, headPos, headQuat } = useMemo(() => {
+/** A single arced 3D arrow (tube shaft + cone head + glow) from `from` to `to`.
+ *  The control point bows the arc UP *and* SIDEWAYS — a purely vertical arc on a
+ *  shot that runs away from the camera collapses into an unreadable straight line,
+ *  so the lateral swing is what makes it legible as an arrow from any seat view. */
+function Arrow({ from, to, kind, bend = 1 }: { from: THREE.Vector3; to: THREE.Vector3; kind: string; bend?: number }) {
+  const { tube, glow, headPos, headQuat } = useMemo(() => {
+    const dir = to.clone().sub(from)
+    const horiz = Math.hypot(dir.x, dir.z) || 0.001
+    const perp = new THREE.Vector3(-dir.z, 0, dir.x).normalize()
     const mid = from.clone().lerp(to, 0.5)
-    mid.y += from.distanceTo(to) * 0.22 + 0.6 // arc up so it reads over the cards
+    mid.y += horiz * 0.28 + 0.9 // bow up over the board
+    mid.add(perp.multiplyScalar(Math.min(2.8, horiz * 0.32) * bend)) // and out to the side
     const curve = new THREE.QuadraticBezierCurve3(from, mid, to)
-    const tube = new THREE.TubeGeometry(curve, 24, 0.055, 8, false)
+    const tube = new THREE.TubeGeometry(curve, 40, 0.085, 10, false)
+    const glow = new THREE.TubeGeometry(curve, 40, 0.18, 10, false)
     const tan = curve.getTangentAt(1).normalize()
     const headQuat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), tan)
-    const headPos = to.clone().addScaledVector(tan, -0.18)
-    return { tube, headPos, headQuat }
-  }, [from, to])
-  useEffect(() => () => tube.dispose(), [tube])
+    const headPos = to.clone().addScaledVector(tan, -0.4) // pull the cone back so its tip lands on `to`
+    return { tube, glow, headPos, headQuat }
+  }, [from, to, bend])
+  useEffect(() => () => { tube.dispose(); glow.dispose() }, [tube, glow])
   const color = ARROW_COLOR[kind] ?? '#ffffff'
   return (
     <group userData={{ arrowKind: kind, arrowHead: headPos.toArray() }}>
-      <mesh geometry={tube}>
-        <meshBasicMaterial color={color} transparent opacity={0.92} toneMapped={false} depthTest={false} />
+      <mesh geometry={glow} renderOrder={998}>
+        <meshBasicMaterial color={color} transparent opacity={0.22} toneMapped={false} depthTest={false} depthWrite={false} />
       </mesh>
-      <mesh position={headPos} quaternion={headQuat}>
-        <coneGeometry args={[0.17, 0.42, 12]} />
-        <meshBasicMaterial color={color} toneMapped={false} depthTest={false} />
+      <mesh geometry={tube} renderOrder={999}>
+        <meshBasicMaterial color={color} transparent opacity={0.98} toneMapped={false} depthTest={false} depthWrite={false} />
+      </mesh>
+      <mesh position={headPos} quaternion={headQuat} renderOrder={999}>
+        <coneGeometry args={[0.32, 0.82, 16]} />
+        <meshBasicMaterial color={color} toneMapped={false} depthTest={false} depthWrite={false} />
       </mesh>
     </group>
   )
@@ -873,7 +884,8 @@ function BoardArrows({ seats, combat, targets }: { seats: Seat[]; combat: GameSt
   return (
     <>
       {arrows.map((a, i) => (
-        <Arrow key={i} from={a.from} to={a.to} kind={a.kind} />
+        // fan multiple arrows to alternating sides + magnitudes so they don't overlap
+        <Arrow key={i} from={a.from} to={a.to} kind={a.kind} bend={(i % 2 ? -1 : 1) * (1 + Math.floor(i / 2) * 0.5)} />
       ))}
     </>
   )
