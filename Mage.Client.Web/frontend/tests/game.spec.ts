@@ -180,18 +180,21 @@ test.describe('Game board (3D)', () => {
 
   test('creatures show a P/T badge (not lands)', async ({ page }) => {
     await gotoScreen(page, 'game')
-    // Serra Angel 4/4 (battlefield) is uniquely identifiable
-    await expect(page.locator('.c3d-pt', { hasText: '4/4' })).toHaveCount(1)
-    await expect(page.locator('.c3d-pt').first()).toBeVisible()
-    // lands must not get a 0/0 badge
-    await expect(page.locator('.c3d-pt', { hasText: '0/0' })).toHaveCount(0)
+    await page.waitForFunction(() => !!(window as unknown as { __board3d?: unknown }).__board3d, null, { timeout: 15000 })
+    // in-canvas P/T sprites: Serra Angel 4/4 exists + is on-screen; lands get no 0/0
+    const badges = () => page.evaluate(() => (window as unknown as { __board3d: { badges(): { text: string; onScreen: boolean }[] } }).__board3d.badges())
+    await expect.poll(async () => (await badges()).filter((b) => b.text === '4/4').length).toBe(1)
+    expect((await badges()).some((b) => b.text === '4/4' && b.onScreen)).toBe(true)
+    expect((await badges()).some((b) => b.text === '0/0')).toBe(false)
   })
 
   test('a P/T change pushed by the server updates the on-board badge', async ({ page }) => {
     await gotoScreen(page, 'ptUpdate')
+    await page.waitForFunction(() => !!(window as unknown as { __board3d?: unknown }).__board3d, null, { timeout: 15000 })
+    const badges = () => page.evaluate(() => (window as unknown as { __board3d: { badges(): { text: string }[] } }).__board3d.badges())
     // server pushes a buffed board ~0.5s later → the 4/4 badge becomes 6/6
-    await expect(page.locator('.c3d-pt', { hasText: '6/6' })).toHaveCount(1)
-    await expect(page.locator('.c3d-pt', { hasText: '4/4' })).toHaveCount(0)
+    await expect.poll(async () => (await badges()).some((b) => b.text === '6/6')).toBe(true)
+    expect((await badges()).some((b) => b.text === '4/4')).toBe(false)
   })
 
   test('hand cards show mana-cost pips', async ({ page }) => {

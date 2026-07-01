@@ -45,7 +45,11 @@ test('real game vs AI: connect → board → live card indicators', async ({ pag
       await no.click().catch(() => {})
     }
     expect(await page.locator('.c3d-pip').count()).toBeGreaterThan(0) // mana-cost pips
-    expect(await page.locator('.c3d-pt').count()).toBeGreaterThan(0) // a creature P/T badge
+    // a creature P/T badge (now an in-canvas sprite, read via the debug hook)
+    const pts = await page.evaluate(
+      () => (window as unknown as { __board3d?: { badges(): { text: string }[] } }).__board3d?.badges() ?? [],
+    )
+    expect(pts.some((b) => /^\d+\/\d+$/.test(b.text))).toBe(true)
   }).toPass({ timeout: 60_000, intervals: [1000] })
 
   // the interactive game UI is live (skip bar + log) regardless of whose priority

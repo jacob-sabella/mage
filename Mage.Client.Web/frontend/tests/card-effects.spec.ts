@@ -69,6 +69,11 @@ type Rendered = { id: string; tapped: boolean; onScreen: boolean }
 const rendered = (page: Page) =>
   page.evaluate(() => (window as unknown as { __board3d: { rendered(): Rendered[] } }).__board3d.rendered()) as Promise<Rendered[]>
 
+type Badge = { cardId: string; text: string; onScreen: boolean }
+const badges = (page: Page) =>
+  page.evaluate(() => (window as unknown as { __board3d: { badges(): Badge[] } }).__board3d.badges()) as Promise<Badge[]>
+const isPT = (t: string) => /^\d+\/\d+$/.test(t)
+
 test.describe('Card-effect visual verification (1v1)', () => {
   test('creatures show their P/T badge; lands / non-creatures do not', async ({ page }) => {
     await boot(page, {
@@ -79,10 +84,9 @@ test.describe('Card-effect visual verification (1v1)', () => {
         card('a1', 'Sol Ring', ['Artifact']),
       ],
     })
-    await expect(page.locator('.c3d-pt', { hasText: '2/2' })).toHaveCount(1)
-    await expect(page.locator('.c3d-pt', { hasText: '4/4' })).toHaveCount(1)
-    // exactly two creatures → exactly two P/T badges (land + artifact get none)
-    await expect(page.locator('.c3d-pt')).toHaveCount(2)
+    await expect.poll(async () => (await badges(page)).filter((b) => isPT(b.text)).map((b) => b.text).sort()).toEqual(['2/2', '4/4'])
+    // land + artifact get no P/T badge → exactly two, both on-screen
+    expect((await badges(page)).filter((b) => isPT(b.text) && b.onScreen)).toHaveLength(2)
   })
 
   test('a damaged creature shows its marked combat damage on the board', async ({ page }) => {
@@ -92,16 +96,15 @@ test.describe('Card-effect visual verification (1v1)', () => {
         card('d2', 'Fine Bear', ['Creature'], { power: '2', toughness: '2', damage: 0, colors: 'G' }),
       ],
     })
-    await expect(page.locator('.c3d-damage', { hasText: '−3' })).toHaveCount(1)
-    await expect(page.locator('.c3d-damage')).toHaveCount(1) // only the damaged one
+    await expect.poll(async () => (await badges(page)).filter((b) => b.text.startsWith('−')).map((b) => b.text)).toEqual(['−3'])
   })
 
   test('planeswalkers show their loyalty badge', async ({ page }) => {
     await boot(page, {
       myField: [card('p1', 'Garruk Wildspeaker', ['Planeswalker'], { loyalty: '3', colors: 'G' })],
     })
-    await expect(page.locator('.c3d-loy', { hasText: '3' })).toHaveCount(1)
-    await expect(page.locator('.c3d-pt')).toHaveCount(0) // not a creature
+    await expect.poll(async () => (await badges(page)).map((b) => b.text)).toEqual(['3'])
+    expect((await badges(page)).some((b) => isPT(b.text))).toBe(false) // not a creature
   })
 
   test('tapped permanents render rotated; untapped do not', async ({ page }) => {

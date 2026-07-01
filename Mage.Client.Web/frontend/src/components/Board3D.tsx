@@ -147,6 +147,69 @@ function makeCardBack(): THREE.Texture {
   return t
 }
 
+/** Render a pill badge (P/T, loyalty, damage) to a canvas texture. In-canvas so
+ *  it depth-occludes like real geometry — no DOM overlay bleeding over cards. */
+function makeBadgeTexture(text: string, bg: string, fg: string, border: string): THREE.Texture {
+  const k = 4 // supersample for crisp text
+  const font = '800 30px "Segoe UI", system-ui, sans-serif'
+  const meas = document.createElement('canvas').getContext('2d')!
+  meas.font = font
+  const padX = 18
+  const w = Math.ceil(meas.measureText(text).width) + padX * 2
+  const h = 46
+  const cv = document.createElement('canvas')
+  cv.width = w * k
+  cv.height = h * k
+  const g = cv.getContext('2d')!
+  g.scale(k, k)
+  g.font = font
+  g.fillStyle = bg
+  g.beginPath()
+  g.roundRect(1, 1, w - 2, h - 2, 12)
+  g.fill()
+  g.strokeStyle = border
+  g.lineWidth = 2
+  g.stroke()
+  g.fillStyle = fg
+  g.textAlign = 'center'
+  g.textBaseline = 'middle'
+  g.fillText(text, w / 2, h / 2 + 1)
+  const t = new THREE.CanvasTexture(cv)
+  t.colorSpace = THREE.SRGBColorSpace
+  t.anisotropy = 4
+  return t
+}
+
+/** A camera-facing badge sprite anchored in 3D. Depth-tested, so a card in front
+ *  (stack card, hovered/lifted card, nearer row) hides it — unlike a DOM badge. */
+function BadgeSprite({
+  text,
+  position,
+  bg,
+  fg = '#ffffff',
+  border = 'rgba(255,255,255,0.28)',
+  height = 0.5,
+  cardId,
+}: {
+  text: string
+  position: [number, number, number]
+  bg: string
+  fg?: string
+  border?: string
+  height?: number
+  cardId: string
+}) {
+  const tex = useMemo(() => makeBadgeTexture(text, bg, fg, border), [text, bg, fg, border])
+  useEffect(() => () => tex.dispose(), [tex])
+  const img = tex.image as HTMLCanvasElement
+  const aspect = img.width / img.height
+  return (
+    <sprite position={position} scale={[height * aspect, height, 1]} userData={{ badgeCardId: cardId, badgeText: text }}>
+      <spriteMaterial map={tex} transparent toneMapped={false} depthTest depthWrite={false} />
+    </sprite>
+  )
+}
+
 type CardProps = (c: GameCard) => { highlight?: 'play' | 'target'; onClick?: (c: GameCard) => void }
 
 /** A stacked zone pile (library / graveyard / exile). Depth layers fake the
@@ -390,46 +453,37 @@ function Card3D({
           {/* unlit + toneMapped off → card art shows at full, vivid, readable colour
               instead of being washed out by the scene lighting. Tapped permanents are
               dimmed (in addition to the 90° rotation) so they read as "used" at a glance. */}
-          <meshBasicMaterial map={tex} color={card.tapped && !standing ? '#7a7a82' : '#ffffff'} toneMapped={false} transparent depthWrite={false} />
+          {/* write depth (alphaTest drops the transparent rounded corners) so the
+              in-canvas badge sprites are occluded by cards drawn in front of them */}
+          <meshBasicMaterial map={tex} color={card.tapped && !standing ? '#7a7a82' : '#ffffff'} toneMapped={false} transparent alphaTest={0.5} depthWrite />
         </mesh>
 
-        {/* crisp DOM indicators anchored to the card — readable at any zoom/angle */}
+        {/* creature P/T, damage, loyalty — in-canvas sprites so they occlude
+            properly (a card in front hides them) instead of a DOM overlay on top */}
         {isType(card, /creature/i) && card.power != null && card.toughness != null && (
-          <Html
+          <BadgeSprite
+            text={`${card.power}/${card.toughness}`}
             position={[CARD_W * 0.34, 0.14, CARD_H * 0.3]}
-            center
-            distanceFactor={9}
-            zIndexRange={[20, 0]}
-            occlude={occludeBadges}
-            className="c3d-badge c3d-pt"
-          >
-            {card.power}/{card.toughness}
-          </Html>
+            bg="rgba(10,12,18,0.92)"
+            cardId={card.id}
+          />
         )}
-        {/* marked combat damage on a creature (reduces effective toughness) */}
         {isType(card, /creature/i) && card.damage > 0 && (
-          <Html
+          <BadgeSprite
+            text={`−${card.damage}`}
             position={[CARD_W * 0.34, 0.14, -CARD_H * 0.04]}
-            center
-            distanceFactor={9}
-            zIndexRange={[20, 0]}
-            occlude={occludeBadges}
-            className="c3d-badge c3d-damage"
-          >
-            −{card.damage}
-          </Html>
+            bg="#e0344f"
+            height={0.3}
+            cardId={card.id}
+          />
         )}
         {isType(card, /planeswalker/i) && card.loyalty != null && (
-          <Html
+          <BadgeSprite
+            text={String(card.loyalty)}
             position={[CARD_W * 0.34, 0.14, CARD_H * 0.3]}
-            center
-            distanceFactor={9}
-            zIndexRange={[20, 0]}
-            occlude={occludeBadges}
-            className="c3d-badge c3d-loy"
-          >
-            {card.loyalty}
-          </Html>
+            bg="#6b4ea5"
+            cardId={card.id}
+          />
         )}
         {showCost && manaSymbols(card.manaCost).length > 0 && (
           <Html
@@ -975,10 +1029,27 @@ function BoardDebug({ zoom, mode, look }: { zoom: number; mode: ViewMode; look: 
       })
       return out
     }
+    // the in-canvas badge sprites (P/T, loyalty, damage) with on-screen visibility,
+    // so tests can verify the annotation renders + isn't occluded
+    const badges = () => {
+      const { three } = ref.current
+      const out: { cardId: string; text: string; onScreen: boolean }[] = []
+      three.scene.traverse((o) => {
+        const cardId = o.userData?.badgeCardId as string | undefined
+        const text = o.userData?.badgeText as string | undefined
+        if (!cardId || text == null) return
+        const wp = new THREE.Vector3()
+        o.getWorldPosition(wp)
+        const p = project(wp)
+        out.push({ cardId, text, onScreen: o.visible && p.z < 1 && p.x >= 0 && p.y >= 0 && p.x <= p.w && p.y <= p.h })
+      })
+      return out
+    }
     const api = {
       mode: () => ref.current.mode,
       zoom: () => ref.current.zoom,
       rendered,
+      badges,
       camera: () => {
         const { three, look } = ref.current
         // free mode → OrbitControls owns the orbit target; otherwise use the
