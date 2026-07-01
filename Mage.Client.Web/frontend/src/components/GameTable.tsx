@@ -650,6 +650,7 @@ function CardPreview({ card }: { card: CardType | null }) {
   return (
     <div className="card-preview" role="dialog" aria-label={`Card: ${displayName}`}>
       <img
+        key={img}
         className="card-preview-img"
         src={img}
         alt={displayName}

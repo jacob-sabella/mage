@@ -135,6 +135,31 @@ function SettingsView() {
             onChange={(e) => setPref('boardZoom', Number(e.target.value))}
           />
         </label>
+        {(
+          [
+            ['cardGap', 'Card spacing', 'How far apart cards sit in a row'],
+            ['matW', 'Playmat width', 'Horizontal size of each playmat'],
+            ['matH', 'Playmat depth', 'Vertical size of each playmat'],
+            ['seatSpread', 'Playmat distance', 'How far apart the playmats sit'],
+          ] as const
+        ).map(([key, label, hint]) => (
+          <label className="setting-row" key={key}>
+            <span>
+              <strong>{label}</strong>
+              <span className="muted setting-hint">
+                {hint} ({Math.round(prefs[key] * 100)}%)
+              </span>
+            </span>
+            <input
+              type="range"
+              min={0.5}
+              max={2}
+              step={0.05}
+              value={prefs[key]}
+              onChange={(e) => setPref(key, Number(e.target.value))}
+            />
+          </label>
+        ))}
         <label className="setting-row">
           <span>
             <strong>Reduce motion</strong>

@@ -611,8 +611,11 @@ const TABLE_LIFT = 0.09
 /** A subtle playmat under a seat's zone: a dark fill + a thin coloured frame, so
  *  each player's area reads as one tidy region instead of cards floating loose. */
 function SeatMat({ color, active }: { color: string; active: boolean }) {
-  const fill = useMemo(() => new THREE.ShapeGeometry(roundedRectShape(MAT_W, MAT_H, 0.5)), [])
-  const frame = useMemo(() => new THREE.ShapeGeometry(roundedRectShape(MAT_W + 0.18, MAT_H + 0.18, 0.56)), [])
+  const { prefs } = usePrefs()
+  const w = MAT_W * prefs.matW
+  const h = MAT_H * prefs.matH
+  const fill = useMemo(() => new THREE.ShapeGeometry(roundedRectShape(w, h, 0.5)), [w, h])
+  const frame = useMemo(() => new THREE.ShapeGeometry(roundedRectShape(w + 0.18, h + 0.18, 0.56)), [w, h])
   useEffect(() => () => { fill.dispose(); frame.dispose() }, [fill, frame])
   return (
     <group rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.006, MAT_Z]}>
@@ -654,6 +657,8 @@ function PlayerZone({
   occludeBadges?: boolean
 }) {
   const [expanded, setExpanded] = useState(false)
+  const { prefs } = usePrefs()
+  const cardGap = prefs.cardGap
 
   const { placed, rows } = useMemo(() => {
     const creatures: RowItem[] = []
@@ -683,10 +688,11 @@ function PlayerZone({
     const rows = defs.map((d) => {
       const overflow = Math.max(0, d.items.length - MAX_PER_ROW)
       const vis = expanded ? d.items : d.items.slice(0, MAX_PER_ROW)
-      return { placed: row(vis, 0, d.z), overflow, visCount: vis.length, z: d.z }
+      // cardGap scales both the gap and the row's max width so cards actually spread
+      return { placed: row(vis, 0, d.z, 1.45 * cardGap, MAX_ROW_W * cardGap), overflow, visCount: vis.length, z: d.z }
     })
     return { placed: rows.flatMap((r) => r.placed), rows }
-  }, [seat.player.battlefield, expanded])
+  }, [seat.player.battlefield, expanded, cardGap])
   const anyOverflow = rows.some((r) => r.overflow > 0)
 
   const p = seat.player
@@ -740,7 +746,7 @@ function PlayerZone({
 /** Seat N players radially around the table: the viewer at the front (+z) and
  *  the rest spread evenly around the circle, each facing the centre. Scales the
  *  radius up with the player count so seats don't crowd. */
-function seatPlayers(players: GamePlayer[], me?: string | null): { seats: Seat[]; radius: number; spectating: boolean } {
+function seatPlayers(players: GamePlayer[], me?: string | null, spread = 1): { seats: Seat[]; radius: number; spectating: boolean } {
   const found = players.findIndex((p) => p.name === me)
   const spectating = found < 0 // me isn't a player → watching, so nobody is "You"
   const viewerIdx = spectating ? 0 : found
@@ -749,7 +755,7 @@ function seatPlayers(players: GamePlayer[], me?: string | null): { seats: Seat[]
   const n = ordered.length
   // push seats further apart as the table fills so a busy multiplayer board has
   // breathing room (an 8.8-wide playmat needs the seats well separated)
-  const radius = Math.max(4.3, 2.5 + n * 1.35)
+  const radius = Math.max(4.3, 2.5 + n * 1.35) * spread
   const seats = ordered.map((player, i) => {
     const theta = Math.PI / 2 + (i * 2 * Math.PI) / n // front seat at +z
     return {
@@ -1216,7 +1222,10 @@ export function Board3D({
   }
 
   // seat all players radially around the table (supports 2..N)
-  const { seats, radius, spectating } = useMemo(() => seatPlayers(game.players, game.me), [game.players, game.me])
+  const { seats, radius, spectating } = useMemo(
+    () => seatPlayers(game.players, game.me, prefs.seatSpread),
+    [game.players, game.me, prefs.seatSpread],
+  )
 
   // camera viewpoints: an overview + a 3/4 view behind each seat that frames
   // that player's battlefield and (for the viewer) the hand laid in front.
@@ -1325,24 +1334,7 @@ export function Board3D({
           />
         )}
 
-        {/* play surface: a dark pad with a glowing perimeter in the family colours */}
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]} receiveShadow>
-          <planeGeometry args={[20, 15.5]} />
-          <meshStandardMaterial color={scene.table} roughness={0.6} metalness={0.2} transparent opacity={scene.grid ? 0.62 : 0.92} />
-        </mesh>
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, TABLE_LIFT - 0.012, 0]}>
-          <circleGeometry args={[6.9, 64]} />
-          <meshBasicMaterial color={scene.ring2} transparent opacity={0.06} toneMapped={false} />
-        </mesh>
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, TABLE_LIFT - 0.01, 0]}>
-          <ringGeometry args={[6.7, 6.9, 96]} />
-          <meshBasicMaterial color={scene.ring} transparent opacity={0.38} toneMapped={false} />
-        </mesh>
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, TABLE_LIFT - 0.008, 0]}>
-          <ringGeometry args={[3.0, 3.08, 96]} />
-          <meshBasicMaterial color={scene.ring2} transparent opacity={0.16} toneMapped={false} />
-        </mesh>
-
+        {/* no central table/rings — the per-seat playmats float over the backdrop */}
         {seats.map((s) => (
           <PlayerZone
             key={s.player.id}
