@@ -787,6 +787,7 @@ input::placeholder { color: var(--text-dim); }
 .deck-syntax-eg { font-size: 11px; white-space: nowrap; }
 
 .deck-list {
+  position: relative;
   width: 360px;
   flex-shrink: 0;
   display: flex;
@@ -1759,6 +1760,14 @@ html, body { overflow-x: hidden; }
 
 /* visual deck view — the maindeck as card images */
 .deck-view-switch { flex: 0 0 auto; align-self: flex-start; margin: 8px 0 4px; font-size: 12px; }
+
+/* drag-and-drop: drag a search result onto the deck panel to add it */
+.deck-drop-active { outline: 2px dashed var(--accent); outline-offset: -5px; box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent) inset; }
+.deck-drop-active::after {
+  content: 'Drop to add'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 15px; color: var(--accent); background: color-mix(in srgb, var(--bg) 55%, transparent);
+  pointer-events: none; border-radius: inherit; z-index: 3;
+}
 .deck-visual { display: flex; flex-direction: column; gap: 12px; }
 .deck-visual-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; margin-top: 4px; }
 .deck-visual-card { position: relative; border-radius: 7px; overflow: hidden; }

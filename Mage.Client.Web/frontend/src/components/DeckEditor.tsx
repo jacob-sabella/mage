@@ -138,6 +138,10 @@ export function DeckEditor() {
     localStorage.setItem('mage.deckView', fView)
   }, [fView])
 
+  // card currently being dragged from the results grid → deck (drag-and-drop add)
+  const draggedCard = useRef<CardInfoDto | null>(null)
+  const [dropActive, setDropActive] = useState(false)
+
   // restore an in-progress deck from a previous session so a refresh never
   // discards your work-in-progress deck
   const draft0 = useMemo(loadDraft, [])
@@ -547,6 +551,7 @@ export function DeckEditor() {
                 onAdd={addCard}
                 onRemove={decName}
                 onHover={showPreview}
+                onDragCard={(c) => (draggedCard.current = c)}
               />
             ))}
           </div>
@@ -598,7 +603,26 @@ export function DeckEditor() {
         )}
       </section>
 
-      <section className="panel deck-list">
+      <section
+        className={`panel deck-list${dropActive ? ' deck-drop-active' : ''}`}
+        onDragOver={(e) => {
+          if (!draggedCard.current) return
+          e.preventDefault()
+          e.dataTransfer.dropEffect = 'copy'
+          if (!dropActive) setDropActive(true)
+        }}
+        onDragLeave={(e) => {
+          // only clear when the pointer actually leaves the panel (not a child)
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropActive(false)
+        }}
+        onDrop={(e) => {
+          e.preventDefault()
+          setDropActive(false)
+          const c = draggedCard.current
+          draggedCard.current = null
+          if (c) addCard(c)
+        }}
+      >
         <DeckCardPreview card={preview} />
         <div className="deck-list-head">
           <input
@@ -1027,12 +1051,14 @@ function CardTile({
   onAdd,
   onRemove,
   onHover,
+  onDragCard,
 }: {
   card: CardInfoDto
   count: number
   onAdd: (c: CardInfoDto, playset?: boolean) => void
   onRemove: (name: string) => void
   onHover: (c: PreviewCard | null) => void
+  onDragCard?: (c: CardInfoDto | null) => void
 }) {
   const img = `/api/cardimg?set=${encodeURIComponent(card.set ?? '')}&num=${encodeURIComponent((card as { num?: string }).num ?? '')}&name=${encodeURIComponent(card.name)}`
   // touch: long-press previews (no hover on touch); a quick tap still adds
@@ -1041,6 +1067,13 @@ function CardTile({
   return (
     <div
       className={`card-tile${count > 0 ? ' in-deck' : ''}`}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData('text/plain', card.name)
+        e.dataTransfer.effectAllowed = 'copy'
+        onDragCard?.(card)
+      }}
+      onDragEnd={() => onDragCard?.(null)}
       onMouseEnter={() => onHover(card)}
       onMouseLeave={() => onHover(null)}
     >
