@@ -15,6 +15,7 @@ const GROUPS: { title: string; items: { keys: string; label: string }[] }[] = [
       { keys: 'D', label: 'Done / confirm selection' },
       { keys: 'P / Space', label: 'Pass priority' },
       { keys: 'Y / N', label: 'Answer yes / no (Mulligan / Keep)' },
+      { keys: 'H', label: 'Hide / show your hand' },
       { keys: '← / →', label: 'Move between hand cards' },
       { keys: 'Enter', label: 'Play the focused hand card' },
     ],

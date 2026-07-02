@@ -219,6 +219,18 @@ test.describe('Game board (3D)', () => {
     await expect(page.locator('.card-preview')).toHaveCount(0)
   })
 
+  test('H collapses the hand to a pill and restores it', async ({ page }) => {
+    await gotoScreen(page, 'game')
+    await expect(page.locator('.hand-fan')).toBeVisible()
+    await page.locator('.turn-label').click()
+    await page.keyboard.press('h')
+    await expect(page.locator('.hand-fan')).toHaveCount(0)
+    const pill = page.getByRole('button', { name: /Hand \(4\)/ })
+    await expect(pill).toBeVisible()
+    await pill.click()
+    await expect(page.locator('.hand-fan')).toBeVisible()
+  })
+
   test('the preview shows oracle text when the server ships it', async ({ page }) => {
     await gotoScreen(page, 'game')
     await page.locator('.play-chip', { hasText: 'Lightning Bolt' }).hover()

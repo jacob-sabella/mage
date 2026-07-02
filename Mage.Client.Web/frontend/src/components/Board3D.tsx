@@ -851,11 +851,15 @@ const TABLE_LIFT = 0.09
 
 /** A subtle playmat under a seat's zone: a dark fill + a thin coloured frame, so
  *  each player's area reads as one tidy region instead of cards floating loose. */
-function SeatMat({ color, active, pileX }: { color: string; active: boolean; pileX: number }) {
+function SeatMat({ color, active, pileX, maxW }: { color: string; active: boolean; pileX: number; maxW?: number }) {
   const { prefs } = usePrefs()
-  // wide enough that the zone piles (at ±pileX) always sit ON the mat
-  const w = Math.max(MAT_W * prefs.matW, 2 * (pileX + CARD_W / 2 + 0.35))
-  const h = MAT_H * prefs.matH
+  // wide enough that the zone piles (at ±pileX) always sit ON the mat, but no
+  // wider than the seat's share of the table (3p/4p corners must not overlap)
+  let w = Math.max(MAT_W * prefs.matW, 2 * (pileX + CARD_W / 2 + 0.35))
+  if (maxW) w = Math.min(w, Math.max(maxW, 2 * (pileX + CARD_W / 2 + 0.35)))
+  // deep enough for the three battlefield rows + the back pile column even
+  // when the mat-height pref is dialed down (shrinking below content is noise)
+  const h = Math.max(MAT_H * prefs.matH, 6.0)
   const fill = useMemo(() => new THREE.ShapeGeometry(roundedRectShape(w, h, 0.5)), [w, h])
   const frame = useMemo(() => new THREE.ShapeGeometry(roundedRectShape(w + 0.18, h + 0.18, 0.56)), [w, h])
   useEffect(() => () => { fill.dispose(); frame.dispose() }, [fill, frame])
@@ -890,6 +894,7 @@ function PlayerZone({
   onOpenMenu,
   onOpenZone,
   occludeBadges,
+  matMaxW,
 }: {
   seat: Seat
   active: boolean
@@ -899,6 +904,7 @@ function PlayerZone({
   onOpenMenu?: (c: GameCard, members?: GameCard[]) => void
   onOpenZone?: (player: GamePlayer, zone: BrowsableZone) => void
   occludeBadges?: boolean
+  matMaxW?: number
 }) {
   const [expanded, setExpanded] = useState(false)
   const { prefs } = usePrefs()
@@ -930,7 +936,7 @@ function PlayerZone({
 
   return (
     <group position={[seat.x, TABLE_LIFT, seat.z]} rotation={[0, seat.yaw, 0]}>
-      <SeatMat color={matColor} active={active} pileX={pileX} />
+      <SeatMat color={matColor} active={active} pileX={pileX} maxW={matMaxW} />
       {placed.map(({ card, pos, stackCount, members, gap }) => (
         <Card3D key={card.id} card={card} position={pos} stackCount={stackCount} members={members} rowGap={gap} cardProps={cardProps} onHoverCard={onHoverCard} onOpenMenu={onOpenMenu} occludeBadges={occludeBadges} />
       ))}
@@ -1791,6 +1797,9 @@ export function Board3D({
             onOpenMenu={onOpenMenu}
             onOpenZone={onOpenZone}
             occludeBadges={occludeBadges}
+            // 3p+: cap each mat at the chord between adjacent seats so the
+            // corners of neighbouring mats can't overlap at default spread
+            matMaxW={seats.length >= 3 ? 2 * radius * Math.sin(Math.PI / seats.length) - 0.4 : undefined}
           />
         ))}
 

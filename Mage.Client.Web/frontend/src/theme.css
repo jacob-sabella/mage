@@ -1594,6 +1594,24 @@ html.game-on .lobby-header { display: none; }
 .hand-card:focus-visible .hand-card-name { padding-right: 5px; }
 /* in maximized mode the control dock floats over the board, so lift the fan clear */
 html.board-max .hand-fan { bottom: 88px; }
+/* collapse the fan entirely: a chevron on the fan, a slim restore pill when hidden */
+.hand-collapse {
+  position: absolute; left: 50%; bottom: 2px; transform: translateX(-50%);
+  z-index: 19; width: 34px; height: 18px; line-height: 1;
+  border: 1px solid var(--stroke); border-radius: 8px 8px 0 0;
+  background: color-mix(in srgb, var(--panel) 85%, transparent);
+  color: var(--text-dim); cursor: pointer; font-size: 11px; padding: 0;
+}
+.hand-collapse:hover { color: var(--text); border-color: var(--accent); }
+.hand-restore {
+  position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%);
+  z-index: 19; padding: 5px 14px;
+  border: 1px solid var(--stroke); border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  color: var(--text); cursor: pointer; font-size: 12.5px;
+}
+.hand-restore:hover { border-color: var(--accent); }
+
 /* short desktop windows: scale the whole fan down so it stops shadowing the
    viewer's battlefield rows (capped canvas height leaves no clear band otherwise) */
 @media (max-height: 800px) {

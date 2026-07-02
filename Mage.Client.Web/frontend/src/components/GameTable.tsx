@@ -71,6 +71,8 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
   // zone counts or by clicking a pile on the 3D board. Keyed by player NAME so
   // a fresh game push re-resolves to live cards.
   const [zoneBrowser, setZoneBrowser] = useState<{ playerName: string; zone: BrowsableZone } | null>(null)
+  // collapse the hand fan to a slim pill so it stops shadowing the battlefield
+  const [handHidden, setHandHidden] = useState(false)
   // target-candidate picker: dismissed state for the CURRENT prompt (a new
   // prompt re-opens it), plus the ids already sent in a multi-pick
   const [pickerClosed, setPickerClosed] = useState(false)
@@ -180,6 +182,11 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
       }
       // quick confirm/decline for the current decision
       const k = e.key.toLowerCase()
+      if (k === 'h') {
+        e.preventDefault()
+        setHandHidden((v) => !v)
+        return
+      }
       if (prompt?.kind === 'select') {
         if (e.key === ' ' || k === 'p') {
           e.preventDefault()
@@ -485,9 +492,19 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
 
         {/* your hand as a fixed screen-space fan at the bottom (like other MTG
             clients) instead of laid flat on the 3D table */}
-        {game.myHand && game.myHand.length > 0 && (
-          <HandFan cards={game.myHand} cardProps={cardProps} onHoverCard={handleHoverCard} onOpenMenu={handleOpenMenu} />
-        )}
+        {game.myHand && game.myHand.length > 0 &&
+          (handHidden ? (
+            <button className="hand-restore" onClick={() => setHandHidden(false)} title="Show hand (H)">
+              🂠 Hand ({game.myHand.length})
+            </button>
+          ) : (
+            <>
+              <HandFan cards={game.myHand} cardProps={cardProps} onHoverCard={handleHoverCard} onOpenMenu={handleOpenMenu} />
+              <button className="hand-collapse" onClick={() => setHandHidden(true)} title="Hide hand (H)" aria-label="Hide hand">
+                ▾
+              </button>
+            </>
+          ))}
 
         {(game.stack.length > 0 || game.combat.length > 0) && (
           <div className="overlay-tr board-overlays">
