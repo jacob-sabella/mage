@@ -21,13 +21,33 @@ type C = {
   // stack spells/abilities: ids this item targets + the battlefield source id
   targets?: string[]
   sourceId?: string
+  // permanent counters (+1/+1, charge, …); [] when absent (gateway contract)
+  counters?: { name: string; count: number }[]
+  // attachment plumbing: ids attached TO this permanent / the host this one is on
+  attachments?: string[]
+  attachedTo?: string | null
+  faceDown?: boolean
+  isToken?: boolean
+  isCopy?: boolean
+  // command-zone entries only
+  commandType?: 'commander' | 'emblem' | 'plane' | 'dungeon' | null
+  // rules text lines — only for faceless emblem/plane/dungeon command entries
+  rules?: string[] | null
 }
 export const card = (
   id: string,
   name: string,
   types: string[],
   o: Partial<C> = {},
-): C => ({ id, name, set: o.set ?? 'M21', num: o.num ?? '1', types, power: o.power ?? null, toughness: o.toughness ?? null, loyalty: o.loyalty ?? null, manaCost: o.manaCost ?? '', colors: o.colors ?? '', tapped: !!o.tapped, damage: o.damage ?? 0, targets: o.targets, sourceId: o.sourceId })
+): C => ({
+  id, name, set: o.set ?? 'M21', num: o.num ?? '1', types,
+  power: o.power ?? null, toughness: o.toughness ?? null, loyalty: o.loyalty ?? null,
+  manaCost: o.manaCost ?? '', colors: o.colors ?? '', tapped: !!o.tapped, damage: o.damage ?? 0,
+  targets: o.targets, sourceId: o.sourceId,
+  counters: o.counters ?? [], attachments: o.attachments ?? [], attachedTo: o.attachedTo ?? null,
+  faceDown: !!o.faceDown, isToken: !!o.isToken, isCopy: !!o.isCopy,
+  commandType: o.commandType ?? null, rules: o.rules ?? null,
+})
 
 export const SAMPLE = {
   tables: [
@@ -65,19 +85,38 @@ export const SAMPLE = {
     players: [
       {
         id: 'ai', name: 'Computer', life: 18, libraryCount: 30, handCount: 5, graveyardCount: 2, active: false,
-        battlefield: [card('a1', 'Mountain', ['Land'], { colors: 'R', tapped: true }), card('a2', 'Goblin Guide', ['Creature'], { power: '2', toughness: '2', colors: 'R' })],
+        battlefield: [
+          card('a1', 'Mountain', ['Land'], { colors: 'R', tapped: true }),
+          card('a2', 'Goblin Guide', ['Creature'], { power: '2', toughness: '2', colors: 'R' }),
+          // a face-down morph and a token copy — exercises the faceDown/isToken/isCopy rendering
+          card('a3', 'Morph', ['Creature'], { power: '2', toughness: '2', faceDown: true }),
+          card('a4', 'Goblin Guide', ['Creature'], { power: '2', toughness: '2', colors: 'R', isToken: true, isCopy: true }),
+        ],
         graveyard: [card('ag', 'Shock', ['Instant'], { colors: 'R' })], exile: [],
+        command: [], counters: [{ name: 'poison', count: 3 }], designations: ['Monarch'],
       },
       {
         id: 'me', name: 'You', life: 20, libraryCount: 28, handCount: 4, graveyardCount: 0, active: true, manaPool: '{U}{U}{R}',
-        battlefield: [card('b1', 'Island', ['Land'], { colors: 'U' }), card('b2', 'Island', ['Land'], { colors: 'U' }), card('b3', 'Serra Angel', ['Creature'], { power: '4', toughness: '4', colors: 'W' })],
+        battlefield: [
+          card('b1', 'Island', ['Land'], { colors: 'U' }),
+          card('b2', 'Island', ['Land'], { colors: 'U' }),
+          card('b3', 'Serra Angel', ['Creature'], { power: '4', toughness: '4', colors: 'W', counters: [{ name: '+1/+1', count: 2 }], attachments: ['att1'] }),
+          // an aura attached to the Serra Angel — tucks under its host, no row slot
+          card('att1', 'Rancor', ['Enchantment'], { colors: 'G', attachedTo: 'b3' }),
+        ],
         graveyard: [], exile: [],
+        // castable commander in the command zone (cmd1 is also in canPlay)
+        command: [card('cmd1', 'Ghalta, Primal Hunger', ['Legendary', 'Creature'], { power: '12', toughness: '12', colors: 'G', manaCost: '{10}{G}{G}', commandType: 'commander' })],
+        counters: [{ name: 'energy', count: 2 }], designations: [],
       },
     ],
     stack: [],
-    canPlay: ['h1', 'h3', 'b3'],
+    canPlay: ['h1', 'h3', 'b3', 'cmd1'],
     myHand: [card('h1', 'Lightning Bolt', ['Instant'], { colors: 'R', manaCost: '{R}' }), card('h2', 'Mountain', ['Land'], { colors: 'R' }), card('h3', 'Mulldrifter', ['Creature'], { power: '2', toughness: '2', colors: 'U', manaCost: '{4}{U}' }), card('h4', 'Counterspell', ['Instant'], { colors: 'U', manaCost: '{U}{U}' })],
     combat: [] as unknown[],
+    special: [] as { id: string; name: string }[],
+    revealed: [] as { name: string; cards: C[] }[],
+    lookedAt: [] as { name: string; cards: C[] }[],
   },
   prompts: {
     select: { kind: 'select', message: 'Play spells and abilities', canCancel: true, min: 0, max: 0, choices: [], choiceKind: 'string', targets: [] },
@@ -98,6 +137,18 @@ export const SAMPLE = {
       multi: [
         { label: 'Goblin Guide', min: 0, max: 3, def: 0 },
         { label: 'Serra Angel', min: 0, max: 3, def: 0 },
+      ],
+    },
+    // a target prompt carrying off-battlefield candidates (a delve-style
+    // graveyard pick) — drives the auto-opening candidate picker overlay
+    gamePick: {
+      kind: 'target', message: 'Choose a card to exile (delve)', canCancel: true,
+      min: 1, max: 1, choices: [], choiceKind: 'string', targets: [],
+      candidateZone: 'graveyard',
+      candidates: [
+        card('gy1', 'Shock', ['Instant'], { colors: 'R' }),
+        card('gy2', 'Thought Scour', ['Instant'], { colors: 'U' }),
+        card('gy3', 'Gurmag Angler', ['Creature'], { power: '5', toughness: '5', colors: 'B' }),
       ],
     },
   },
@@ -122,6 +173,9 @@ export type Scenario =
   | 'stack'
   | 'landstack'
   | 'ability'
+  | 'gamePick'
+  | 'gameSpecial'
+  | 'gameReveal'
 
 const DRAFT = {
   booster: [
@@ -202,16 +256,22 @@ function densePlayer(
   const lands = Array.from({ length: 8 }, (_, i) =>
     card(`${pre}L${i}`, landName, ['Land'], { colors: color, tapped: i % 3 === 0 }),
   )
+  // worst-case creature row also carries the per-card annotations: counters,
+  // a face-down morph, a token and a copy
   const creatures = CREATURE_POOL.slice(0, 10).map((cn, i) =>
     card(`${pre}C${i}`, cn, ['Creature'], {
       colors: color, power: String(1 + (i % 9)), toughness: String(1 + ((i + 3) % 9)), tapped: i % 4 === 0,
+      counters: i === 0 ? [{ name: '+1/+1', count: 3 }, { name: 'stun', count: 1 }] : [],
+      faceDown: i === 9, isToken: i === 1, isCopy: i === 2,
+      attachments: i === 0 ? [`${pre}E0`] : [],
     }),
   )
-  // non-creature, non-land permanents go in their own (middle) battlefield row
+  // non-creature, non-land permanents go in their own (middle) battlefield row;
+  // the Rancor is attached to the first creature (tucks under it, no row slot)
   const others = [
     card(`${pre}A0`, 'Sol Ring', ['Artifact'], { tapped: true }),
     card(`${pre}A1`, 'Howling Mine', ['Artifact'], {}),
-    card(`${pre}E0`, 'Rancor', ['Enchantment'], { colors: color }),
+    card(`${pre}E0`, 'Rancor', ['Enchantment'], { colors: color, attachedTo: `${pre}C0` }),
     card(`${pre}P0`, 'Garruk Wildspeaker', ['Planeswalker'], { colors: color, loyalty: '3' }),
   ]
   return {
@@ -220,6 +280,10 @@ function densePlayer(
     battlefield: [...lands, ...others, ...creatures],
     graveyard: Array.from({ length: 3 }, (_, i) => card(`${pre}G${i}`, CREATURE_POOL[i], ['Creature'], { colors: color })),
     exile: [],
+    // every dense seat also has a commander in the command zone + player counters
+    command: [card(`${pre}CMD`, 'Atraxa, Praetors’ Voice', ['Legendary', 'Creature'], { colors: color, power: '4', toughness: '4', commandType: 'commander' as const })],
+    counters: me ? [{ name: 'energy', count: 4 }] : [{ name: 'poison', count: 2 }],
+    designations: pre === 'p2' ? ['Monarch'] : [],
   }
 }
 function denseGame(seats: Array<[string, string, number, string, string]>) {
@@ -235,6 +299,8 @@ function denseGame(seats: Array<[string, string, number, string, string]>) {
     card('xs3', 'Counterspell', ['Instant'], { manaCost: '{U}{U}', colors: 'U' }),
   ] as typeof SAMPLE.game.stack
   g.step = 'Declare Attackers'
+  // the server ships a single "Special" entry whenever special actions exist
+  g.special = [{ id: 'special', name: 'Special' }]
   const me = g.players[0]
   const others = g.players.slice(1)
   g.combat = me.battlefield
@@ -270,6 +336,30 @@ GAME_STACK.stack = [
   card('st1', 'Lightning Bolt', ['Instant'], { manaCost: '{R}', colors: 'R', targets: ['a2'] }),
   card('st2', 'Counterspell', ['Instant'], { manaCost: '{U}{U}', colors: 'U', targets: ['st1'] }),
 ] as typeof SAMPLE.game.stack
+
+// special actions available: the gateway ships either [] or exactly this one
+// entry; responding {kind:'string', value:'special'} triggers a follow-up
+// choice prompt from the server listing the concrete actions.
+const GAME_SPECIAL = JSON.parse(JSON.stringify(SAMPLE.game)) as typeof SAMPLE.game
+GAME_SPECIAL.special = [{ id: 'special', name: 'Special' }]
+
+// revealed + looked-at cards: revealed carries full cards; lookedAt entries can
+// be NAMELESS (id/set/num only — SimpleCardView upstream), so the panel must
+// render those from the set/num face alone.
+const GAME_REVEAL = JSON.parse(JSON.stringify(SAMPLE.game)) as typeof SAMPLE.game
+GAME_REVEAL.revealed = [
+  {
+    name: 'Computer reveals',
+    cards: [
+      card('rv1', 'Emrakul, the Aeons Torn', ['Legendary', 'Creature'], { power: '15', toughness: '15' }),
+      card('rv2', 'Island', ['Land'], { colors: 'U' }),
+    ],
+  },
+]
+GAME_REVEAL.lookedAt = [
+  // a nameless looked-at card: only id/set/num arrive from the gateway
+  { name: 'Scry', cards: [{ id: 'la1', name: '', set: 'M21', num: '7', types: [] } as unknown as C] },
+]
 
 // a 1x1 jpeg so the 3D board's card textures resolve deterministically
 const TINY_JPEG = Buffer.from(
@@ -307,7 +397,9 @@ export async function installMocks(
             ? 'pile'
             : scenario === 'multiAmount'
               ? 'multiAmount'
-              : 'select'
+              : scenario === 'gamePick'
+                ? 'gamePick'
+                : 'select'
   const second = scenario === 'ptUpdate' ? GAME_BUFFED : null
   const gameState =
     opts.game ??
@@ -317,6 +409,8 @@ export async function installMocks(
     : scenario === 'arrows' ? GAME_ARROWS
     : scenario === 'stack' ? GAME_STACK
     : scenario === 'landstack' || scenario === 'ability' ? GAME_LANDSTACK
+    : scenario === 'gameSpecial' ? GAME_SPECIAL
+    : scenario === 'gameReveal' ? GAME_REVEAL
     : SAMPLE.game)
   const isDraft = scenario === 'draft'
   const isConstruct = scenario === 'construct'

@@ -583,6 +583,11 @@ suite('Dense multiplayer board · modalities', () => {
     await seat.click()
     await page.waitForTimeout(250)
     expect(sent).toEqual([])
+    // on plain priority the seat's zone counts are browse buttons — if the click
+    // landed on one it opened the zone browser (intended); dismiss it so the
+    // targeting phase below isn't covered by the modal
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.zone-browser')).toHaveCount(0)
     // a real target prompt: the seat becomes targetable and sends its player id
     await page.evaluate(() =>
       (window as unknown as { __push: (p: unknown) => void }).__push({

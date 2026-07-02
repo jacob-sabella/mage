@@ -2409,3 +2409,74 @@ html, body { overflow-x: hidden; }
 
 .settings-reset { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--stroke); }
 .stack-item { cursor: pointer; }
+
+/* ===== player strip: zone-count buttons, counters, designations ===== */
+/* the graveyard/exile counts double as browse buttons (dotted underline = affordance) */
+.pstat-zone-btn {
+  cursor: pointer; border-radius: 4px;
+  text-decoration: underline dotted color-mix(in srgb, var(--text-dim) 65%, transparent);
+  text-underline-offset: 2px;
+}
+.pstat-zone-btn:hover { color: var(--accent-2); }
+.pstat-extras { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; flex: 0 0 auto; }
+.pstat-counter {
+  font-size: 12px; font-weight: 800; padding: 0 6px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07); white-space: nowrap;
+}
+.pc-poison { color: #8fdc66; }
+.pc-energy { color: #ffd75e; }
+.pc-experience { color: #c9a6ff; }
+.pstat-desig { white-space: nowrap; flex: 0 0 auto; }
+
+/* toolbar chip that reopens the revealed-cards panel while content exists */
+.revealed-chip { flex: 0 0 auto; white-space: nowrap; border-color: var(--accent-2); }
+
+/* special actions in the control dock */
+.dock-special { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
+.dock-special .special-btn { padding: 8px 11px; border-color: var(--accent-2); color: var(--accent-2); font-weight: 700; }
+
+/* ===== zone browser / candidate picker / revealed overlay =====
+   One modal surface for "look at a pile of cards". z 55: above the floating
+   overlay rail (30) and the game log (50), below toasts + the card action
+   sheet / confirm modals (60+) — and the fixed card preview (1000) stays
+   readable while hovering tiles. */
+.zone-browser-backdrop {
+  position: fixed; inset: 0; z-index: 55;
+  display: flex; align-items: center; justify-content: center; padding: 12px;
+  background: rgba(8, 10, 14, 0.6); backdrop-filter: blur(3px);
+}
+.zone-browser {
+  display: flex; flex-direction: column; gap: 10px;
+  width: min(880px, 94vw); max-height: min(78vh, 720px); padding: 14px 16px;
+  animation: card-pop 0.18s cubic-bezier(0.2, 0.9, 0.3, 1.08);
+}
+.zb-head { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+.zb-title { font-weight: 800; font-size: 16px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zb-close { padding: 4px 10px; flex: 0 0 auto; }
+.zb-body { overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 14px; }
+.zb-section-title {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase;
+  color: var(--accent-2); margin-bottom: 6px;
+}
+.zb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 10px; align-content: start; }
+.zb-empty { padding: 18px; text-align: center; }
+.zb-card-name { display: block; margin-top: 3px; font-size: 11px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zb-card .card-tile-art { cursor: default; }
+.zb-card.zb-actionable .card-tile-art {
+  cursor: pointer; outline: 2px solid var(--accent-2);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent-2) 45%, transparent);
+}
+.zb-card.zb-picked .card-tile-art { outline: 2px solid var(--accent); opacity: 0.72; }
+.zb-picked-tag {
+  position: absolute; top: 5px; right: 5px; z-index: 3; width: 20px; height: 20px;
+  display: flex; align-items: center; justify-content: center; border-radius: 50%;
+  font-size: 12px; font-weight: 800; color: #0d1119; background: var(--accent-2);
+}
+/* faceless command objects (emblems / planes / dungeons) render as a text card */
+.zb-text-card {
+  position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; gap: 4px;
+  padding: 8px; background: linear-gradient(160deg, #241d3e, #171226); text-align: left; overflow: hidden;
+}
+.zb-text-card-name { font-weight: 800; font-size: 12px; color: var(--text); }
+.zb-text-card-rule { font-size: 11px; line-height: 1.3; color: var(--text-dim); }
+.zb-footer { display: flex; align-items: center; gap: 10px; justify-content: flex-end; flex: 0 0 auto; }

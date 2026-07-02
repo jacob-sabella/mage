@@ -95,6 +95,34 @@ function makeCardTexture(card: GameCard): THREE.Texture {
   g.font = 'bold 28px "Segoe UI", system-ui, sans-serif'
   // for a stack ability, name it after its source card, not the generic "Ability"
   g.fillText(fit(card.sourceName ?? card.name, w - 44), 22, 33)
+  // emblems / planes / dungeons have no card face — render their rules text in
+  // the art box so the card actually says what it does
+  if (card.rules && card.rules.length) {
+    g.fillStyle = '#e8e8ee'
+    g.font = '14px "Segoe UI", system-ui, sans-serif'
+    const maxW = w - 44
+    let ry = 74
+    outer: for (const rule of card.rules) {
+      // simple word wrap inside the art box
+      let line = ''
+      for (const word of rule.split(/\s+/)) {
+        const next = line ? line + ' ' + word : word
+        if (g.measureText(next).width > maxW && line) {
+          g.fillText(line, 22, ry)
+          ry += 18
+          if (ry > h - 80) break outer
+          line = word
+        } else {
+          line = next
+        }
+      }
+      if (line) {
+        g.fillText(line, 22, ry)
+        ry += 22
+      }
+      if (ry > h - 80) break
+    }
+  }
   // type line
   g.fillStyle = 'rgba(0,0,0,0.45)'
   g.fillRect(14, h - 64, w - 28, 28)
@@ -216,6 +244,18 @@ function BadgeSprite({
 
 type CardProps = (c: GameCard) => { highlight?: 'play' | 'target'; onClick?: (c: GameCard) => void }
 
+// counter pill colours for the common counter kinds; everything else gets a
+// neutral slate pill
+const COUNTER_BG: Record<string, string> = {
+  '+1/+1': 'rgba(38,110,62,0.92)',
+  '-1/-1': 'rgba(150,44,52,0.92)',
+  charge: 'rgba(48,96,150,0.92)',
+  loyalty: 'rgba(107,78,165,0.92)',
+}
+
+/** Which zone browsers a seat can open (public zones — the library stays hidden). */
+export type BrowsableZone = 'graveyard' | 'exile' | 'command'
+
 /** A stacked zone pile (library / graveyard / exile). Depth layers fake the
  *  stack height; the top card shows real art when the zone is public (face-up),
  *  or the card back when it's hidden (the library). A floating badge labels it. */
@@ -228,6 +268,7 @@ function CardPile({
   cardProps,
   onHoverCard,
   occludeBadges,
+  onOpen,
 }: {
   position: [number, number] // local x, z
   count: number
@@ -237,6 +278,10 @@ function CardPile({
   cardProps: CardProps
   onHoverCard?: (c: GameCard | null) => void
   occludeBadges?: boolean
+  // open this zone's browser overlay (public zones only — the library stays
+  // hidden). Clicking the pile opens it; the top card still goes through the
+  // normal card-action path first (play / target beats browse).
+  onOpen?: () => void
 }) {
   const back = useMemo(makeCardBack, [])
   const { gl } = useThree()
@@ -251,6 +296,20 @@ function CardPile({
   const step = 0.02
   const topY = Math.max(0, layers - 1) * step + 0.012
 
+  // the top card's primary action (play / target) wins; otherwise a click on it
+  // falls through to opening the zone browser
+  const pileCardProps: CardProps = (c) => {
+    const r = cardProps(c)
+    if (r.onClick || !onOpen) return r
+    return { ...r, onClick: () => onOpen() }
+  }
+  const openHandler = onOpen
+    ? (e: { stopPropagation: () => void }) => {
+        e.stopPropagation()
+        onOpen()
+      }
+    : undefined
+
   return (
     <group position={[position[0], 0, position[1]]}>
       {count <= 0 && (
@@ -262,7 +321,7 @@ function CardPile({
       {/* depth layers (face-down backs) under the top card — lean AWAY from the
           battlefield (exile sits at negative x, so it leans further left) */}
       {Array.from({ length: Math.max(0, layers - 1) }).map((_, i) => (
-        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[(position[0] < 0 ? -1 : 1) * 0.012 * i, 0.012 + i * step, 0.012 * i]}>
+        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[(position[0] < 0 ? -1 : 1) * 0.012 * i, 0.012 + i * step, 0.012 * i]} onClick={openHandler}>
           <planeGeometry args={[CARD_W, CARD_H]} />
           <meshBasicMaterial map={back} toneMapped={false} transparent depthWrite={false} />
         </mesh>
@@ -270,7 +329,7 @@ function CardPile({
       {/* top of the pile */}
       {count > 0 &&
         (faceUp && top ? (
-          <Card3D card={top} position={[0, topY, 0]} cardProps={cardProps} onHoverCard={onHoverCard} />
+          <Card3D card={top} position={[0, topY, 0]} cardProps={pileCardProps} onHoverCard={onHoverCard} />
         ) : (
           <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, topY, 0]}>
             <planeGeometry args={[CARD_W, CARD_H]} />
@@ -336,8 +395,15 @@ function Card3D({
   const { gl } = useThree()
   const maxAniso = useMemo(() => gl.capabilities.getMaxAnisotropy?.() ?? 8, [gl])
 
-  // always-present readable face; disposed on unmount
-  const fallback = useMemo(() => makeCardTexture(card), [card.id, card.name, card.power, card.toughness, card.loyalty])
+  // face-down permanents (morphs, manifests) show the card back, not their face
+  const faceDown = !!card.faceDown
+  // always-present readable face; disposed on unmount. Face-down → the shared
+  // card-back drawing instead of the (hidden) real face.
+  const fallback = useMemo(
+    () => (faceDown ? makeCardBack() : makeCardTexture(card)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [card.id, card.name, card.power, card.toughness, card.loyalty, faceDown],
+  )
   useEffect(() => {
     fallback.anisotropy = maxAniso // sharp at the board's viewing angle
     fallback.needsUpdate = true
@@ -347,6 +413,11 @@ function Card3D({
   // try to upgrade to real card art (composited onto a canvas so it gets rounded corners)
   useEffect(() => {
     let alive = true
+    // no art to fetch for a face-down card or a faceless text card (emblem/plane)
+    if (faceDown || (card.rules && card.rules.length)) {
+      setArt(null)
+      return
+    }
     preloadImage(imgUrl(card))
       .then((src) => {
         if (!alive) return
@@ -378,9 +449,10 @@ function Card3D({
     return () => {
       alive = false
     }
-  }, [card.id, card.name, maxAniso])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [card.id, card.name, maxAniso, faceDown])
 
-  const tex = art ?? fallback
+  const tex = faceDown ? fallback : art ?? fallback
 
   // flat on table, rotated 90° when tapped; or standing toward camera
   const rot: [number, number, number] = standing
@@ -404,7 +476,7 @@ function Card3D({
       <mesh
         position={[0, hitY, 0]}
         rotation={rot}
-        userData={{ cardId: card.id }}
+        userData={{ cardId: card.id, faceDown, isToken: !!card.isToken, isCopy: !!card.isCopy }}
         onPointerEnter={(e) => {
           e.stopPropagation()
           setHover(true)
@@ -477,7 +549,9 @@ function Card3D({
               dimmed (in addition to the 90° rotation) so they read as "used" at a glance. */}
           {/* write depth (alphaTest drops the transparent rounded corners) so the
               in-canvas badge sprites are occluded by cards drawn in front of them */}
-          <meshBasicMaterial map={tex} color={card.tapped && !standing ? '#7a7a82' : '#ffffff'} toneMapped={false} transparent alphaTest={0.5} depthWrite />
+          {/* tokens get a subtle desaturating tint so they read as "not a real
+              card" at a glance; the tapped dim wins when both apply */}
+          <meshBasicMaterial map={tex} color={card.tapped && !standing ? '#7a7a82' : card.isToken ? '#d4d4da' : '#ffffff'} toneMapped={false} transparent alphaTest={0.5} depthWrite />
         </mesh>
 
         {/* creature P/T, damage, loyalty — in-canvas sprites so they occlude
@@ -515,6 +589,52 @@ function Card3D({
                   position={[CARD_W * 0.34, 0.14, CARD_H * 0.3]}
                   bg="#6b4ea5"
                   height={0.5 * badgeScale}
+                  cardId={card.id}
+                />
+              )}
+              {/* permanent counters (+1/+1, charge, …) as a pill column on the
+                  card's left edge — same badge system as P/T so they occlude and
+                  cull identically. Capped at 3 kinds + a "+n" overflow pill.
+                  A planeswalker's loyalty counter is skipped: the loyalty badge
+                  above already shows it. */}
+              {(() => {
+                const counters = (card.counters ?? []).filter(
+                  (k) => k.count > 0 && !(card.loyalty != null && /^loyalty$/i.test(k.name)),
+                )
+                if (!counters.length) return null
+                const shown = counters.slice(0, 3)
+                const extra = counters.length - shown.length
+                return (
+                  <>
+                    {shown.map((k, i) => (
+                      <BadgeSprite
+                        key={k.name}
+                        text={`${k.name} ×${k.count}`}
+                        position={[-CARD_W * 0.3, 0.14, CARD_H * 0.3 - i * 0.34]}
+                        bg={COUNTER_BG[k.name.toLowerCase()] ?? 'rgba(38,42,54,0.92)'}
+                        height={0.28 * badgeScale}
+                        cardId={card.id}
+                      />
+                    ))}
+                    {extra > 0 && (
+                      <BadgeSprite
+                        text={`+${extra}`}
+                        position={[-CARD_W * 0.3, 0.14, CARD_H * 0.3 - shown.length * 0.34]}
+                        bg="rgba(38,42,54,0.92)"
+                        height={0.28 * badgeScale}
+                        cardId={card.id}
+                      />
+                    )}
+                  </>
+                )
+              })()}
+              {/* a copied permanent wears a small COPY ribbon at its top edge */}
+              {card.isCopy && (
+                <BadgeSprite
+                  text="COPY"
+                  position={[0, 0.14, -CARD_H * 0.3]}
+                  bg="rgba(38,88,140,0.92)"
+                  height={0.24 * badgeScale}
                   cardId={card.id}
                 />
               )}
@@ -602,17 +722,29 @@ type BattlefieldRow = {
   z: number
 }
 
+type PlacedAttachment = { card: GameCard; pos: [number, number, number]; gap: number }
+
+type BattlefieldLayout = { rows: BattlefieldRow[]; attachments: PlacedAttachment[] }
+
 /** THE battlefield layout, in a seat's LOCAL space — the single source of truth
  *  shared by PlayerZone (rendering) and BoardArrows (arrow anchors), so arrows
  *  always land where cards actually draw. Standard MTG rows front → back:
  *  creatures · non-creature/non-land permanents (only when any exist) · lands,
  *  with same-named lands collapsed into one slot (Arena-style), rows scaled by
- *  the cardGap pref, and each row sliced to MAX_PER_ROW unless expanded. */
-function battlefieldRows(player: GamePlayer, cardGap: number, expanded: boolean): BattlefieldRow[] {
+ *  the cardGap pref, and each row sliced to MAX_PER_ROW unless expanded.
+ *  Attached permanents (auras/equipment: `attachedTo` a host on this same
+ *  battlefield) don't take a row slot of their own — they tuck UNDER their
+ *  host, stepped +0.35 local z (toward the seat) and slightly lower per
+ *  attachment so the host always draws on top. */
+function battlefieldLayout(player: GamePlayer, cardGap: number, expanded: boolean): BattlefieldLayout {
+  const all = player.battlefield
+  const ids = new Set(all.map((c) => c.id))
+  const isAttached = (c: GameCard) => !!c.attachedTo && ids.has(c.attachedTo)
   const creatures: RowItem[] = []
   const others: RowItem[] = [] // artifacts, enchantments, planeswalkers, …
   const lands: GameCard[] = []
-  for (const c of player.battlefield) {
+  for (const c of all) {
+    if (isAttached(c)) continue // tucks under its host — no row slot
     const t = (c.types ?? []).map((x) => x.toLowerCase())
     if (t.some((x) => x.includes('creature'))) creatures.push({ card: c })
     else if (t.some((x) => x.includes('land'))) lands.push(c)
@@ -631,12 +763,42 @@ function battlefieldRows(player: GamePlayer, cardGap: number, expanded: boolean)
         { items: creatures, z: -0.95 },
         { items: landRow, z: 0.95 },
       ]
-  return defs.map((d) => {
+  const rows = defs.map((d) => {
     const overflow = Math.max(0, d.items.length - MAX_PER_ROW)
     const vis = expanded ? d.items : d.items.slice(0, MAX_PER_ROW)
     // cardGap scales both the gap and the row's max width so cards actually spread
     return { placed: row(vis, 0, d.z, 1.45 * cardGap, MAX_ROW_W * cardGap), overflow, z: d.z }
   })
+
+  // tuck each attachment under its (transitively resolved) placed host —
+  // an aura on an equipment on a creature stacks under the same root host
+  const slot = new Map<string, { pos: [number, number, number]; gap: number }>()
+  for (const r of rows) for (const p of r.placed) slot.set(p.card.id, { pos: p.pos, gap: p.gap })
+  const byId = new Map(all.map((c) => [c.id, c]))
+  const rootOf = (c: GameCard): string | null => {
+    let cur: GameCard = c
+    const seen = new Set<string>()
+    while (cur.attachedTo && ids.has(cur.attachedTo) && !seen.has(cur.id)) {
+      seen.add(cur.id)
+      const host = byId.get(cur.attachedTo)
+      if (!host) return null
+      if (slot.has(host.id)) return host.id
+      cur = host
+    }
+    return null
+  }
+  const perHost = new Map<string, number>()
+  const attachments: PlacedAttachment[] = []
+  for (const c of all) {
+    if (!isAttached(c)) continue
+    const root = rootOf(c)
+    if (!root) continue // host clipped by row overflow / on a collapsed land stack — skip
+    const n = (perHost.get(root) ?? 0) + 1
+    perHost.set(root, n)
+    const s = slot.get(root)!
+    attachments.push({ card: c, gap: s.gap, pos: [s.pos[0], s.pos[1] - 0.004 * n, s.pos[2] + 0.35 * n] })
+  }
+  return { rows, attachments }
 }
 
 /** World-space fan layout for the centre stack — the single source of truth for
@@ -726,6 +888,7 @@ function PlayerZone({
   cardProps,
   onHoverCard,
   onOpenMenu,
+  onOpenZone,
   occludeBadges,
 }: {
   seat: Seat
@@ -734,24 +897,27 @@ function PlayerZone({
   cardProps: CardProps
   onHoverCard?: (c: GameCard | null) => void
   onOpenMenu?: (c: GameCard, members?: GameCard[]) => void
+  onOpenZone?: (player: GamePlayer, zone: BrowsableZone) => void
   occludeBadges?: boolean
 }) {
   const [expanded, setExpanded] = useState(false)
   const { prefs } = usePrefs()
   const cardGap = prefs.cardGap
 
-  // battlefieldRows is the shared layout helper — BoardArrows anchors to the
+  // battlefieldLayout is the shared layout helper — BoardArrows anchors to the
   // exact same positions, so arrows always land on rendered cards
-  const rows = useMemo(
-    () => battlefieldRows(seat.player, cardGap, expanded),
+  const layout = useMemo(
+    () => battlefieldLayout(seat.player, cardGap, expanded),
     [seat.player, cardGap, expanded],
   )
+  const rows = layout.rows
   const placed = useMemo(() => rows.flatMap((r) => r.placed), [rows])
   const anyOverflow = rows.some((r) => r.overflow > 0)
 
   const p = seat.player
   const gy = p.graveyard.length ? p.graveyard[p.graveyard.length - 1] : null
   const ex = p.exile.length ? p.exile[p.exile.length - 1] : null
+  const cmd = p.command ?? []
   const pileX = pileXFor(cardGap)
 
   // X position of the overflow badge: one gap-width past the last visible card,
@@ -767,6 +933,11 @@ function PlayerZone({
       <SeatMat color={matColor} active={active} pileX={pileX} />
       {placed.map(({ card, pos, stackCount, members, gap }) => (
         <Card3D key={card.id} card={card} position={pos} stackCount={stackCount} members={members} rowGap={gap} cardProps={cardProps} onHoverCard={onHoverCard} onOpenMenu={onOpenMenu} occludeBadges={occludeBadges} />
+      ))}
+      {/* attached permanents (auras/equipment) tucked under their hosts —
+          same positions BoardArrows anchors to */}
+      {layout.attachments.map(({ card, pos, gap }) => (
+        <Card3D key={card.id} card={card} position={pos} rowGap={gap} cardProps={cardProps} onHoverCard={onHoverCard} onOpenMenu={onOpenMenu} occludeBadges={occludeBadges} />
       ))}
       {/* overflow badges: show +N when a row is clipped */}
       {!expanded &&
@@ -791,8 +962,25 @@ function PlayerZone({
           right, exile set apart on the left ("outside the game").
           pileX scales with cardGap so widened rows never bury the piles. */}
       <CardPile position={[pileX, 1.7]} count={p.libraryCount} faceUp={false} label="Lib" cardProps={cardProps} onHoverCard={onHoverCard} occludeBadges={occludeBadges} />
-      <CardPile position={[pileX, 0.0]} count={p.graveyardCount} top={gy} faceUp label="GY" cardProps={cardProps} onHoverCard={onHoverCard} occludeBadges={occludeBadges} />
-      <CardPile position={[-pileX, 1.7]} count={p.exile.length} top={ex} faceUp label="Exile" cardProps={cardProps} onHoverCard={onHoverCard} occludeBadges={occludeBadges} />
+      <CardPile position={[pileX, 0.0]} count={p.graveyardCount} top={gy} faceUp label="GY" cardProps={cardProps} onHoverCard={onHoverCard} occludeBadges={occludeBadges} onOpen={onOpenZone ? () => onOpenZone(p, 'graveyard') : undefined} />
+      <CardPile position={[-pileX, 1.7]} count={p.exile.length} top={ex} faceUp label="Exile" cardProps={cardProps} onHoverCard={onHoverCard} occludeBadges={occludeBadges} onOpen={onOpenZone ? () => onOpenZone(p, 'exile') : undefined} />
+      {/* command zone: commanders / emblems / planes / dungeons — a 4th pile on
+          the exile side, only when the zone has anything in it. The top card
+          goes through the normal card-action path, so a castable commander is
+          clickable exactly like any playable card. */}
+      {cmd.length > 0 && (
+        <CardPile
+          position={[-pileX, 2.3]}
+          count={cmd.length}
+          top={cmd[cmd.length - 1]}
+          faceUp
+          label="Cmd"
+          cardProps={cardProps}
+          onHoverCard={onHoverCard}
+          occludeBadges={occludeBadges}
+          onOpen={onOpenZone ? () => onOpenZone(p, 'command') : undefined}
+        />
+      )}
     </group>
   )
 }
@@ -942,24 +1130,48 @@ function CinematicRig({
 
 /** Mobile free-cam framing: put the top-down camera high enough that the whole
  *  board (seat mats included) fits the frustum, refit whenever the canvas
- *  resizes (rotation, browser chrome) — a fixed y=16 clipped the far mats. */
-function MobileCamFit({ radius }: { radius: number }) {
-  const { camera, size } = useThree()
+ *  resizes (rotation, browser chrome) — a fixed y=16 clipped the far mats.
+ *  The DOM hand fan overlays the bottom of the canvas, so the fit also reserves
+ *  that band and floats the board up into the clear area — otherwise the
+ *  viewer's own battlefield rows sit permanently behind the fan and can never
+ *  be tapped. `fanCards` re-fits when the hand appears/empties. */
+function MobileCamFit({ radius, fanCards }: { radius: number; fanCards: number }) {
+  const { camera, gl, size } = useThree()
+  // the drei OrbitControls (makeDefault) registers itself here; it owns the
+  // look-at target in free mode, so the fit must move THAT, not just lookAt
+  const controls = useThree((s) => s.controls) as ({ target: THREE.Vector3; update: () => void } & object) | null
   useEffect(() => {
     const cam = camera as THREE.PerspectiveCamera
     const halfFov = ((cam.fov ?? 46) * Math.PI) / 360
+    const tan = Math.tan(halfFov)
     const aspect = size.width / Math.max(1, size.height)
     // vertical (world z) half-extent of the board: seat radius + mat depth
     const ez = radius + MAT_H / 2 + MAT_Z + 0.8
-    let y = ez / Math.tan(halfFov)
+    // fraction of the canvas covered by the hand fan's cards — measured, so it
+    // tracks the hand-size pref and mobile scaling; capped so a squat canvas
+    // can't shrink the board into a sliver
+    const canvasRect = gl.domElement.getBoundingClientRect()
+    const cardRect = document.querySelector('.hand-fan .hand-card')?.getBoundingClientRect()
+    const covered = cardRect ? Math.max(0, canvasRect.bottom - cardRect.top) : 0
+    const f = Math.min(0.4, covered / Math.max(1, canvasRect.height || size.height))
+    let y = ez / (tan * (1 - f))
     // narrow viewports must also fit the board's horizontal (world x) extent
     if (aspect < 1.4) {
       const ex = MAT_W / 2 + 0.8
-      y = Math.max(y, ex / (Math.tan(halfFov) * aspect))
+      y = Math.max(y, ex / (tan * aspect))
     }
-    camera.position.set(0, y, 0.01)
-    camera.lookAt(0, 0, 0)
-  }, [camera, size.width, size.height, radius])
+    // shift the look point so the reserved band sits BELOW the board: the
+    // visible half-height is y·tan; offsetting by its fan fraction pins the
+    // board's far edge to the top of the canvas and leaves the fan band clear
+    const lookZ = y * tan * f
+    camera.position.set(0, y, lookZ + 0.01)
+    if (controls) {
+      controls.target.set(0, 0, lookZ)
+      controls.update()
+    } else {
+      camera.lookAt(0, 0, lookZ)
+    }
+  }, [camera, gl, controls, size.width, size.height, radius, fanCards])
   return null
 }
 
@@ -1047,8 +1259,11 @@ function BoardArrows({
     // collapsed), each stack spell's fan slot, plus each player's seat centre
     const pos = new Map<string, THREE.Vector3>()
     for (const s of seats) {
-      for (const r of battlefieldRows(s.player, cardGap, false))
+      const layout = battlefieldLayout(s.player, cardGap, false)
+      for (const r of layout.rows)
         for (const { card, pos: lp } of r.placed) pos.set(card.id, seatToWorld(s, lp))
+      // attachments register at their real (tucked) position
+      for (const { card, pos: lp } of layout.attachments) pos.set(card.id, seatToWorld(s, lp))
       const centre = new THREE.Vector3(s.x * 0.8, 0.6, s.z * 0.8)
       pos.set('P:' + s.player.id, centre)
       pos.set('P:' + s.player.name, centre)
@@ -1167,7 +1382,7 @@ function BoardDebug({ zoom, mode, look }: { zoom: number; mode: ViewMode; look: 
     // whether it's drawn tapped (the flat card mesh rotates ~90° on Z when tapped)
     const rendered = () => {
       const { three } = ref.current
-      const out: { id: string; x: number; y: number; onScreen: boolean; tapped: boolean }[] = []
+      const out: { id: string; x: number; y: number; onScreen: boolean; tapped: boolean; faceDown: boolean }[] = []
       three.scene.traverse((o) => {
         const id = o.userData?.cardId as string | undefined
         if (!id) return
@@ -1175,6 +1390,7 @@ function BoardDebug({ zoom, mode, look }: { zoom: number; mode: ViewMode; look: 
         o.getWorldPosition(wp)
         const p = project(wp)
         out.push({
+          faceDown: !!o.userData?.faceDown,
           id,
           x: p.x,
           y: p.y,
@@ -1350,6 +1566,7 @@ export function Board3D({
   cardProps,
   onHoverCard,
   onOpenMenu,
+  onOpenZone,
   targets,
   focusSeat,
 }: {
@@ -1357,6 +1574,8 @@ export function Board3D({
   cardProps: CardProps
   onHoverCard?: (c: GameCard | null) => void
   onOpenMenu?: (c: GameCard, members?: GameCard[]) => void
+  // open a zone browser overlay for a seat's public pile (GY / exile / command)
+  onOpenZone?: (player: GamePlayer, zone: BrowsableZone) => void
   targets?: string[]
   // a request to swing the 3D camera to a given player's seat (the nonce lets the
   // same player be focused repeatedly)
@@ -1557,6 +1776,7 @@ export function Board3D({
             cardProps={cardProps}
             onHoverCard={onHoverCard}
             onOpenMenu={onOpenMenu}
+            onOpenZone={onOpenZone}
             occludeBadges={occludeBadges}
           />
         ))}
@@ -1600,7 +1820,7 @@ export function Board3D({
               enableRotate={!isMobile}
               touches={isMobile ? { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_PAN } : undefined}
             />
-            {isMobile && <MobileCamFit radius={radius} />}
+            {isMobile && <MobileCamFit radius={radius} fanCards={game.myHand?.length ?? 0} />}
           </>
         ) : mode === 'auto' ? (
           <CinematicRig seats={seats} activeName={game.activePlayer} radius={radius} zoom={zoom} combat={game.combat.length} look={lastLook} />

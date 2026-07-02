@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Board3D } from './Board3D'
+import { Board3D, type BrowsableZone } from './Board3D'
 import { ConfirmDialog } from './ConfirmDialog'
+import { ZoneBrowser } from './ZoneBrowser'
 import type { RespondKind } from '../api'
 import { plain } from '../text'
-import type { GameCard as CardType, GameState, Prompt } from '../types'
+import type { CounterDto, GameCard as CardType, GamePlayer, GameState, Prompt } from '../types'
 
 interface Props {
   game: GameState | null
@@ -60,6 +61,22 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
   }, [game])
   const [menu, setMenu] = useState<MenuState | null>(null)
   const [confirmConcede, setConfirmConcede] = useState(false)
+  // zone browser (graveyard / exile / command), opened from the player strip's
+  // zone counts or by clicking a pile on the 3D board. Keyed by player NAME so
+  // a fresh game push re-resolves to live cards.
+  const [zoneBrowser, setZoneBrowser] = useState<{ playerName: string; zone: BrowsableZone } | null>(null)
+  // target-candidate picker: dismissed state for the CURRENT prompt (a new
+  // prompt re-opens it), plus the ids already sent in a multi-pick
+  const [pickerClosed, setPickerClosed] = useState(false)
+  const [picked, setPicked] = useState<string[]>([])
+  useEffect(() => {
+    setPickerClosed(false)
+    setPicked([])
+  }, [prompt])
+  // revealed / looked-at cards: auto-open the panel when NEW content arrives,
+  // stay closed once dismissed until the content changes again
+  const [revealOpen, setRevealOpen] = useState(false)
+  const seenRevealSig = useRef('')
   // clicking a player in the strip swings the camera to their board (multiplayer)
   const [focusSeat, setFocusSeat] = useState<{ name: string; n: number } | null>(null)
   // the last battlefield card the viewer clicked to activate — used to anchor the
@@ -185,6 +202,30 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
     return () => window.removeEventListener('pointerup', clear)
   }, [])
 
+  // revealed + looked-at cards, merged into one dismissible panel (legacy pops
+  // a window per reveal). lookedAt entries may carry nameless cards (id/set/num
+  // only) — the browser tile falls back to the set/num face.
+  const revealGroups = useMemo(() => {
+    const groups: { name: string; cards: CardType[] }[] = []
+    for (const g of game?.revealed ?? []) if (g.cards?.length) groups.push(g)
+    for (const g of game?.lookedAt ?? []) if (g.cards?.length) groups.push(g)
+    return groups
+  }, [game])
+  const revealSig = useMemo(
+    () => revealGroups.map((g) => `${g.name}:${g.cards.map((c) => c.id).join(',')}`).join('|'),
+    [revealGroups],
+  )
+  useEffect(() => {
+    if (revealSig && revealSig !== seenRevealSig.current) {
+      seenRevealSig.current = revealSig
+      setRevealOpen(true)
+    }
+    if (!revealSig) {
+      seenRevealSig.current = ''
+      setRevealOpen(false)
+    }
+  }, [revealSig])
+
   if (!game) {
     return (
       <div className="game-table">
@@ -222,6 +263,32 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
     return {}
   }
 
+  // target-candidate picker: cards NOT on the battlefield (graveyard / library /
+  // revealed picks). Empty candidates = ordinary board targeting (no picker).
+  const candidates = (interactive && prompt?.kind === 'target' ? prompt.candidates : undefined) ?? []
+  const multiPick = candidates.length > 0 && (prompt?.max ?? 0) > 1
+
+  // What a card inside a browser overlay does on click — the normal respond
+  // path when the card is actionable (a prompt candidate / playable), else nothing.
+  function zoneCardAction(card: CardType): (() => void) | undefined {
+    if (!interactive) return undefined
+    if (prompt?.kind === 'target') {
+      if (candidates.length && !candidates.some((c) => c.id === card.id)) return undefined
+      return () => onRespond('uuid', card.id)
+    }
+    if (game?.canPlay.includes(card.id)) {
+      return () => {
+        lastActivatedRef.current = { card, t: Date.now() }
+        onRespond('uuid', card.id)
+      }
+    }
+    return undefined
+  }
+
+  const zoneCards = (p: GamePlayer, zone: BrowsableZone): CardType[] =>
+    zone === 'graveyard' ? p.graveyard : zone === 'exile' ? p.exile : p.command ?? []
+  const browserPlayer = zoneBrowser ? game.players.find((pl) => pl.name === zoneBrowser.playerName) : undefined
+
   return (
     <div className="game-table">
       <div className="game-toolbar">
@@ -238,6 +305,11 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
           <span className={`prio-chip${game.priorityPlayer === game.me ? ' you' : ''}`}>
             {game.priorityPlayer === game.me ? 'Your priority' : `Priority: ${game.priorityPlayer}`}
           </span>
+        )}
+        {revealGroups.length > 0 && (
+          <button className="btn ghost revealed-chip" onClick={() => setRevealOpen(true)} title="Show revealed cards">
+            Revealed ({revealGroups.reduce((a, g) => a + g.cards.length, 0)})
+          </button>
         )}
         {interactive && (
           <button className="btn ghost concede" onClick={() => setConfirmConcede(true)}>
@@ -266,7 +338,16 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
             >
               <span className="pstat-name">{p.name}</span>
               <LifeTotal life={p.life} />
-              <PStatCounts hand={p.handCount} lib={p.libraryCount} grave={p.graveyardCount} />
+              <PlayerCounters counters={p.counters} designations={p.designations} />
+              <PStatCounts
+                hand={p.handCount}
+                lib={p.libraryCount}
+                grave={p.graveyardCount}
+                exile={p.exile.length}
+                // during a target prompt the whole seat is the click target — the
+                // zone counts must not swallow the targeting click
+                onOpenZone={canTarget ? undefined : (zone) => setZoneBrowser({ playerName: p.name, zone })}
+              />
               {p.manaPool && <ManaPool pool={p.manaPool} />}
               {p.name === game.activePlayer && <span className="chip active-chip">Active</span>}
             </button>
@@ -301,6 +382,7 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
           cardProps={cardProps}
           onHoverCard={handleHoverCard}
           onOpenMenu={handleOpenMenu}
+          onOpenZone={(pl, zone) => setZoneBrowser({ playerName: pl.name, zone })}
           targets={prompt?.kind === 'target' ? prompt.targets : undefined}
           focusSeat={focusSeat}
         />
@@ -315,6 +397,73 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
             onRespond={onRespond}
             onTapMany={onTapMany}
             onClose={() => setMenu(null)}
+          />
+        )}
+
+        {/* zone browser: a seat's graveyard / exile / command as a card grid */}
+        {zoneBrowser && browserPlayer && (
+          <ZoneBrowser
+            title={`${browserPlayer.name} — ${zoneBrowser.zone} (${zoneCards(browserPlayer, zoneBrowser.zone).length})`}
+            sections={[{ cards: zoneCards(browserPlayer, zoneBrowser.zone) }]}
+            onClose={() => setZoneBrowser(null)}
+            onHoverCard={handleHoverCard}
+            cardAction={zoneCardAction}
+          />
+        )}
+
+        {/* target-candidate picker: auto-opens when a target prompt carries
+            off-battlefield candidates (delve / flashback / tutor picks) */}
+        {candidates.length > 0 && !pickerClosed && prompt && (
+          <ZoneBrowser
+            title={`${plain(prompt.message) || 'Choose a card'}${prompt.candidateZone ? ` — ${prompt.candidateZone}` : ''}`}
+            sections={[{ cards: candidates }]}
+            onClose={() => setPickerClosed(true)}
+            onHoverCard={handleHoverCard}
+            picked={picked}
+            cardAction={(c) =>
+              picked.includes(c.id) || (multiPick && prompt.max > 0 && picked.length >= prompt.max)
+                ? undefined
+                : () => {
+                    onRespond('uuid', c.id)
+                    if (multiPick) setPicked((prev) => [...prev, c.id])
+                    else setPickerClosed(true)
+                  }
+            }
+            footer={
+              multiPick ? (
+                <div className="zb-footer">
+                  <span className="muted">
+                    {prompt.min === prompt.max ? `pick ${prompt.max}` : `pick ${prompt.min}–${prompt.max}`}
+                    {picked.length > 0 ? ` · ${picked.length} sent` : ''}
+                  </span>
+                  <button
+                    className="btn primary"
+                    // the server flips canCancel on once enough targets are
+                    // chosen (each pick round-trips); picks made against THIS
+                    // prompt push also count toward the minimum
+                    disabled={!prompt.canCancel && picked.length < prompt.min}
+                    onClick={() => {
+                      // same semantics as the action bar's target Done
+                      onRespond('boolean', 'false')
+                      setPickerClosed(true)
+                    }}
+                  >
+                    Done
+                  </button>
+                </div>
+              ) : undefined
+            }
+          />
+        )}
+
+        {/* revealed / looked-at cards — read-only, auto-opens on new content,
+            reopenable from the toolbar's Revealed chip while content exists */}
+        {revealOpen && revealGroups.length > 0 && (
+          <ZoneBrowser
+            title="Revealed"
+            sections={revealGroups}
+            onClose={() => setRevealOpen(false)}
+            onHoverCard={handleHoverCard}
           />
         )}
 
@@ -446,6 +595,18 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
               </button>
             ))}
           </div>
+          {/* special actions: the server ships a single "Special" entry when any
+              exist; responding {kind:'string', value:'special'} makes it follow
+              up with a choice prompt listing the concrete actions */}
+          {(game.special?.length ?? 0) > 0 && (
+            <div className="dock-special">
+              {game.special.map((s) => (
+                <button key={s.id} className="btn special-btn" onClick={() => onRespond('string', s.id)} title="Special actions">
+                  ✦ {plain(s.name)}
+                </button>
+              ))}
+            </div>
+          )}
           {prompt?.kind === 'select' && <PlayableBar game={game} onRespond={onRespond} onHoverCard={handleHoverCard} onPressCard={setPressedCard} />}
           <span className="spacer" />
           {/* when the ability picker is anchored to a card menu, don't also list
@@ -492,11 +653,26 @@ function LifeTotal({ life }: { life: number }) {
   )
 }
 
-/** Hand / library / graveyard counts for a seat. On a roomy strip the labels are
- *  spelled out; when the seat chip gets narrow (4-player boards, phones) it
- *  switches to a compact `H4 · L28 · G2` form so every strip stays one line tall
- *  instead of wrapping into 2-3 ragged lines. Full names stay in the tooltip. */
-function PStatCounts({ hand, lib, grave }: { hand: number; lib: number; grave: number }) {
+/** Hand / library / graveyard / exile counts for a seat. On a roomy strip the
+ *  labels are spelled out; when the seat chip gets narrow (4-player boards,
+ *  phones) it switches to a compact `H4 · L28 · G2 · E0` form so every strip
+ *  stays one line tall instead of wrapping into 2-3 ragged lines. Full names
+ *  stay in the tooltip. The graveyard/exile counts double as buttons that open
+ *  that zone's browser (spans with a button role — the seat chip is itself a
+ *  button, so a nested <button> would be invalid HTML). */
+function PStatCounts({
+  hand,
+  lib,
+  grave,
+  exile,
+  onOpenZone,
+}: {
+  hand: number
+  lib: number
+  grave: number
+  exile: number
+  onOpenZone?: (zone: BrowsableZone) => void
+}) {
   const ref = useRef<HTMLSpanElement>(null)
   const [compact, setCompact] = useState(false)
   useEffect(() => {
@@ -506,9 +682,63 @@ function PStatCounts({ hand, lib, grave }: { hand: number; lib: number; grave: n
     ro.observe(seat)
     return () => ro.disconnect()
   }, [])
+  const zoneSeg = (text: string, zone: BrowsableZone, label: string) =>
+    onOpenZone ? (
+      <span
+        role="button"
+        tabIndex={-1}
+        className="pstat-zone-btn"
+        title={`Browse ${label}`}
+        onClick={(e) => {
+          e.stopPropagation() // don't also trigger the seat chip's focus/target click
+          onOpenZone(zone)
+        }}
+      >
+        {text}
+      </span>
+    ) : (
+      text
+    )
   return (
-    <span ref={ref} className="muted pstat-counts" title={`Hand ${hand} · Library ${lib} · Graveyard ${grave}`}>
-      {compact ? `H${hand} · L${lib} · G${grave}` : `Hand ${hand} · Lib ${lib} · Grave ${grave}`}
+    <span
+      ref={ref}
+      className="muted pstat-counts"
+      title={`Hand ${hand} · Library ${lib} · Graveyard ${grave} · Exile ${exile}`}
+    >
+      {compact ? `H${hand} · L${lib} · ` : `Hand ${hand} · Lib ${lib} · `}
+      {zoneSeg(compact ? `G${grave}` : `Grave ${grave}`, 'graveyard', 'graveyard')}
+      {' · '}
+      {zoneSeg(compact ? `E${exile}` : `Exile ${exile}`, 'exile', 'exile')}
+    </span>
+  )
+}
+
+// player-counter glyphs for the common kinds (others render as `name:N`)
+const COUNTER_ICON: Record<string, string> = { poison: '☠', energy: '⚡', experience: '✦' }
+
+/** Player counters (poison/energy/experience/…) + designations (Monarch, …) as
+ *  compact one-line chips right after the life total. Zero-count counters are
+ *  hidden so a poison-free game shows nothing. */
+function PlayerCounters({ counters, designations }: { counters?: CounterDto[]; designations?: string[] }) {
+  const cs = (counters ?? []).filter((c) => c.count > 0)
+  const ds = designations ?? []
+  if (!cs.length && !ds.length) return null
+  return (
+    <span className="pstat-extras">
+      {cs.map((c) => {
+        const icon = COUNTER_ICON[c.name.toLowerCase()]
+        return (
+          <span key={c.name} className={`pstat-counter pc-${c.name.toLowerCase()}`} title={`${c.name}: ${c.count}`}>
+            {icon ? `${icon}${c.count}` : `${c.name}:${c.count}`}
+          </span>
+        )
+      })}
+      {ds.map((d) => (
+        <span key={d} className="chip pstat-desig" title={d}>
+          {/^monarch$/i.test(d) ? '👑 ' : ''}
+          {d}
+        </span>
+      ))}
     </span>
   )
 }
@@ -627,7 +857,11 @@ function PlayableBar({
 }) {
   const byId: Record<string, CardType> = {}
   game.myHand.forEach((c) => (byId[c.id] = c))
-  game.players.forEach((p) => p.battlefield.forEach((c) => (byId[c.id] = c)))
+  game.players.forEach((p) => {
+    p.battlefield.forEach((c) => (byId[c.id] = c))
+    // a castable commander shows up in the playable bar like any other card
+    ;(p.command ?? []).forEach((c) => (byId[c.id] = c))
+  })
   const playable = game.canPlay.map((id) => byId[id]).filter(Boolean)
   if (playable.length === 0) return null
   return (

@@ -27,6 +27,12 @@ public class PromptDto {
     public List<ChoiceOption> choices = new ArrayList<>();
     public String choiceKind = "string"; // how a chosen option is sent: string | uuid
     public List<String> targets = new ArrayList<>(); // already-selected target ids
+    // for kind == "target": the candidate cards to pick from, when the server
+    // sends them (e.g. picking from graveyard/library/hand); empty when the
+    // targets are ordinary board objects the UI already renders
+    public List<GameDto.CardDto> candidates = new ArrayList<>();
+    // zone the candidates live in ("hand" | "graveyard" | "library" | ...) or null
+    public String candidateZone;
     // for kind == "pile": the two piles to choose between (boolean true = pile1)
     public List<GameDto.CardDto> pile1 = new ArrayList<>();
     public List<GameDto.CardDto> pile2 = new ArrayList<>();
@@ -72,8 +78,13 @@ public class PromptDto {
                 break;
             case GAME_TARGET:
                 dto.kind = "target";
-                dto.canCancel = true; // boolean false = done / cancel
+                // the server re-sends the prompt with required=false once the
+                // target's minimum is satisfied — that's the "Done is allowed" signal
+                dto.canCancel = !message.isFlag();
                 addTargets(dto, message.getTargets());
+                // the candidate card set (server side sends it for zone picks)
+                addPile(dto.candidates, message.getCardsView1());
+                dto.candidateZone = zoneOf(message.getOptions());
                 break;
             case GAME_GET_AMOUNT:
                 dto.kind = "amount";
@@ -134,6 +145,15 @@ public class PromptDto {
             }
         }
         return dto;
+    }
+
+    /** The zone the target candidates live in, when the server names one. */
+    private static String zoneOf(Map<String, java.io.Serializable> options) {
+        Object zone = options == null ? null : options.get("targetZone");
+        if (zone instanceof mage.constants.Zone) {
+            return ((mage.constants.Zone) zone).name().toLowerCase(java.util.Locale.ROOT);
+        }
+        return null;
     }
 
     private static void addPile(List<GameDto.CardDto> out, mage.view.CardsView cards) {

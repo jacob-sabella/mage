@@ -76,6 +76,19 @@ export interface Prompt {
   pile1?: GameCard[]
   pile2?: GameCard[]
   multi?: { label: string; min: number; max: number; def: number }[]
+  // target prompts only: the concrete pickable cards when they are NOT on the
+  // battlefield (graveyard/library/revealed picks — delve, flashback, tutors).
+  // [] / absent = ordinary board targeting (no picker overlay).
+  candidates?: GameCard[]
+  // Zone enum name, lowercased — note 'exiled' (not 'exile'), plus
+  // hand/graveyard/library/battlefield/stack/command. null when n/a.
+  candidateZone?: string | null
+}
+
+/** A named counter (poison/energy/… on players; +1/+1, loyalty, charge… on permanents). */
+export interface CounterDto {
+  name: string
+  count: number
 }
 
 export interface GameCard {
@@ -99,6 +112,20 @@ export interface GameCard {
   // of an ability. Drives the board's source→target arrows.
   targets?: string[]
   sourceId?: string | null
+  // counters on this permanent (+1/+1, loyalty, charge, …); [] when absent
+  counters?: CounterDto[]
+  // ids of permanents attached TO this permanent, and the id this one is
+  // attached to (null / absent when free-standing)
+  attachments?: string[]
+  attachedTo?: string | null
+  faceDown?: boolean
+  isToken?: boolean
+  isCopy?: boolean
+  // command-zone entries only: what kind of command object this is
+  commandType?: 'commander' | 'emblem' | 'plane' | 'dungeon' | null
+  // rules text lines — populated ONLY for emblem/plane/dungeon command-zone
+  // entries (they have no card face, so they render as a text card)
+  rules?: string[] | null
 }
 
 export interface GamePlayer {
@@ -113,6 +140,19 @@ export interface GamePlayer {
   battlefield: GameCard[]
   graveyard: GameCard[]
   exile: GameCard[]
+  // command zone (commanders, emblems, planes, dungeons); [] when empty
+  command: GameCard[]
+  // player counters (poison, energy, experience, …); [] when none
+  counters: CounterDto[]
+  // designations like Monarch / Initiative / City's Blessing; [] when none
+  designations: string[]
+}
+
+/** A named group of revealed / looked-at cards (one per reveal source).
+ *  lookedAt entries may carry cards WITHOUT names — only id/set/num. */
+export interface RevealedGroup {
+  name: string
+  cards: GameCard[]
 }
 
 export interface GameState {
@@ -127,6 +167,12 @@ export interface GameState {
   canPlay: string[]
   myHand: GameCard[]
   combat: CombatGroup[]
+  // special actions: either [] or exactly [{id:'special', name:'Special'}] —
+  // responding {kind:'string', value:'special'} makes the server follow up
+  // with a 'choice' prompt listing the concrete actions
+  special: { id: string; name: string }[]
+  revealed: RevealedGroup[]
+  lookedAt: RevealedGroup[]
 }
 
 export interface CombatGroup {

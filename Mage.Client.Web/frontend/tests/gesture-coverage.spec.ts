@@ -73,21 +73,39 @@ async function cardPagePos(page: Page, id: string): Promise<{ x: number; y: numb
   return { x: box.x + p.x, y: box.y + p.y }
 }
 
-/** Poll until at least one of `ids` is visible on the board; returns its page pos. */
+/** Poll until one of `ids` is visible on the board at a STABLE position whose
+ *  point actually hit-tests to the canvas; returns its page pos. Sampling a
+ *  card mid camera-settle (the cinematic rig glides in over ~1-2s) yields a
+ *  stale aim point that can land on a DOM floater (the hand fan) instead of
+ *  the card — so we require two consecutive samples to agree AND the pixel to
+ *  reach the canvas before aiming a click at it. */
 async function firstVisibleCardPos(page: Page, ids: string[]): Promise<{ id: string; x: number; y: number }> {
   let found: { id: string; x: number; y: number } | null = null
+  const prev = new Map<string, { x: number; y: number }>()
   await expect
     .poll(
       async () => {
         const cards = await readCards(page)
-        const hit = cards.find((c) => ids.includes(c.id))
-        if (!hit) return false
         const box = await page.locator('.board3d canvas').boundingBox()
         if (!box) return false
-        found = { id: hit.id, x: box.x + hit.x, y: box.y + hit.y }
-        return true
+        for (const c of cards) {
+          if (!ids.includes(c.id)) continue
+          const last = prev.get(c.id)
+          prev.set(c.id, { x: c.x, y: c.y })
+          if (!last || Math.hypot(last.x - c.x, last.y - c.y) > 0.75) continue // still settling
+          const px = box.x + c.x
+          const py = box.y + c.y
+          const clear = await page.evaluate(
+            ([x, y]) => document.elementFromPoint(x as number, y as number)?.tagName === 'CANVAS',
+            [px, py],
+          )
+          if (!clear) continue // covered by a DOM floater (hand fan etc.)
+          found = { id: c.id, x: px, y: py }
+          return true
+        }
+        return false
       },
-      { timeout: 15000 },
+      { timeout: 15000, intervals: [200] },
     )
     .toBe(true)
   return found!
