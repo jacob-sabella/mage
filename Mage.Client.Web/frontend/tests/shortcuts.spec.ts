@@ -8,7 +8,7 @@ test.describe('Keyboard shortcuts overlay', () => {
     await expect(page.getByRole('dialog', { name: 'Keyboard shortcuts' })).toHaveCount(0)
     await page.keyboard.press('?')
     await expect(page.getByRole('dialog', { name: 'Keyboard shortcuts' })).toBeVisible()
-    await expect(page.getByText('Skip until my turn')).toBeVisible()
+    await expect(page.getByText('Skip until my next turn')).toBeVisible()
     // newer shortcuts are documented too
     await expect(page.getByText('Move between hand cards')).toBeVisible()
     await page.keyboard.press('Escape')

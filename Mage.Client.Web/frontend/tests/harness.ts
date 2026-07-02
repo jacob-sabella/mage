@@ -21,6 +21,8 @@ type C = {
   // stack spells/abilities: ids this item targets + the battlefield source id
   targets?: string[]
   sourceId?: string
+  // soulbond partner permanent id (draws the green pair arrow)
+  pairedCard?: string
   // permanent counters (+1/+1, charge, …); [] when absent (gateway contract)
   counters?: { name: string; count: number }[]
   // attachment plumbing: ids attached TO this permanent / the host this one is on
@@ -43,7 +45,7 @@ export const card = (
   id, name, set: o.set ?? 'M21', num: o.num ?? '1', types,
   power: o.power ?? null, toughness: o.toughness ?? null, loyalty: o.loyalty ?? null,
   manaCost: o.manaCost ?? '', colors: o.colors ?? '', tapped: !!o.tapped, damage: o.damage ?? 0,
-  targets: o.targets, sourceId: o.sourceId,
+  targets: o.targets, sourceId: o.sourceId, pairedCard: o.pairedCard,
   counters: o.counters ?? [], attachments: o.attachments ?? [], attachedTo: o.attachedTo ?? null,
   faceDown: !!o.faceDown, isToken: !!o.isToken, isCopy: !!o.isCopy,
   commandType: o.commandType ?? null, rules: o.rules ?? null,
