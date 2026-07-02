@@ -104,7 +104,7 @@ export const SAMPLE = {
         battlefield: [
           card('b1', 'Island', ['Land'], { colors: 'U' }),
           card('b2', 'Island', ['Land'], { colors: 'U' }),
-          card('b3', 'Serra Angel', ['Creature'], { power: '4', toughness: '4', colors: 'W', counters: [{ name: '+1/+1', count: 2 }], attachments: ['att1'] }),
+          card('b3', 'Serra Angel', ['Creature'], { power: '4', toughness: '4', colors: 'W', counters: [{ name: '+1/+1', count: 2 }], attachments: ['att1'], rules: ['Flying, vigilance'] }),
           // an aura attached to the Serra Angel — tucks under its host, no row slot
           card('att1', 'Rancor', ['Enchantment'], { colors: 'G', attachedTo: 'b3' }),
         ],

@@ -34,8 +34,8 @@ const MAX_PER_ROW = 12
 /** X-position of the zone piles (library/GY on the right, exile on the left).
  *  Scales with the cardGap pref so widened battlefield rows never bury the piles;
  *  CARD_H/2 covers a tapped (90°-rotated) card at the row's end. */
-function pileXFor(cardGap: number): number {
-  return Math.max(3.9, (MAX_ROW_W * cardGap) / 2 + CARD_H / 2 + 0.45)
+function pileXFor(cardGap: number, cardScale = 1): number {
+  return Math.max(3.9, (MAX_ROW_W * cardGap * cardScale) / 2 + (CARD_H * cardScale) / 2 + 0.45)
 }
 /** A card or a named land stack — same name lands collapse into one slot with a count.
  *  `members` carries the individual collapsed cards (only set for real stacks) so the
@@ -59,6 +59,12 @@ function imgUrl(c: GameCard) {
 
 /** Draw a readable card face on a canvas (name / type / P-T) so a card is never
  *  blank, even when its real art is missing. Real art replaces this once loaded. */
+/** Objects with no printed card face (emblems/planes/dungeons, or anything
+ *  without a set/number) render as text cards from their rules lines. */
+function facelessCard(c: GameCard): boolean {
+  return c.commandType === 'emblem' || c.commandType === 'plane' || c.commandType === 'dungeon' || (!c.set && !c.num)
+}
+
 function makeCardTexture(card: GameCard): THREE.Texture {
   const w = 256
   const h = 358
@@ -96,8 +102,9 @@ function makeCardTexture(card: GameCard): THREE.Texture {
   // for a stack ability, name it after its source card, not the generic "Ability"
   g.fillText(fit(card.sourceName ?? card.name, w - 44), 22, 33)
   // emblems / planes / dungeons have no card face — render their rules text in
-  // the art box so the card actually says what it does
-  if (card.rules && card.rules.length) {
+  // the art box so the card actually says what it does. (Every card ships rules
+  // now, so "has rules" is NOT the faceless test — commandType/printing is.)
+  if (facelessCard(card) && card.rules && card.rules.length) {
     g.fillStyle = '#e8e8ee'
     g.font = '14px "Segoe UI", system-ui, sans-serif'
     const maxW = w - 44
@@ -414,7 +421,7 @@ function Card3D({
   useEffect(() => {
     let alive = true
     // no art to fetch for a face-down card or a faceless text card (emblem/plane)
-    if (faceDown || (card.rules && card.rules.length)) {
+    if (faceDown || facelessCard(card)) {
       setArt(null)
       return
     }
@@ -736,7 +743,7 @@ type BattlefieldLayout = { rows: BattlefieldRow[]; attachments: PlacedAttachment
  *  battlefield) don't take a row slot of their own — they tuck UNDER their
  *  host, stepped +0.35 local z (toward the seat) and slightly lower per
  *  attachment so the host always draws on top. */
-function battlefieldLayout(player: GamePlayer, cardGap: number, expanded: boolean): BattlefieldLayout {
+function battlefieldLayout(player: GamePlayer, cardGap: number, expanded: boolean, rowGap = 1, cardScale = 1): BattlefieldLayout {
   const all = player.battlefield
   const ids = new Set(all.map((c) => c.id))
   const isAttached = (c: GameCard) => !!c.attachedTo && ids.has(c.attachedTo)
@@ -755,19 +762,21 @@ function battlefieldLayout(player: GamePlayer, cardGap: number, expanded: boolea
   // creature+land board keeps its roomy two-row spacing.
   const defs = others.length
     ? [
-        { items: creatures, z: -1.2 },
-        { items: others, z: 0.3 },
-        { items: landRow, z: 1.75 },
+        { items: creatures, z: -1.2 * rowGap },
+        { items: others, z: 0.3 * rowGap },
+        { items: landRow, z: 1.75 * rowGap },
       ]
     : [
-        { items: creatures, z: -0.95 },
-        { items: landRow, z: 0.95 },
+        { items: creatures, z: -0.95 * rowGap },
+        { items: landRow, z: 0.95 * rowGap },
       ]
+  // cardScale widens the pitch with the cards so scaled-up cards don't overlap
+  const spread = cardGap * cardScale
   const rows = defs.map((d) => {
     const overflow = Math.max(0, d.items.length - MAX_PER_ROW)
     const vis = expanded ? d.items : d.items.slice(0, MAX_PER_ROW)
     // cardGap scales both the gap and the row's max width so cards actually spread
-    return { placed: row(vis, 0, d.z, 1.45 * cardGap, MAX_ROW_W * cardGap), overflow, z: d.z }
+    return { placed: row(vis, 0, d.z, 1.45 * spread, MAX_ROW_W * spread), overflow, z: d.z }
   })
 
   // tuck each attachment under its (transitively resolved) placed host —
@@ -909,12 +918,14 @@ function PlayerZone({
   const [expanded, setExpanded] = useState(false)
   const { prefs } = usePrefs()
   const cardGap = prefs.cardGap
+  const cardScale = prefs.cardScale || 1
+  const rowGap = prefs.rowGap || 1
 
   // battlefieldLayout is the shared layout helper — BoardArrows anchors to the
   // exact same positions, so arrows always land on rendered cards
   const layout = useMemo(
-    () => battlefieldLayout(seat.player, cardGap, expanded),
-    [seat.player, cardGap, expanded],
+    () => battlefieldLayout(seat.player, cardGap, expanded, rowGap, cardScale),
+    [seat.player, cardGap, expanded, rowGap, cardScale],
   )
   const rows = layout.rows
   const placed = useMemo(() => rows.flatMap((r) => r.placed), [rows])
@@ -924,7 +935,7 @@ function PlayerZone({
   const gy = p.graveyard.length ? p.graveyard[p.graveyard.length - 1] : null
   const ex = p.exile.length ? p.exile[p.exile.length - 1] : null
   const cmd = p.command ?? []
-  const pileX = pileXFor(cardGap)
+  const pileX = pileXFor(cardGap, cardScale)
 
   // X position of the overflow badge: one gap-width past the last visible card,
   // read straight off the placed row so it always lines up (cardGap + the
@@ -1261,13 +1272,15 @@ function BoardArrows({
 }) {
   const { prefs } = usePrefs()
   const cardGap = prefs.cardGap
+  const cardScale = prefs.cardScale || 1
+  const rowGap = prefs.rowGap || 1
   const arrows = useMemo(() => {
     // id → world position: battlefield cards via the SAME layout helper the
     // renderer uses (cardGap + MAX_PER_ROW slice included; rows assumed
     // collapsed), each stack spell's fan slot, plus each player's seat centre
     const pos = new Map<string, THREE.Vector3>()
     for (const s of seats) {
-      const layout = battlefieldLayout(s.player, cardGap, false)
+      const layout = battlefieldLayout(s.player, cardGap, false, rowGap, cardScale)
       for (const r of layout.rows)
         for (const { card, pos: lp } of r.placed) pos.set(card.id, seatToWorld(s, lp))
       // attachments register at their real (tucked) position
@@ -1330,7 +1343,7 @@ function BoardArrows({
       }
     }
     return out
-  }, [seats, combat, targets, stack, cardGap])
+  }, [seats, combat, targets, stack, cardGap, cardScale, rowGap])
 
   return (
     <>
