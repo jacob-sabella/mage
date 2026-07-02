@@ -1512,11 +1512,11 @@ function BoardTuner() {
   ]
   return (
     <div className={`board-tuner${open ? ' open' : ''}`}>
-      <button className="btn tuner-fab" onClick={() => setOpen((o) => !o)} title="Board layout" aria-label="Board layout settings">
+      <button className="btn tuner-fab" onClick={() => setOpen((o) => !o)} title="Board layout" aria-label="Board layout tuner">
         ⚙
       </button>
       {open && (
-        <div className="tuner-panel" role="group" aria-label="Board layout settings">
+        <div className="tuner-panel" role="group" aria-label="Board layout tuner">
           {SLIDERS.map(([key, label, min, max]) => (
             <label className="tuner-row" key={key}>
               <span className="tuner-label">
