@@ -62,6 +62,9 @@ const DECORATIVE = [
   'scene-bg', 'brand-dot', 'img-progress-fill', 'waiting-spinner', 'reconnect-spinner',
   'spinner', 'hl-play', 'hl-target', 'pstat', 'action-bar', 'life-delta', 'mana-pip',
   'c3d-', 'board3d', 'active-glow', 'card-preview', 'badge-pop',
+  // aria-hidden celebration emoji on the result card — finite (3 bounces) but
+  // each bounce is a slow 1.6s ease, intentionally over the 600ms action cap
+  'game-over-emoji',
 ]
 
 type Screen = {

@@ -168,7 +168,7 @@ suite('Lobby & nav · modalities', () => {
     await expect(page.locator('.chat-panel')).toBeVisible()
     await page.getByRole('button', { name: 'Chat ✕' }).click()
     await expect(page.locator('.chat-panel')).toHaveCount(0)
-    await page.getByRole('button', { name: '💬' }).click()
+    await page.getByRole('button', { name: 'Show chat' }).click()
     await expect(page.locator('.chat-panel')).toBeVisible()
   })
 })
@@ -505,10 +505,10 @@ suite('Game board · modalities', () => {
     await page.locator('.view-fab').click()
     await expect(page.locator('.zoom-bar')).toBeVisible()
     await page.getByRole('button', { name: 'Zoom in' }).click()
-    await expect(page.locator('.zoom-label')).not.toHaveText('75%')
+    await expect(page.locator('.zoom-label')).not.toHaveText('100%')
     // the zoom % is a real button now — Enter resets it
     await pressKey(page, page.locator('.zoom-label'))
-    await expect(page.locator('.zoom-label')).toHaveText('75%')
+    await expect(page.locator('.zoom-label')).toHaveText('100%')
   })
 })
 
@@ -568,17 +568,31 @@ suite('Dense multiplayer board · modalities', () => {
     await expect.poll(() => playedId).toBe('h1')
   })
 
-  test('mouse: a player-strip seat is targetable and sends its player id', async ({ page }) => {
-    // the dense board sits on a `select` prompt → every seat is a target button
+  test('mouse: a player-strip seat targets only on a target prompt (plain priority focuses the seat)', async ({ page }) => {
+    // the dense board sits on a `select` prompt (plain priority): clicking a
+    // seat must NOT send a spurious target response to the server
     await gotoScreen(page, 'game3p')
-    let target: string | null = null
+    const sent: string[] = []
     await page.route('**/api/game/respond', (route) => {
       const b = JSON.parse(route.request().postData() || '{}')
-      if (b.kind === 'uuid') target = b.value
+      if (b.kind === 'uuid') sent.push(b.value)
       return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
     })
-    await page.locator('.pstat', { hasText: 'Teferi' }).click()
-    await expect.poll(() => target).toBe('p3')
+    const seat = page.locator('.pstat', { hasText: 'Teferi' })
+    await expect(seat).not.toHaveClass(/targetable/)
+    await seat.click()
+    await page.waitForTimeout(250)
+    expect(sent).toEqual([])
+    // a real target prompt: the seat becomes targetable and sends its player id
+    await page.evaluate(() =>
+      (window as unknown as { __push: (p: unknown) => void }).__push({
+        kind: 'target', message: 'Choose a player', canCancel: true,
+        min: 0, max: 0, choices: [], choiceKind: 'string', targets: [],
+      }),
+    )
+    await expect(seat).toHaveClass(/targetable/)
+    await seat.click()
+    await expect.poll(() => sent[0]).toBe('p3')
   })
 })
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Billboard, Grid, Html, OrbitControls } from '@react-three/drei'
 import { usePrefs, CHROMA_FAMILY } from '../prefs'
@@ -27,13 +27,16 @@ const isType = (c: GameCard, re: RegExp) => (c.types ?? []).some((t) => re.test(
 const CARD_W = 1.2
 const CARD_H = 1.68
 /** Max width (in local units) a battlefield row may span before cards start overlapping.
- *  Zone piles sit at x ≈ ±PILE_X, so this must stay below PILE_X*2 to prevent
- *  battlefield rows from overflowing into the zone piles. */
+ *  Zone piles sit at x ≈ ±pileXFor(cardGap), which scales past the row width so
+ *  battlefield rows never overflow into the zone piles. */
 const MAX_ROW_W = 4.2
 const MAX_PER_ROW = 12
 /** X-position of the zone piles (library/GY on the right, exile on the left).
- *  Must be > MAX_ROW_W/2 + CARD_W/2 to keep piles clear of the battlefield rows. */
-const PILE_X = 3.5
+ *  Scales with the cardGap pref so widened battlefield rows never bury the piles;
+ *  CARD_H/2 covers a tapped (90°-rotated) card at the row's end. */
+function pileXFor(cardGap: number): number {
+  return Math.max(3.9, (MAX_ROW_W * cardGap) / 2 + CARD_H / 2 + 0.45)
+}
 /** A card or a named land stack — same name lands collapse into one slot with a count.
  *  `members` carries the individual collapsed cards (only set for real stacks) so the
  *  card menu can tap a chosen number of the still-untapped ones. */
@@ -88,7 +91,8 @@ function makeCardTexture(card: GameCard): THREE.Texture {
   }
   g.fillStyle = '#f4f1e8'
   g.textBaseline = 'middle'
-  g.font = 'bold 20px "Segoe UI", system-ui, sans-serif'
+  // 28px so the name survives the downscale to on-table size
+  g.font = 'bold 28px "Segoe UI", system-ui, sans-serif'
   // for a stack ability, name it after its source card, not the generic "Ability"
   g.fillText(fit(card.sourceName ?? card.name, w - 44), 22, 33)
   // type line
@@ -255,9 +259,10 @@ function CardPile({
           <meshBasicMaterial color="#ffffff" transparent opacity={0.05} />
         </mesh>
       )}
-      {/* depth layers (face-down backs) under the top card */}
+      {/* depth layers (face-down backs) under the top card — lean AWAY from the
+          battlefield (exile sits at negative x, so it leans further left) */}
       {Array.from({ length: Math.max(0, layers - 1) }).map((_, i) => (
-        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[0.012 * i, 0.012 + i * step, 0.012 * i]}>
+        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[(position[0] < 0 ? -1 : 1) * 0.012 * i, 0.012 + i * step, 0.012 * i]}>
           <planeGeometry args={[CARD_W, CARD_H]} />
           <meshBasicMaterial map={back} toneMapped={false} transparent depthWrite={false} />
         </mesh>
@@ -272,9 +277,21 @@ function CardPile({
             <meshBasicMaterial map={back} toneMapped={false} transparent depthWrite={false} />
           </mesh>
         ))}
-      <Html position={[0, 0.34, CARD_H * 0.62]} center distanceFactor={10} zIndexRange={[15, 0]} occlude={occludeBadges} className="c3d-badge c3d-zone">
-        {label} {count}
-      </Html>
+      {/* label only when the pile has cards ("EXILE 0" over nothing reads as junk);
+          no distanceFactor → constant screen-size, so an opponent's pill stays small
+          but legible instead of shrinking into a garbled smear */}
+      {count > 0 && (
+        <Html
+          position={[0, 0.34, CARD_H * 0.62]}
+          center
+          zIndexRange={[15, 0]}
+          occlude={occludeBadges}
+          className="c3d-badge c3d-zone"
+          style={{ fontSize: '10px', padding: '1px 6px' }}
+        >
+          {label} {count}
+        </Html>
+      )}
     </group>
   )
 }
@@ -287,6 +304,7 @@ function Card3D({
   showCost,
   stackCount,
   members,
+  rowGap,
   cardProps,
   onHoverCard,
   onOpenMenu,
@@ -298,6 +316,10 @@ function Card3D({
   showCost?: boolean
   stackCount?: number
   members?: GameCard[]
+  // effective world-space pitch of the row this card sits in — dense rows hide
+  // the badge sprites (P/T is baked into the card texture) instead of rendering
+  // an unreadable pile of overlapping pills
+  rowGap?: number
   cardProps: CardProps
   onHoverCard?: (c: GameCard | null) => void
   onOpenMenu?: (c: GameCard, members?: GameCard[]) => void
@@ -459,32 +481,46 @@ function Card3D({
         </mesh>
 
         {/* creature P/T, damage, loyalty — in-canvas sprites so they occlude
-            properly (a card in front hides them) instead of a DOM overlay on top */}
-        {isType(card, /creature/i) && card.power != null && card.toughness != null && (
-          <BadgeSprite
-            text={`${card.power}/${card.toughness}`}
-            position={[CARD_W * 0.34, 0.14, CARD_H * 0.3]}
-            bg="rgba(10,12,18,0.92)"
-            cardId={card.id}
-          />
-        )}
-        {isType(card, /creature/i) && card.damage > 0 && (
-          <BadgeSprite
-            text={`−${card.damage}`}
-            position={[CARD_W * 0.34, 0.14, -CARD_H * 0.04]}
-            bg="#e0344f"
-            height={0.3}
-            cardId={card.id}
-          />
-        )}
-        {isType(card, /planeswalker/i) && card.loyalty != null && (
-          <BadgeSprite
-            text={String(card.loyalty)}
-            position={[CARD_W * 0.34, 0.14, CARD_H * 0.3]}
-            bg="#6b4ea5"
-            cardId={card.id}
-          />
-        )}
+            properly (a card in front hides them) instead of a DOM overlay on top.
+            Hidden entirely on very dense rows (gap < 0.6: the pills would overlap
+            ~50% into a garbled stack; P/T is already baked into the card texture),
+            and scaled down as the row compresses below the comfortable pitch. */}
+        {(() => {
+          const showBadges = rowGap == null || rowGap >= 0.6
+          const badgeScale = rowGap == null ? 1 : Math.min(1, rowGap / 0.9)
+          if (!showBadges) return null
+          return (
+            <>
+              {isType(card, /creature/i) && card.power != null && card.toughness != null && (
+                <BadgeSprite
+                  text={`${card.power}/${card.toughness}`}
+                  position={[CARD_W * 0.34, 0.14, CARD_H * 0.3]}
+                  bg="rgba(10,12,18,0.92)"
+                  height={0.5 * badgeScale}
+                  cardId={card.id}
+                />
+              )}
+              {isType(card, /creature/i) && card.damage > 0 && (
+                <BadgeSprite
+                  text={`−${card.damage}`}
+                  position={[CARD_W * 0.34, 0.14, -CARD_H * 0.04]}
+                  bg="#e0344f"
+                  height={0.3 * badgeScale}
+                  cardId={card.id}
+                />
+              )}
+              {isType(card, /planeswalker/i) && card.loyalty != null && (
+                <BadgeSprite
+                  text={String(card.loyalty)}
+                  position={[CARD_W * 0.34, 0.14, CARD_H * 0.3]}
+                  bg="#6b4ea5"
+                  height={0.5 * badgeScale}
+                  cardId={card.id}
+                />
+              )}
+            </>
+          )
+        })()}
         {showCost && manaSymbols(card.manaCost).length > 0 && (
           <Html
             position={[-CARD_W * 0.34, 0.16, -CARD_H * 0.44]}
@@ -529,10 +565,13 @@ function row(items: RowItem[], cx: number, cz: number, gap = 1.45, maxW = MAX_RO
   const w = (n - 1) * effectiveGap
   // Tiny per-card y stagger prevents coplanar z-fighting when adjacent cards share
   // edge pixels under MSAA — visually imperceptible at this scale.
+  // `gap` = the effective (possibly compressed) pitch, so consumers can scale or
+  // hide per-card overlays that would garble on a dense row.
   return items.map(({ card, stackCount, members }, i) => ({
     card,
     stackCount,
     members,
+    gap: effectiveGap,
     pos: [cx - w / 2 + i * effectiveGap, i * 0.001, cz] as [number, number, number],
   }))
 }
@@ -557,21 +596,61 @@ function groupLands(lands: GameCard[]): RowItem[] {
 
 type Seat = { player: GamePlayer; x: number; z: number; yaw: number; isViewer: boolean }
 
-/** Standard MTG battlefield layout in a seat's LOCAL space: creatures in a front
- *  row (toward centre, local -z), non-land permanents + grouped land stacks in a back row (+z).
- *  Same-named lands collapse into a single slot (Arena-style) to reduce crowding. */
-function battlefieldLayout(player: GamePlayer): { card: GameCard; pos: [number, number, number]; stackCount?: number }[] {
+type BattlefieldRow = {
+  placed: ReturnType<typeof row>
+  overflow: number
+  z: number
+}
+
+/** THE battlefield layout, in a seat's LOCAL space — the single source of truth
+ *  shared by PlayerZone (rendering) and BoardArrows (arrow anchors), so arrows
+ *  always land where cards actually draw. Standard MTG rows front → back:
+ *  creatures · non-creature/non-land permanents (only when any exist) · lands,
+ *  with same-named lands collapsed into one slot (Arena-style), rows scaled by
+ *  the cardGap pref, and each row sliced to MAX_PER_ROW unless expanded. */
+function battlefieldRows(player: GamePlayer, cardGap: number, expanded: boolean): BattlefieldRow[] {
   const creatures: RowItem[] = []
-  const nonlands: RowItem[] = []
+  const others: RowItem[] = [] // artifacts, enchantments, planeswalkers, …
   const lands: GameCard[] = []
   for (const c of player.battlefield) {
     const t = (c.types ?? []).map((x) => x.toLowerCase())
     if (t.some((x) => x.includes('creature'))) creatures.push({ card: c })
     else if (t.some((x) => x.includes('land'))) lands.push(c)
-    else nonlands.push({ card: c })
+    else others.push({ card: c })
   }
-  const landItems = groupLands(lands)
-  return [...row(creatures, 0, -0.95), ...row([...nonlands, ...landItems], 0, 0.95)]
+  const landRow = groupLands(lands)
+  // The middle row only appears when there are other permanents, so a plain
+  // creature+land board keeps its roomy two-row spacing.
+  const defs = others.length
+    ? [
+        { items: creatures, z: -1.2 },
+        { items: others, z: 0.3 },
+        { items: landRow, z: 1.75 },
+      ]
+    : [
+        { items: creatures, z: -0.95 },
+        { items: landRow, z: 0.95 },
+      ]
+  return defs.map((d) => {
+    const overflow = Math.max(0, d.items.length - MAX_PER_ROW)
+    const vis = expanded ? d.items : d.items.slice(0, MAX_PER_ROW)
+    // cardGap scales both the gap and the row's max width so cards actually spread
+    return { placed: row(vis, 0, d.z, 1.45 * cardGap, MAX_ROW_W * cardGap), overflow, z: d.z }
+  })
+}
+
+/** World-space fan layout for the centre stack — the single source of truth for
+ *  where each stack spell floats, shared by the Billboard renderer and
+ *  BoardArrows (so per-spell arrows start at the spell that casts them). */
+function stackFan(cards: GameCard[]): { card: GameCard; scale: number; world: THREE.Vector3 }[] {
+  const placed = row(cards.map((c) => ({ card: c })), 0, 0.6, 1.4)
+  const mid = (placed.length - 1) / 2
+  return placed.map(({ card, pos }, i) => {
+    // the middle card(s) sit closest to the camera and biggest; outer ones
+    // step back + down a touch so a multi-spell stack still fans readably.
+    const off = Math.abs(i - mid)
+    return { card, scale: 1.5 - off * 0.18, world: new THREE.Vector3(pos[0] * 1.3, TABLE_LIFT + 0.55 - off * 0.12, 0) }
+  })
 }
 
 /** World position of a seat-local point, applying the seat's yaw + translation. */
@@ -610,9 +689,10 @@ const TABLE_LIFT = 0.09
 
 /** A subtle playmat under a seat's zone: a dark fill + a thin coloured frame, so
  *  each player's area reads as one tidy region instead of cards floating loose. */
-function SeatMat({ color, active }: { color: string; active: boolean }) {
+function SeatMat({ color, active, pileX }: { color: string; active: boolean; pileX: number }) {
   const { prefs } = usePrefs()
-  const w = MAT_W * prefs.matW
+  // wide enough that the zone piles (at ±pileX) always sit ON the mat
+  const w = Math.max(MAT_W * prefs.matW, 2 * (pileX + CARD_W / 2 + 0.35))
   const h = MAT_H * prefs.matH
   const fill = useMemo(() => new THREE.ShapeGeometry(roundedRectShape(w, h, 0.5)), [w, h])
   const frame = useMemo(() => new THREE.ShapeGeometry(roundedRectShape(w + 0.18, h + 0.18, 0.56)), [w, h])
@@ -660,65 +740,39 @@ function PlayerZone({
   const { prefs } = usePrefs()
   const cardGap = prefs.cardGap
 
-  const { placed, rows } = useMemo(() => {
-    const creatures: RowItem[] = []
-    const others: RowItem[] = [] // artifacts, enchantments, planeswalkers, …
-    const lands: GameCard[] = []
-    for (const c of seat.player.battlefield) {
-      const t = (c.types ?? []).map((x) => x.toLowerCase())
-      if (t.some((x) => x.includes('creature'))) creatures.push({ card: c })
-      else if (t.some((x) => x.includes('land'))) lands.push(c)
-      else others.push({ card: c })
-    }
-    const landRow = groupLands(lands)
-    // Standard MTG table layout, front (toward combat) → back (near the player):
-    //   creatures · non-creature permanents · lands.
-    // The middle row only appears when there are other permanents, so a plain
-    // creature+land board keeps its roomy two-row spacing.
-    const defs = others.length
-      ? [
-          { items: creatures, z: -1.2 },
-          { items: others, z: 0.3 },
-          { items: landRow, z: 1.75 },
-        ]
-      : [
-          { items: creatures, z: -0.95 },
-          { items: landRow, z: 0.95 },
-        ]
-    const rows = defs.map((d) => {
-      const overflow = Math.max(0, d.items.length - MAX_PER_ROW)
-      const vis = expanded ? d.items : d.items.slice(0, MAX_PER_ROW)
-      // cardGap scales both the gap and the row's max width so cards actually spread
-      return { placed: row(vis, 0, d.z, 1.45 * cardGap, MAX_ROW_W * cardGap), overflow, visCount: vis.length, z: d.z }
-    })
-    return { placed: rows.flatMap((r) => r.placed), rows }
-  }, [seat.player.battlefield, expanded, cardGap])
+  // battlefieldRows is the shared layout helper — BoardArrows anchors to the
+  // exact same positions, so arrows always land on rendered cards
+  const rows = useMemo(
+    () => battlefieldRows(seat.player, cardGap, expanded),
+    [seat.player, cardGap, expanded],
+  )
+  const placed = useMemo(() => rows.flatMap((r) => r.placed), [rows])
   const anyOverflow = rows.some((r) => r.overflow > 0)
 
   const p = seat.player
   const gy = p.graveyard.length ? p.graveyard[p.graveyard.length - 1] : null
   const ex = p.exile.length ? p.exile[p.exile.length - 1] : null
+  const pileX = pileXFor(cardGap)
 
-  // X position of the overflow badge: one gap-width past the last visible card.
-  // Uses the same capped-gap formula as row() so the badge lines up correctly
-  // even when MAX_ROW_W forces cards to compress.
-  const overflowX = (n: number) => {
-    if (n <= 0) return 0
-    const g = n > 1 ? Math.min(1.45, MAX_ROW_W / (n - 1)) : 1.45
-    return ((n - 1) * g) / 2 + g
+  // X position of the overflow badge: one gap-width past the last visible card,
+  // read straight off the placed row so it always lines up (cardGap + the
+  // MAX_ROW_W compression included) with no duplicated layout math.
+  const overflowX = (r: BattlefieldRow) => {
+    const last = r.placed[r.placed.length - 1]
+    return last ? last.pos[0] + last.gap : 0
   }
 
   return (
     <group position={[seat.x, TABLE_LIFT, seat.z]} rotation={[0, seat.yaw, 0]}>
-      <SeatMat color={matColor} active={active} />
-      {placed.map(({ card, pos, stackCount, members }) => (
-        <Card3D key={card.id} card={card} position={pos} stackCount={stackCount} members={members} cardProps={cardProps} onHoverCard={onHoverCard} onOpenMenu={onOpenMenu} occludeBadges={occludeBadges} />
+      <SeatMat color={matColor} active={active} pileX={pileX} />
+      {placed.map(({ card, pos, stackCount, members, gap }) => (
+        <Card3D key={card.id} card={card} position={pos} stackCount={stackCount} members={members} rowGap={gap} cardProps={cardProps} onHoverCard={onHoverCard} onOpenMenu={onOpenMenu} occludeBadges={occludeBadges} />
       ))}
       {/* overflow badges: show +N when a row is clipped */}
       {!expanded &&
         rows.map((r, i) =>
           r.overflow > 0 ? (
-            <Html key={i} position={[overflowX(r.visCount), 0.2, r.z]} center distanceFactor={10} zIndexRange={[20, 0]}>
+            <Html key={i} position={[overflowX(r), 0.2, r.z]} center distanceFactor={10} zIndexRange={[20, 0]}>
               <button className="c3d-overflow-btn" onClick={() => setExpanded(true)}>
                 +{r.overflow}
               </button>
@@ -735,10 +789,10 @@ function PlayerZone({
       )}
       {/* zone piles — standard playmat: library + graveyard to the player's
           right, exile set apart on the left ("outside the game").
-          PILE_X keeps piles clear of the MAX_ROW_W battlefield rows. */}
-      <CardPile position={[PILE_X, 1.7]} count={p.libraryCount} faceUp={false} label="Lib" cardProps={cardProps} onHoverCard={onHoverCard} occludeBadges={occludeBadges} />
-      <CardPile position={[PILE_X, 0.0]} count={p.graveyardCount} top={gy} faceUp label="GY" cardProps={cardProps} onHoverCard={onHoverCard} occludeBadges={occludeBadges} />
-      <CardPile position={[-PILE_X, 1.7]} count={p.exile.length} top={ex} faceUp label="Exile" cardProps={cardProps} onHoverCard={onHoverCard} occludeBadges={occludeBadges} />
+          pileX scales with cardGap so widened rows never bury the piles. */}
+      <CardPile position={[pileX, 1.7]} count={p.libraryCount} faceUp={false} label="Lib" cardProps={cardProps} onHoverCard={onHoverCard} occludeBadges={occludeBadges} />
+      <CardPile position={[pileX, 0.0]} count={p.graveyardCount} top={gy} faceUp label="GY" cardProps={cardProps} onHoverCard={onHoverCard} occludeBadges={occludeBadges} />
+      <CardPile position={[-pileX, 1.7]} count={p.exile.length} top={ex} faceUp label="Exile" cardProps={cardProps} onHoverCard={onHoverCard} occludeBadges={occludeBadges} />
     </group>
   )
 }
@@ -771,9 +825,8 @@ function seatPlayers(players: GamePlayer[], me?: string | null, spread = 1): { s
 
 type ViewTarget = { pos: THREE.Vector3; look: THREE.Vector3 }
 
-function CameraRig({ target }: { target: ViewTarget }) {
+function CameraRig({ target, look }: { target: ViewTarget; look: MutableRefObject<THREE.Vector3> }) {
   const { camera } = useThree()
-  const look = useRef(new THREE.Vector3(0, 0, 0))
   useFrame(() => {
     // Stop micro-lerping once close enough. Infinite lerp keeps the camera in
     // constant motion, which causes R3F to re-evaluate pointer intersections
@@ -788,66 +841,125 @@ function CameraRig({ target }: { target: ViewTarget }) {
   return null
 }
 
-/** Cinematic auto-camera: orbits around the table to settle behind whoever's
- *  turn it is, with a slow "alive" drift, and during combat eases in toward the
- *  centre. With no active player it slowly circles the whole table. The angle is
- *  interpolated along the shortest arc so a turn change swooshes around the rim
- *  rather than cutting straight across. */
+/** Cinematic auto-camera, anchored to the VIEWER's seat: you always see the
+ *  table from your own side (never mirrored), with a bounded swing toward an
+ *  active opponent and a combat ease-in toward the centre. Spectators follow
+ *  the active seat; with no anchor at all it slowly circles the whole table.
+ *  The angle is interpolated along the shortest arc so a turn change swooshes
+ *  around the rim rather than cutting straight across; once settled the camera
+ *  snaps and stops (mirrors CameraRig's SNAP — perpetual micro-motion re-runs
+ *  the pointer raycast every frame and flickers card hover). */
 function CinematicRig({
   seats,
   activeName,
   radius,
   zoom,
   combat,
+  look,
 }: {
   seats: Seat[]
   activeName?: string | null
   radius: number
   zoom: number
   combat: number
+  look: MutableRefObject<THREE.Vector3>
 }) {
   const { camera } = useThree()
-  const look = useRef(new THREE.Vector3(0, 0.5, 0))
-  const cyl = useRef({ theta: Math.PI / 2, r: radius + 5, y: 6.5 })
-  const clock = useRef(0)
+  const { prefs } = usePrefs()
+  // start from wherever the camera currently is so a mode switch glides, not cuts
+  const cyl = useRef({
+    theta: Math.atan2(camera.position.z, camera.position.x),
+    r: Math.hypot(camera.position.x, camera.position.z),
+    y: camera.position.y,
+  })
 
   useFrame((_, dtRaw) => {
     const dt = Math.min(dtRaw, 0.05) // clamp after tab-switch stalls
-    clock.current += dt
-    const seat = seats.find((s) => s.player.name === activeName)
+    const active = seats.find((s) => s.player.name === activeName)
+    const viewer = seats.find((s) => s.isViewer)
+    const anchor = viewer ?? active // spectators follow the active seat
 
-    // combat pushes the framing in toward the centre of the table for drama
+    // combat eases the LOOK toward the centre of the table for drama. It must
+    // not shrink the camera radius: the resting framing is already tight, and
+    // dollying in pushes the far-side combat arrows off the top of the canvas.
     const combatPull = combat > 0 ? 0.78 : 1
 
     let targetTheta: number
     let lookTarget: THREE.Vector3
-    if (seat) {
-      targetTheta = Math.atan2(seat.z, seat.x) // camera sits outside the active seat
-      lookTarget = new THREE.Vector3(seat.x * 0.32 * combatPull, 0.5, seat.z * 0.32 * combatPull)
+    let targetR: number
+    let targetY: number
+    if (anchor) {
+      targetTheta = Math.atan2(anchor.z, anchor.x) // camera sits outside the viewer's seat
+      if (viewer && active && active !== viewer) {
+        // opponent's turn: swing a bounded arc (≤ ~35°) toward their seat
+        let d = Math.atan2(active.z, active.x) - targetTheta
+        while (d > Math.PI) d -= 2 * Math.PI
+        while (d < -Math.PI) d += 2 * Math.PI
+        targetTheta += Math.max(-0.61, Math.min(0.61, d))
+      }
+      // composition: frame your own board, leaning part-way toward the active
+      // seat when it isn't yours; the low look-y pushes the board into the upper
+      // ~65% of the canvas, clear of the DOM hand fan along the bottom
+      const viewerIsActive = !!viewer && viewer === active
+      const t = viewerIsActive ? 1 : 0.35
+      const toSeat = active ?? anchor
+      lookTarget = new THREE.Vector3(
+        (anchor.x * 0.55 + (toSeat.x * 0.32 - anchor.x * 0.55) * t) * combatPull,
+        -2.0,
+        (anchor.z * 0.55 + (toSeat.z * 0.32 - anchor.z * 0.55) * t) * combatPull,
+      )
+      targetR = (radius + 3.2) / zoom
+      targetY = 6.5 / Math.sqrt(zoom)
     } else {
-      // no active player (pre-game / overview) → slow continuous circle
-      targetTheta = cyl.current.theta + 0.5
+      // no viewer or active player (pre-game overview) → slow continuous circle,
+      // unless the player asked for reduced motion
+      targetTheta = cyl.current.theta + (prefs.reduceMotion ? 0 : 0.5)
       lookTarget = new THREE.Vector3(0, 0.5, 0)
+      targetR = (radius + 5.8) / zoom
+      targetY = 9 / Math.sqrt(zoom)
     }
-    const targetR = ((radius + 5.8) / zoom) * combatPull
-    const targetY = (seat ? 7.1 : 9) / Math.sqrt(zoom)
 
-    // shortest-arc angle lerp → swoosh around the rim
+    // shortest-arc angle lerp → swoosh around the rim; snap when settled so the
+    // camera actually stops (no drift, no endless asymptotic micro-lerp)
+    const SNAP = 0.002
     let dTheta = targetTheta - cyl.current.theta
     while (dTheta > Math.PI) dTheta -= 2 * Math.PI
     while (dTheta < -Math.PI) dTheta += 2 * Math.PI
-    cyl.current.theta += dTheta * Math.min(1, dt * (seat ? 1.7 : 0.3))
-    cyl.current.r += (targetR - cyl.current.r) * Math.min(1, dt * 2.4)
-    cyl.current.y += (targetY - cyl.current.y) * Math.min(1, dt * 2.4)
+    if (Math.abs(dTheta) > SNAP) cyl.current.theta += dTheta * Math.min(1, dt * (anchor ? 1.7 : 0.3))
+    else cyl.current.theta += dTheta
+    if (Math.abs(targetR - cyl.current.r) > SNAP) cyl.current.r += (targetR - cyl.current.r) * Math.min(1, dt * 2.4)
+    else cyl.current.r = targetR
+    if (Math.abs(targetY - cyl.current.y) > SNAP) cyl.current.y += (targetY - cyl.current.y) * Math.min(1, dt * 2.4)
+    else cyl.current.y = targetY
+    camera.position.set(Math.cos(cyl.current.theta) * cyl.current.r, cyl.current.y, Math.sin(cyl.current.theta) * cyl.current.r)
 
-    // gentle alive drift so a settled camera never feels frozen
-    const driftTheta = cyl.current.theta + Math.sin(clock.current * 0.22) * 0.05
-    const driftY = cyl.current.y + Math.sin(clock.current * 0.4) * 0.22
-    camera.position.set(Math.cos(driftTheta) * cyl.current.r, driftY, Math.sin(driftTheta) * cyl.current.r)
-
-    look.current.lerp(lookTarget, Math.min(1, dt * 2.2))
+    if (look.current.distanceTo(lookTarget) > SNAP) look.current.lerp(lookTarget, Math.min(1, dt * 2.2))
+    else look.current.copy(lookTarget)
     camera.lookAt(look.current)
   })
+  return null
+}
+
+/** Mobile free-cam framing: put the top-down camera high enough that the whole
+ *  board (seat mats included) fits the frustum, refit whenever the canvas
+ *  resizes (rotation, browser chrome) — a fixed y=16 clipped the far mats. */
+function MobileCamFit({ radius }: { radius: number }) {
+  const { camera, size } = useThree()
+  useEffect(() => {
+    const cam = camera as THREE.PerspectiveCamera
+    const halfFov = ((cam.fov ?? 46) * Math.PI) / 360
+    const aspect = size.width / Math.max(1, size.height)
+    // vertical (world z) half-extent of the board: seat radius + mat depth
+    const ez = radius + MAT_H / 2 + MAT_Z + 0.8
+    let y = ez / Math.tan(halfFov)
+    // narrow viewports must also fit the board's horizontal (world x) extent
+    if (aspect < 1.4) {
+      const ex = MAT_W / 2 + 0.8
+      y = Math.max(y, ex / (Math.tan(halfFov) * aspect))
+    }
+    camera.position.set(0, y, 0.01)
+    camera.lookAt(0, 0, 0)
+  }, [camera, size.width, size.height, radius])
   return null
 }
 
@@ -873,7 +985,8 @@ function ActiveSeatGlow({ seat }: { seat: Seat }) {
   )
 }
 
-const ARROW_COLOR: Record<string, string> = { attack: '#ff3b3b', block: '#ffb13b', target: '#3bd6ff' }
+// attackBlocked = legacy-client gray: a blocked attacker no longer threatens the defender
+const ARROW_COLOR: Record<string, string> = { attack: '#ff3b3b', attackBlocked: '#9aa0a6', block: '#ffb13b', target: '#3bd6ff' }
 
 /** A single arced 3D arrow (tube shaft + cone head + glow) from `from` to `to`.
  *  The control point bows the arc UP *and* SIDEWAYS — a purely vertical arc on a
@@ -926,21 +1039,33 @@ function BoardArrows({
   targets?: string[]
   stack?: GameState['stack']
 }) {
+  const { prefs } = usePrefs()
+  const cardGap = prefs.cardGap
   const arrows = useMemo(() => {
-    // id → world position: battlefield cards by id, plus each player's seat centre
+    // id → world position: battlefield cards via the SAME layout helper the
+    // renderer uses (cardGap + MAX_PER_ROW slice included; rows assumed
+    // collapsed), each stack spell's fan slot, plus each player's seat centre
     const pos = new Map<string, THREE.Vector3>()
     for (const s of seats) {
-      for (const { card, pos: lp } of battlefieldLayout(s.player)) pos.set(card.id, seatToWorld(s, lp))
+      for (const r of battlefieldRows(s.player, cardGap, false))
+        for (const { card, pos: lp } of r.placed) pos.set(card.id, seatToWorld(s, lp))
       const centre = new THREE.Vector3(s.x * 0.8, 0.6, s.z * 0.8)
       pos.set('P:' + s.player.id, centre)
       pos.set('P:' + s.player.name, centre)
     }
+    for (const { card, world } of stackFan(stack ?? [])) pos.set(card.id, world)
     const out: { from: THREE.Vector3; to: THREE.Vector3; kind: string }[] = []
     for (const cg of combat) {
-      const defPos = cg.defender ? pos.get('P:' + cg.defender) ?? pos.get(cg.defender) : null
+      // defenderId (a player OR planeswalker/battle uuid) resolves against the
+      // position map; the defender NAME is only a legacy fallback
+      const defPos =
+        (cg.defenderId ? pos.get(cg.defenderId) ?? pos.get('P:' + cg.defenderId) : undefined) ??
+        (cg.defender ? pos.get('P:' + cg.defender) : undefined) ??
+        null
+      const attackKind = cg.blocked ? 'attackBlocked' : 'attack'
       for (const aid of cg.attackers) {
         const ap = pos.get(aid)
-        if (ap && defPos) out.push({ from: ap, to: defPos, kind: 'attack' })
+        if (ap && defPos) out.push({ from: ap, to: defPos, kind: attackKind })
         if (ap) {
           for (const bid of cg.blockers) {
             const bp = pos.get(bid)
@@ -949,12 +1074,15 @@ function BoardArrows({
         }
       }
     }
-    const stackCentre = new THREE.Vector3(0, 1.0, 0) // where the stack floats
+    // fallback origin for a spell not yet on the stack (active-target prompt)
+    const stackCentre = new THREE.Vector3(0, TABLE_LIFT + 0.55, 0)
     // persistent arrows for every spell/ability on the stack → what it targets.
-    // Abilities start from their source permanent; spells from the stack centre.
+    // Abilities start from their source permanent; spells from their own fan
+    // slot (so with 2+ stacked spells each arrow starts at the right card, and
+    // a counterspell targeting another stack spell draws card → card).
     for (const item of stack ?? []) {
       if (!item.targets || !item.targets.length) continue
-      const from = (item.sourceId && pos.get(item.sourceId)) || stackCentre
+      const from = (item.sourceId && pos.get(item.sourceId)) || pos.get(item.id) || stackCentre
       for (const t of item.targets) {
         const tp = pos.get(t) ?? pos.get('P:' + t)
         if (tp) out.push({ from, to: tp, kind: 'target' })
@@ -968,7 +1096,7 @@ function BoardArrows({
       }
     }
     return out
-  }, [seats, combat, targets, stack])
+  }, [seats, combat, targets, stack, cardGap])
 
   return (
     <>
@@ -985,7 +1113,7 @@ type ViewMode = '3d' | '2d' | 'free' | 'auto'
 const ZOOM_MIN = 0.35
 const ZOOM_MAX = 3.0
 const ZOOM_STEP = 0.25
-const ZOOM_DEFAULT = 0.75
+const ZOOM_DEFAULT = 1.0
 
 /** Scale the camera's distance from its look-at point by 1/zoom.
  *  zoom=1 → no change; zoom=2 → twice as close; zoom=0.5 → twice as far. */
@@ -1146,7 +1274,8 @@ function ZoomBar({ zoom, onZoom }: { zoom: number; onZoom: (z: number) => void }
 }
 
 /** Camera control: a small glass panel that expands from a corner button, with a
- *  Camera row (Auto/3D/2D/Free) and, in 3D, a Focus row (Overview + each seat). */
+ *  Camera row (Auto/3D/2D/Free) and a Focus row (Overview + each seat); picking
+ *  a focus target snaps into 3D mode. */
 function ViewMenu({
   mode,
   setMode,
@@ -1169,10 +1298,17 @@ function ViewMenu({
     cat: 'mode',
     onClick: () => setMode(m),
   }))
-  const focusItems: Item[] =
-    mode === '3d'
-      ? views.map((v, i) => ({ key: 'f-' + i, label: v.name, active: view === i, cat: 'focus', onClick: () => setView(i) }))
-      : []
+  // focus targets snap the camera, so picking one implies the 3D snap mode
+  const focusItems: Item[] = views.map((v, i) => ({
+    key: 'f-' + i,
+    label: v.name,
+    active: mode === '3d' && view === i,
+    cat: 'focus',
+    onClick: () => {
+      setMode('3d')
+      setView(i)
+    },
+  }))
 
   return (
     <div className={`view-menu${open ? ' open' : ''}`}>
@@ -1277,13 +1413,31 @@ export function Board3D({
   )
   // auto = cinematic cam that follows the active player; 2D = fixed top-down;
   // 3D = the angled seat views; free = user-orbited. Same world either way.
-  const isMobile = useMemo(
+  // Live (not one-shot): resizing/rotating a device across the breakpoint
+  // re-fits the mobile camera instead of keeping a stale layout.
+  const [isMobile, setIsMobile] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(max-width: 760px), (max-height: 540px)').matches,
-    [],
   )
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 760px), (max-height: 540px)')
+    const on = () => setIsMobile(mq.matches)
+    mq.addEventListener('change', on)
+    window.addEventListener('orientationchange', on)
+    return () => {
+      mq.removeEventListener('change', on)
+      window.removeEventListener('orientationchange', on)
+    }
+  }, [])
   // Small screens default to free mode: a flat top-down board you pan with one
   // finger and pinch to zoom — a large zoomable/pannable canvas (rotate locked).
   const [mode, setMode] = useState<ViewMode>(() => (isMobile ? 'free' : prefs.defaultCamera))
+  // the camera mode in force before a seat-focus request forced '3d' (restored
+  // when focus returns to your own seat / clears); user mode picks forget it
+  const priorMode = useRef<ViewMode | null>(null)
+  const setModeUser = (m: ViewMode) => {
+    priorMode.current = null
+    setMode(m)
+  }
   const TOP_DOWN: ViewTarget = useMemo(
     () => ({ pos: new THREE.Vector3(0, 15 + seats.length * 0.8, 2.2), look: new THREE.Vector3(0, 0, 0) }),
     [seats.length],
@@ -1294,32 +1448,70 @@ export function Board3D({
     if (view >= views.length) setView(spectating ? 0 : 1)
   }, [views.length, view, spectating])
 
-  // clicking a player in the strip swings the manual 3D camera to their seat
+  // clicking a player in the strip swings the manual 3D camera to their seat;
+  // focusing your own seat (or clearing the focus) restores the prior camera.
+  // Each request (nonce) is handled once — a game-state push must not re-force
+  // the mode after the user has been restored.
+  const handledFocus = useRef<{ name: string; n: number } | null>(null)
   useEffect(() => {
-    if (!focusSeat) return
-    const idx = seats.findIndex((s) => s.player.name === focusSeat.name)
-    if (idx >= 0) {
-      setMode('3d')
-      setView(idx + 1) // views[0] is Overview, then one per seat in `seats` order
+    if (!focusSeat) {
+      handledFocus.current = null
+      if (priorMode.current != null) {
+        setMode(priorMode.current)
+        priorMode.current = null
+      }
+      return
     }
+    if (handledFocus.current?.name === focusSeat.name && handledFocus.current?.n === focusSeat.n) return
+    const idx = seats.findIndex((s) => s.player.name === focusSeat.name)
+    if (idx < 0) return
+    handledFocus.current = focusSeat
+    if (seats[idx].isViewer && priorMode.current != null) {
+      setMode(priorMode.current)
+      priorMode.current = null
+      return
+    }
+    setMode((m) => {
+      if (m !== '3d' && priorMode.current == null) priorMode.current = m
+      return '3d'
+    })
+    setView(idx + 1) // views[0] is Overview, then one per seat in `seats` order
   }, [focusSeat, seats])
 
   const [zoom, setZoom] = useState(() => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, prefs.boardZoom || ZOOM_DEFAULT)))
+  // persist zoom tweaks (debounced) so the next game opens at the same zoom
+  const { setPref } = usePrefs()
+  useEffect(() => {
+    if (zoom === prefs.boardZoom) return
+    const t = setTimeout(() => setPref('boardZoom', zoom), 600)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zoom])
 
   const rawTarget = mode === '2d' ? TOP_DOWN : views[view].target
   // free mode uses OrbitControls scroll-wheel zoom; for 3d/2d we scale the camera distance
   const target = mode === 'free' ? rawTarget : applyZoom(rawTarget, zoom)
 
+  // the driven rigs (auto/3d/2d) accumulate their look-at point here, so
+  // switching modes glides from the current framing and OrbitControls (free)
+  // seeds its orbit target from where the camera was last looking
+  const lastLook = useRef(new THREE.Vector3(0, 0, 0))
+  // snapshot on entering free mode → a stable prop while the user orbits/pans
+  const freeSeed = useMemo(
+    () => (mode === 'free' ? (lastLook.current.toArray() as [number, number, number]) : null),
+    [mode],
+  )
+
   // the hand is no longer laid on the table — it's a fixed screen-space fan at the
   // bottom of the screen (HandFan in GameTable), the way other MTG clients do it
-  const stack = useMemo(() => row(game.stack.map((c) => ({ card: c })), 0, 0.6, 1.4), [game.stack])
+  const stack = useMemo(() => stackFan(game.stack), [game.stack])
   // raycast-occlude the DOM badges so a card in front (the centre stack card, or a
   // hovered/lifted card, or a nearer row) hides the badges of cards behind it
   const occludeBadges = true
 
   return (
     <div className="board3d">
-      <ViewMenu mode={mode} setMode={setMode} views={views} view={view} setView={setView} />
+      <ViewMenu mode={mode} setMode={setModeUser} views={views} view={view} setView={setView} />
       {mode !== 'free' && <ZoomBar zoom={zoom} onZoom={setZoom} />}
       <Canvas
         shadows
@@ -1381,39 +1573,39 @@ export function Board3D({
         {/* stack (center) — a full Billboard squares each card to the camera like an
             old billboard sprite (no axis locks), floated above the table and oversized
             so the spell(s) currently resolving read clearly from any seat. */}
-        {stack.map(({ card, pos }, i) => {
-          // the middle card(s) sit closest to the camera and biggest; outer ones
-          // step back + down a touch so a multi-spell stack still fans readably.
-          const mid = (stack.length - 1) / 2
-          const off = Math.abs(i - mid)
-          const scale = 1.5 - off * 0.18
-          return (
-            <Billboard key={card.id} position={[pos[0] * 1.3, TABLE_LIFT + 0.55 - off * 0.12, 0]} scale={scale}>
-              <Card3D card={card} position={[0, 0, 0]} standing showCost cardProps={cardProps} onHoverCard={onHoverCard} onOpenMenu={onOpenMenu} />
-            </Billboard>
-          )
-        })}
+        {stack.map(({ card, world, scale }) => (
+          // stackFan is the shared fan layout — BoardArrows anchors each spell's
+          // source→target arrows to the same slot the Billboard renders at
+          <Billboard key={card.id} position={[world.x, world.y, world.z]} scale={scale}>
+            <Card3D card={card} position={[0, 0, 0]} standing showCost cardProps={cardProps} onHoverCard={onHoverCard} onOpenMenu={onOpenMenu} />
+          </Billboard>
+        ))}
 
         {/* free cam → user orbits/pans; otherwise the camera is driven to the
             selected (2D top-down or 3D seat) viewpoint */}
         {mode === 'free' ? (
-          <OrbitControls
-            makeDefault
-            enablePan
-            enableDamping
-            dampingFactor={0.08}
-            minDistance={1.5}
-            maxDistance={isMobile ? 60 : 40}
-            target={[0, 0, 0]}
-            // mobile = a flat pan/pinch canvas: one finger pans, two pinch-zoom,
-            // rotation locked so the board stays readable top-down
-            enableRotate={!isMobile}
-            touches={isMobile ? { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_PAN } : undefined}
-          />
+          <>
+            <OrbitControls
+              makeDefault
+              enablePan
+              enableDamping
+              dampingFactor={0.08}
+              minDistance={1.5}
+              maxDistance={isMobile ? 60 : 40}
+              // seeded from where the driven camera was last looking, so
+              // switching to Free doesn't jump-cut the framing back to origin
+              target={freeSeed ?? [0, 0, 0]}
+              // mobile = a flat pan/pinch canvas: one finger pans, two pinch-zoom,
+              // rotation locked so the board stays readable top-down
+              enableRotate={!isMobile}
+              touches={isMobile ? { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_PAN } : undefined}
+            />
+            {isMobile && <MobileCamFit radius={radius} />}
+          </>
         ) : mode === 'auto' ? (
-          <CinematicRig seats={seats} activeName={game.activePlayer} radius={radius} zoom={zoom} combat={game.combat.length} />
+          <CinematicRig seats={seats} activeName={game.activePlayer} radius={radius} zoom={zoom} combat={game.combat.length} look={lastLook} />
         ) : (
-          <CameraRig target={target} />
+          <CameraRig target={target} look={lastLook} />
         )}
 
         {/* readonly test instrumentation (window.__board3d) — see BoardDebug */}

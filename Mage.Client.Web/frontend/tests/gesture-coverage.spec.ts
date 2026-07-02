@@ -93,10 +93,19 @@ async function firstVisibleCardPos(page: Page, ids: string[]): Promise<{ id: str
   return found!
 }
 
-/** A point on the canvas away from any card (the table centre is clear in-game). */
+/** A point where pointer events actually reach the canvas — the screen-space
+ *  hand fan (and other HUD floaters) may cover the lower centre, so probe
+ *  upward from the middle until the canvas is the top element. */
 async function clearCanvasPoint(page: Page): Promise<{ x: number; y: number; box: { x: number; y: number; width: number; height: number } }> {
   const box = (await page.locator('.board3d canvas').boundingBox())!
-  return { x: box.x + box.width / 2, y: box.y + box.height / 2, box }
+  const fracs = [0.5, 0.42, 0.34, 0.26, 0.2]
+  for (const f of fracs) {
+    const x = box.x + box.width / 2
+    const y = box.y + box.height * f
+    const clear = await page.evaluate(([px, py]) => document.elementFromPoint(px, py)?.tagName === 'CANVAS', [x, y])
+    if (clear) return { x, y, box }
+  }
+  return { x: box.x + box.width / 2, y: box.y + box.height * 0.3, box }
 }
 
 // ---------------------------------------------------------------------------
@@ -339,17 +348,17 @@ suite('Gesture · DOM zoom controls', () => {
     await page.getByRole('button', { name: '3D', exact: true }).click()
     await page.locator('.view-fab').click()
     await expect.poll(() => readMode(page)).toBe('3d')
-    expect(await readZoom(page)).toBeCloseTo(0.75, 2)
+    expect(await readZoom(page)).toBeCloseTo(1.0, 2)
     const dist0 = (await readCam(page)).distance
 
     // zoom IN → factor rises, camera distance drops (applyZoom scales 1/zoom)
     await page.getByRole('button', { name: 'Zoom in' }).click()
-    await expect.poll(() => readZoom(page)).toBeCloseTo(1.0, 2)
+    await expect.poll(() => readZoom(page)).toBeCloseTo(1.25, 2)
     await expect.poll(async () => (await readCam(page)).distance < dist0 - 0.5, { timeout: 6000 }).toBe(true)
 
     // reset (the % is a real button) → back to default factor + distance
     await page.getByRole('button', { name: 'Reset zoom' }).click()
-    await expect.poll(() => readZoom(page)).toBeCloseTo(0.75, 2)
+    await expect.poll(() => readZoom(page)).toBeCloseTo(1.0, 2)
     await expect.poll(async () => Math.abs((await readCam(page)).distance - dist0) < 0.5, { timeout: 6000 }).toBe(true)
   })
 
@@ -360,7 +369,7 @@ suite('Gesture · DOM zoom controls', () => {
     await zin.focus()
     await expect(zin).toBeFocused()
     await page.keyboard.press('Enter')
-    await expect.poll(() => readZoom(page)).toBeCloseTo(1.0, 2)
+    await expect.poll(() => readZoom(page)).toBeCloseTo(1.25, 2)
   })
 
   test('touch: tapping +/- changes the zoom factor', async ({ browser }) => {

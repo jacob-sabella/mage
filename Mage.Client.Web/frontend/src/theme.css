@@ -1113,6 +1113,7 @@ input::placeholder { color: var(--text-dim); }
 .player-strip { display: flex; gap: 12px; }
 .pstat {
   flex: 1; display: flex; align-items: center; gap: 8px;
+  min-width: 0; /* let the counts ellipsize instead of forcing the strip taller */
   background: var(--bg); border: 1px solid var(--stroke); border-radius: var(--radius);
   padding: 3px 10px; color: var(--text); font: inherit; text-align: left; cursor: default;
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -1126,9 +1127,11 @@ input::placeholder { color: var(--text-dim); }
   50% { box-shadow: 0 0 calc(20px * var(--glow-strength, 1)) color-mix(in srgb, var(--accent) 55%, transparent); }
 }
 .pstat.targetable { cursor: crosshair; box-shadow: 0 0 0 2px var(--accent); }
-.pstat-name { font-weight: 700; font-size: 15px; }
-.pstat-life { color: var(--success); font-weight: 800; font-size: 15px; }
-.pstat-counts { font-size: 12px; }
+.pstat-name { font-weight: 700; font-size: 15px; white-space: nowrap; }
+.pstat-life { color: var(--success); font-weight: 800; font-size: 15px; white-space: nowrap; }
+/* one line, ellipsized — never wrapped into 2-3 ragged lines on 4p boards
+   (below ~180px the component also swaps to a compact H/L/G form) */
+.pstat-counts { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
 
 /* ----- playable cards bar (priority) ----- */
 .playable-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 14px; }
@@ -1350,7 +1353,7 @@ input::placeholder { color: var(--text-dim); }
 /* outcome accents */
 .game-over-win { border-color: #e8c35a; box-shadow: 0 0 60px color-mix(in srgb, #e8c35a 32%, transparent); }
 .game-over-win .game-over-title { color: #f4d678; text-shadow: 0 0 22px color-mix(in srgb, #e8c35a 60%, transparent); }
-.game-over-win .game-over-emoji { animation: game-over-bounce 1.6s ease-in-out infinite; }
+.game-over-win .game-over-emoji { animation: game-over-bounce 1.6s ease-in-out 3; }
 @keyframes game-over-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 .game-over-loss { border-color: color-mix(in srgb, var(--danger) 60%, var(--stroke)); }
 .game-over-loss .game-over-title { color: var(--danger); }
@@ -1396,6 +1399,9 @@ html.reduce-motion .game-over-card, html.reduce-motion .game-over-win .game-over
   transition: background 0.25s, color 0.25s, box-shadow 0.25s;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* narrow track → deliberate two-char codes (set by PhaseTrack's ResizeObserver);
+   they always fit, so never ellipsize them into 'U..' stubs */
+.phase-track.abbr .phase-seg { overflow: visible; text-overflow: clip; padding: 3px 5px; }
 .phase-seg.past { color: var(--text); opacity: 0.55; }
 .phase-seg.active {
   color: #06120d; background: var(--accent-2); border-color: transparent;
@@ -1470,7 +1476,9 @@ input:focus {
    disjoint vertical bands so a dense board (3-deep stack + 6-group combat)
    can't grow the rail down into the log — it scrolls within its band instead.
    (50% + 34% leaves a ≥16% gap on any board taller than ~150px.) */
-.overlay-tr { position: absolute; top: 12px; right: 12px; z-index: 6; max-width: 280px; max-height: 50%; overflow-y: auto; }
+/* z 30: above the board's floating <Html> card labels (zIndexRange goes up to
+   20) but below the game log (50) and any modal/backdrop (50+) */
+.overlay-tr { position: absolute; top: 12px; right: 12px; z-index: 30; max-width: 280px; max-height: 50%; overflow-y: auto; }
 .board-wrap .game-log {
   position: absolute; right: 12px; bottom: 12px; z-index: 6;
   width: 300px; max-height: min(180px, 34%); margin: 0;
@@ -1491,9 +1499,14 @@ input:focus {
 }
 
 /* the one control dock — always present, same place every turn */
+/* in-game: the "Playing" heading row is dead weight — hidden (LobbyView toggles
+   html.game-on) so the board gets it back. The nav stays: Settings must remain
+   reachable mid-game. */
+html.game-on .lobby-header { display: none; }
+
 .control-dock {
-  display: flex; align-items: center; gap: 10px 12px; flex-wrap: wrap;
-  padding: 10px 14px; flex-shrink: 0; overflow: visible;
+  display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap;
+  padding: 8px 12px; flex-shrink: 0; overflow: visible;
   border-color: color-mix(in srgb, var(--accent) 45%, var(--stroke));
   box-shadow: 0 -10px 34px color-mix(in srgb, var(--accent) 16%, transparent);
 }
@@ -1550,14 +1563,36 @@ input:focus {
   padding: 3px 5px; font-size: 11px; font-weight: 700; line-height: 1.15;
   color: #f4f1e8; text-align: left;
   background: linear-gradient(rgba(10, 12, 18, 0), rgba(10, 12, 18, 0.92));
-  white-space: normal; max-height: 38%; overflow: hidden;
+  /* the right neighbour overlaps this card by 22px (the fan), so the caption
+     ellipsizes INSIDE the visible strip instead of running under the neighbour
+     ('Lightning Bolt' reading as a clipped 'Lightning') */
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  padding-right: 27px; /* 22px fan overlap + 5px normal padding */
 }
+/* the last card and a lifted (hovered/focused) card have nothing on top of
+   them — give the caption its full width back */
+.hand-card:last-child .hand-card-name,
+.hand-card:hover .hand-card-name,
+.hand-card:focus-visible .hand-card-name { padding-right: 5px; }
 /* in maximized mode the control dock floats over the board, so lift the fan clear */
 html.board-max .hand-fan { bottom: 88px; }
+/* short desktop windows: scale the whole fan down so it stops shadowing the
+   viewer's battlefield rows (capped canvas height leaves no clear band otherwise) */
+@media (max-height: 800px) {
+  .hand-fan { transform: translateX(-50%) scale(0.85); transform-origin: bottom center; }
+}
 
 /* hand-fan size preference (default = medium, the values above) */
 html[data-hand-size='small'] .hand-card { width: 84px; height: 117px; margin: 0 -18px; }
+html[data-hand-size='small'] .hand-card-name { padding-right: 23px; } /* 18px overlap + 5px */
+html[data-hand-size='small'] .hand-card:last-child .hand-card-name,
+html[data-hand-size='small'] .hand-card:hover .hand-card-name,
+html[data-hand-size='small'] .hand-card:focus-visible .hand-card-name { padding-right: 5px; }
 html[data-hand-size='large'] .hand-card { width: 128px; height: 179px; margin: 0 -26px; }
+html[data-hand-size='large'] .hand-card-name { padding-right: 31px; } /* 26px overlap + 5px */
+html[data-hand-size='large'] .hand-card:last-child .hand-card-name,
+html[data-hand-size='large'] .hand-card:hover .hand-card-name,
+html[data-hand-size='large'] .hand-card:focus-visible .hand-card-name { padding-right: 5px; }
 
 /* segmented control (settings) */
 .seg-control { display: inline-flex; border: 1px solid var(--stroke); border-radius: 10px; overflow: hidden; background: var(--bg-raised); }
@@ -2044,6 +2079,9 @@ html, body { overflow-x: hidden; }
     background: linear-gradient(rgba(8, 10, 16, 0), rgba(8, 10, 16, 0.88));
     backdrop-filter: blur(4px);
   }
+  /* the dock floats OVER the board here, so lift the hand fan clear of it —
+     otherwise the cards hide behind the dock with only a sliver showing */
+  .board-focus .hand-fan { bottom: 74px; }
   .board-focus .player-strip { right: 6px; }
 
   /* drop the board's own overlays below the top HUD so they don't collide with
@@ -2143,16 +2181,37 @@ html, body { overflow-x: hidden; }
   .card-grid { max-height: 56vh; }
 }
 
-/* short / landscape-phone viewports: same scroll + real board height as mobile,
-   and trim tall chrome so the board isn't crushed */
+/* short / landscape-phone viewports (812x375 et al): same scroll + real board
+   height as mobile, and the SAME chrome compaction as ≤760px-wide screens —
+   vertical space is the scarce thing here, so the tall header/topbar collapse
+   and the player strip stays one scrollable row. (In-game the immersive
+   .board-focus HUD auto-enables at this height; these rules cover the lobby,
+   deck screens and a manually-exited HUD.) */
 @media (max-height: 540px) {
-  #app { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  #app { padding: 8px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  /* top bar / nav: condense, drop low-value text (mirrors the ≤760px rules) */
+  .topbar { padding: 4px 10px; gap: 6px; flex-wrap: wrap; }
+  .topbar .version-chip, .topbar .server-label { display: none; }
+  .topbar-report { padding: 5px 9px; font-size: 12px; }
+  .app-nav { padding: 0 8px; overflow-x: auto; }
+  .nav-tab { padding: 6px 12px; white-space: nowrap; }
+  .lobby-view { gap: 8px; }
   .lobby-body { flex-direction: column; gap: 8px; }
   .chat-col { width: 100% !important; min-width: 0 !important; }
-  .game-table { height: auto; }
-  .board-wrap, .board3d { min-height: 78vh; }
-  .lobby-header { margin-bottom: 2px; }
-  .lobby-header .h1 { font-size: 20px; }
+  .game-table { height: auto; gap: 8px; }
+  .board-wrap, .board3d { min-height: 60vh; }
+  .lobby-header { margin-bottom: 0; gap: 8px; }
+  .lobby-header .h1 { font-size: 17px; }
+  /* game toolbar + player strip: one non-wrapping scrollable line each */
+  .game-toolbar { flex-wrap: nowrap; overflow-x: auto; gap: 6px; }
+  .player-strip { flex-wrap: nowrap; overflow-x: auto; gap: 6px; }
+  .pstat { flex: 0 0 auto; padding: 2px 8px; }
+  .pstat-counts { white-space: nowrap; }
+  /* pin the control dock to the bottom so Pass/Done never fall below the fold */
+  .control-dock { position: sticky; bottom: 0; z-index: 20; padding: 6px 10px; gap: 6px 8px; }
+  /* the floating "?" keyboard-shortcuts button floats over real content on a
+     short screen (same reasoning as the ≤760px rule; "?" key still works) */
+  .help-fab { display: none; }
 }
 
 /* lite mode (Reduce motion): kill UI animation + give a static themed backdrop

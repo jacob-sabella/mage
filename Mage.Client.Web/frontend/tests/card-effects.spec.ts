@@ -180,7 +180,7 @@ test.describe('Card-effect visual verification (1v1)', () => {
     await expect(page.locator('.stack-item', { hasText: 'Llanowar Elves' })).toHaveCount(1)
   })
 
-  test('combat renders attack + block arrows on the board', async ({ page }) => {
+  test('combat renders attack (blocked → gray) + block arrows on the board', async ({ page }) => {
     await boot(page, {
       myField: [card('atk', 'Serra Angel', ['Creature'], { power: '4', toughness: '4', colors: 'W' })],
       oppField: [card('blk', 'Goblin Guide', ['Creature'], { power: '2', toughness: '2', colors: 'R' })],
@@ -194,7 +194,7 @@ test.describe('Card-effect visual verification (1v1)', () => {
           .map((a) => a.kind)
           .sort(),
       )
-      .toEqual(['attack', 'block'])
+      .toEqual(['attackBlocked', 'block'])
   })
 
   test('a spell on the stack draws an arrow to its target (no prompt needed)', async ({ page }) => {

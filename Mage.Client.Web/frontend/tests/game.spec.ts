@@ -122,15 +122,15 @@ test.describe('Game board (3D)', () => {
     await expect(combat).toContainText(/blocked by/)
 
     // the actual on-board 3D arrows must render too: Serra Angel (b3) attacks the
-    // Computer (attack arrow), blocked by Goblin Guide (a2) (block arrow), and the
-    // paired target prompt draws a targeting arrow — three in all.
+    // Computer but is BLOCKED by Goblin Guide (a2) → a gray attackBlocked arrow +
+    // a block arrow, and the paired target prompt draws a targeting arrow.
     const readArrows = () =>
       page.evaluate(
         () =>
           (window as unknown as { __board3d?: { arrows: () => { kind: string; onScreen: boolean }[] } }).__board3d?.arrows() ??
           [],
       )
-    await expect.poll(async () => (await readArrows()).map((a) => a.kind).sort()).toEqual(['attack', 'block', 'target'])
+    await expect.poll(async () => (await readArrows()).map((a) => a.kind).sort()).toEqual(['attackBlocked', 'block', 'target'])
     // and they must actually land on-screen, not just exist in the scene graph
     expect((await readArrows()).every((a) => a.onScreen)).toBe(true)
   })

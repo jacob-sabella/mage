@@ -19,6 +19,8 @@ interface Props {
   onToggleMaximize?: () => void
   onLeave: () => void
   onPlayAgain?: () => void
+  // spectator affordance: re-watch the table's NEXT game after this one ends
+  onWatchNext?: () => void
 }
 
 // What the contextual card menu is currently showing. `members` is the collapsed
@@ -47,7 +49,7 @@ const SKIP_BUTTONS = [
   { label: 'Cancel skips', key: 'F6', action: 'PASS_PRIORITY_CANCEL_ALL_ACTIONS' },
 ]
 
-export function GameTable({ game, prompt, interactive, result, onRespond, onTapMany, maximized, onToggleMaximize, onLeave, onPlayAgain }: Props) {
+export function GameTable({ game, prompt, interactive, result, onRespond, onTapMany, maximized, onToggleMaximize, onLeave, onPlayAgain, onWatchNext }: Props) {
   const [preview, setPreview] = useState<CardType | null>(null)
   const [pressedCard, setPressedCard] = useState<CardType | null>(null)
   // resolve combat card ids → names (defenders may be a player name, left as-is)
@@ -74,8 +76,11 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
   // mobile immersive mode: a real landscape game HUD — the board fills the
   // screen, the app chrome is hidden, and player info / controls become compact
   // on-board panels instead of a scrolling page. Toggled with the ⛶ button.
+  // Auto-enabled on tiny screens (≤360px) and on SHORT viewports (landscape
+  // phones, ≤540px tall) where the normal page layout can't fit board + dock;
+  // portrait phones above 360px keep the manual toggle.
   const [boardFocus, setBoardFocus] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 360px)').matches,
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 360px), (max-height: 540px)').matches,
   )
   useEffect(() => {
     const root = document.documentElement
@@ -244,7 +249,10 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
 
       <div className="player-strip">
         {game.players.map((p) => {
-          const canTarget = interactive && prompt && (prompt.kind === 'target' || prompt.kind === 'select')
+          // ONLY a real target prompt turns seats into targets — a plain priority
+          // ('select') click must never send a spurious target response to the
+          // server; it focuses the camera on that seat instead.
+          const canTarget = interactive && prompt?.kind === 'target'
           return (
             <button
               key={p.id}
@@ -258,9 +266,7 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
             >
               <span className="pstat-name">{p.name}</span>
               <LifeTotal life={p.life} />
-              <span className="muted pstat-counts">
-                Hand {p.handCount} · Lib {p.libraryCount} · Grave {p.graveyardCount}
-              </span>
+              <PStatCounts hand={p.handCount} lib={p.libraryCount} grave={p.graveyardCount} />
               {p.manaPool && <ManaPool pool={p.manaPool} />}
               {p.name === game.activePlayer && <span className="chip active-chip">Active</span>}
             </button>
@@ -396,7 +402,12 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
                         Play again
                       </button>
                     )}
-                    <button className={`btn${onPlayAgain ? ' ghost' : ' primary'}`} onClick={onLeave}>
+                    {onWatchNext && (
+                      <button className="btn primary" onClick={onWatchNext}>
+                        Watch next game
+                      </button>
+                    )}
+                    <button className={`btn${onPlayAgain || onWatchNext ? ' ghost' : ' primary'}`} onClick={onLeave}>
                       Back to lobby
                     </button>
                   </div>
@@ -477,6 +488,27 @@ function LifeTotal({ life }: { life: number }) {
     <span className={`pstat-life${flash ? ` flash-${flash}` : ''}`}>
       ♥ {life}
       {delta != null && <span className={`life-delta ${delta > 0 ? 'up' : 'down'}`}>{delta > 0 ? `+${delta}` : delta}</span>}
+    </span>
+  )
+}
+
+/** Hand / library / graveyard counts for a seat. On a roomy strip the labels are
+ *  spelled out; when the seat chip gets narrow (4-player boards, phones) it
+ *  switches to a compact `H4 · L28 · G2` form so every strip stays one line tall
+ *  instead of wrapping into 2-3 ragged lines. Full names stay in the tooltip. */
+function PStatCounts({ hand, lib, grave }: { hand: number; lib: number; grave: number }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const [compact, setCompact] = useState(false)
+  useEffect(() => {
+    const seat = ref.current?.closest('.pstat')
+    if (!seat || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(([entry]) => setCompact(entry.contentRect.width < 180))
+    ro.observe(seat)
+    return () => ro.disconnect()
+  }, [])
+  return (
+    <span ref={ref} className="muted pstat-counts" title={`Hand ${hand} · Library ${lib} · Graveyard ${grave}`}>
+      {compact ? `H${hand} · L${lib} · G${grave}` : `Hand ${hand} · Lib ${lib} · Grave ${grave}`}
     </span>
   )
 }
@@ -1006,7 +1038,17 @@ function MultiAmountControl({ prompt, onRespond }: { prompt: Prompt; onRespond: 
   )
 }
 
-const PHASE_SEGMENTS = ['Untap', 'Upkeep', 'Draw', 'Main 1', 'Combat', 'Main 2', 'End']
+// full label + a deliberate two-char code used when the track is too narrow for
+// full names (instead of CSS ellipsis mangling them into 'U..'/'M..' stubs)
+const PHASE_SEGMENTS = [
+  { label: 'Untap', abbr: 'UT' },
+  { label: 'Upkeep', abbr: 'UP' },
+  { label: 'Draw', abbr: 'DR' },
+  { label: 'Main 1', abbr: 'M1' },
+  { label: 'Combat', abbr: 'CB' },
+  { label: 'Main 2', abbr: 'M2' },
+  { label: 'End', abbr: 'END' },
+]
 function phaseIndex(phase?: string | null, step?: string | null): number {
   const s = `${step || ''} ${phase || ''}`.toLowerCase()
   if (/untap/.test(s)) return 0
@@ -1021,18 +1063,30 @@ function phaseIndex(phase?: string | null, step?: string | null): number {
 }
 
 /** A horizontal turn-structure track with the current step lit, so it's obvious
- *  where in the turn we are. */
+ *  where in the turn we are. Below a width threshold the segments switch to
+ *  fixed two-char codes (UT/UP/DR/M1/CB/M2/END) — the full name stays in the
+ *  title tooltip — instead of ellipsizing into unreadable 'U..' stubs. */
 function PhaseTrack({ phase, step }: { phase?: string | null; step?: string | null }) {
   const idx = phaseIndex(phase, step)
+  const trackRef = useRef<HTMLDivElement>(null)
+  const [abbr, setAbbr] = useState(false)
+  useEffect(() => {
+    const el = trackRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    // ~7 full-name segments need ≈340px; below that, two-char codes
+    const ro = new ResizeObserver(([entry]) => setAbbr(entry.contentRect.width < 340))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
   return (
-    <div className="phase-track" aria-label="turn phase">
-      {PHASE_SEGMENTS.map((label, i) => (
+    <div className={`phase-track${abbr ? ' abbr' : ''}`} ref={trackRef} aria-label="turn phase">
+      {PHASE_SEGMENTS.map((seg, i) => (
         <div
-          key={label}
+          key={seg.label}
           className={`phase-seg${i === idx ? ' active' : i < idx ? ' past' : ''}`}
-          title={i === idx && step ? `${label} — ${step}` : label}
+          title={i === idx && step ? `${seg.label} — ${step}` : seg.label}
         >
-          {label}
+          {abbr ? seg.abbr : seg.label}
         </div>
       ))}
       {step && <span className="phase-step muted">{step}</span>}

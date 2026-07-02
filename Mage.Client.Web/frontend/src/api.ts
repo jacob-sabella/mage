@@ -47,6 +47,24 @@ export function watchGame(token: string, gameId: string): Promise<{ ok: boolean 
   })
 }
 
+// Watch a table's CURRENT game rather than a fixed game id (a Bo3/multi-game
+// match makes the lobby's game ids go stale). The gateway resolves the game and
+// pushes it back asynchronously as a `{ type: 'watchGame', gameId }` WS frame.
+export function watchTable(token: string, tableId: string): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>('/api/watch-table', {
+    method: 'POST',
+    body: JSON.stringify({ token, tableId }),
+  })
+}
+
+// Stop spectating a game (drops the gateway's watch subscription server-side).
+export function watchStop(token: string, gameId: string): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>('/api/watch-stop', {
+    method: 'POST',
+    body: JSON.stringify({ token, gameId }),
+  })
+}
+
 export function joinTable(token: string, tableId: string, deckPath: string): Promise<{ ok: boolean }> {
   return request<{ ok: boolean }>('/api/join', {
     method: 'POST',

@@ -18,6 +18,9 @@ type C = {
   colors?: string
   tapped?: boolean
   damage?: number
+  // stack spells/abilities: ids this item targets + the battlefield source id
+  targets?: string[]
+  sourceId?: string
 }
 export const card = (
   id: string,
@@ -138,11 +141,12 @@ buffed.power = '6'
 buffed.toughness = '6'
 
 // declared combat: the viewer's Serra Angel (b3) attacks the Computer, blocked
-// by its Goblin Guide (a2) — exercises attack + block arrows. Paired with a
-// target prompt selecting a2 to also exercise the targeting arrow.
+// by its Goblin Guide (a2) — exercises attackBlocked + block arrows. Paired with
+// a target prompt selecting a2 to also exercise the targeting arrow.
+// defenderId = the defending player's UUID (matches the gateway's CombatDto).
 const GAME_ARROWS = JSON.parse(JSON.stringify(SAMPLE.game)) as typeof SAMPLE.game
 GAME_ARROWS.step = 'Declare Blockers'
-GAME_ARROWS.combat = [{ attackers: ['b3'], blockers: ['a2'], defender: 'Computer', blocked: true }] as unknown[]
+GAME_ARROWS.combat = [{ attackers: ['b3'], blockers: ['a2'], defender: 'Computer', defenderId: 'ai', blocked: true }] as unknown[]
 
 // the viewer controls a stack of 5 same-named Forests — 3 untapped (fl1..fl3),
 // 2 tapped (fl4, fl5) — collapsed into one slot. Exercises the card menu's
@@ -236,7 +240,13 @@ function denseGame(seats: Array<[string, string, number, string, string]>) {
   g.combat = me.battlefield
     .filter((c) => c.types?.includes('Creature'))
     .slice(0, 6)
-    .map((c, i) => ({ attackers: [c.id], blockers: [], defender: others[i % others.length].name, blocked: false })) as unknown[]
+    .map((c, i) => ({
+      attackers: [c.id],
+      blockers: [],
+      defender: others[i % others.length].name,
+      defenderId: others[i % others.length].id,
+      blocked: false,
+    })) as unknown[]
   return g
 }
 // viewer + 2 opponents, and viewer + 3 opponents, all with maxed boards
@@ -252,10 +262,13 @@ const GAME_4P_MAX = denseGame([
   ['p4', 'Vraska', 8, 'B', 'Swamp'],
 ])
 
+// two spells on the stack: Bolt targeting a battlefield creature, Counterspell
+// targeting the Bolt — exercises per-spell fan-slot arrow origins AND the
+// stack-targeting-stack (card → card) arrow.
 const GAME_STACK = JSON.parse(JSON.stringify(SAMPLE.game)) as typeof SAMPLE.game
 GAME_STACK.stack = [
-  card('st1', 'Lightning Bolt', ['Instant'], { manaCost: '{R}', colors: 'R' }),
-  card('st2', 'Counterspell', ['Instant'], { manaCost: '{U}{U}', colors: 'U' }),
+  card('st1', 'Lightning Bolt', ['Instant'], { manaCost: '{R}', colors: 'R', targets: ['a2'] }),
+  card('st2', 'Counterspell', ['Instant'], { manaCost: '{U}{U}', colors: 'U', targets: ['st1'] }),
 ] as typeof SAMPLE.game.stack
 
 // a 1x1 jpeg so the 3D board's card textures resolve deterministically

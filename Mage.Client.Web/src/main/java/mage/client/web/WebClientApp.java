@@ -137,6 +137,8 @@ public class WebClientApp {
         app.get("/api/matches", this::handleMatches);
         app.post("/api/chat", this::handleChat);
         app.post("/api/watch", this::handleWatch);
+        app.post("/api/watch-table", this::handleWatchTable);
+        app.post("/api/watch-stop", this::handleWatchStop);
         app.post("/api/join", this::handleJoin);
         app.get("/api/gametypes", this::handleGameTypes);
         app.post("/api/tables/create", this::handleCreateTable);
@@ -314,6 +316,55 @@ public class WebClientApp {
             return;
         }
         // The board itself arrives asynchronously via GAME_INIT/GAME_UPDATE on the WS.
+        ctx.json(Map.of("ok", ok));
+    }
+
+    /**
+     * Watch a table rather than a fixed game id. The server resolves the table's
+     * CURRENT game and answers with a WATCHGAME callback (handled in
+     * {@link #pushCallback}), so this keeps working across the games of a
+     * multi-game match where the lobby's game id goes stale.
+     */
+    private void handleWatchTable(Context ctx) {
+        JoinRequest req = ctx.bodyAsClass(JoinRequest.class);
+        ServerConnection conn = sessions.get(req == null ? null : req.token);
+        if (conn == null) {
+            ctx.status(401).json(error("not connected"));
+            return;
+        }
+        if (req.tableId == null) {
+            ctx.status(400).json(error("tableId is required"));
+            return;
+        }
+        boolean ok;
+        try {
+            ok = conn.watchTable(UUID.fromString(req.tableId));
+        } catch (IllegalArgumentException e) {
+            ctx.status(400).json(error("invalid tableId"));
+            return;
+        }
+        // The resolved game id arrives asynchronously as a "watchGame" WS frame.
+        ctx.json(Map.of("ok", ok));
+    }
+
+    private void handleWatchStop(Context ctx) {
+        WatchRequest req = ctx.bodyAsClass(WatchRequest.class);
+        ServerConnection conn = sessions.get(req == null ? null : req.token);
+        if (conn == null) {
+            ctx.status(401).json(error("not connected"));
+            return;
+        }
+        if (req.gameId == null) {
+            ctx.status(400).json(error("gameId is required"));
+            return;
+        }
+        boolean ok;
+        try {
+            ok = conn.stopWatching(UUID.fromString(req.gameId));
+        } catch (IllegalArgumentException e) {
+            ctx.status(400).json(error("invalid gameId"));
+            return;
+        }
         ctx.json(Map.of("ok", ok));
     }
 
@@ -953,6 +1004,20 @@ public class WebClientApp {
                 t.start();
                 Map<String, Object> msg = new LinkedHashMap<>();
                 msg.put("type", "gameStart");
+                msg.put("gameId", gameId.toString());
+                pushMap(ctx, msg);
+            }
+            return;
+        }
+        // answer to a watch-table request: the server resolved the table's current
+        // game — subscribe to its callbacks and tell the UI which game to adopt
+        if (method == ClientCallbackMethod.WATCHGAME) {
+            UUID gameId = cb.getObjectId();
+            if (gameId != null) {
+                // watchGame is a remote call - keep it off the callback thread
+                runAsync("fx-watchgame", () -> conn.watchGame(gameId));
+                Map<String, Object> msg = new LinkedHashMap<>();
+                msg.put("type", "watchGame");
                 msg.put("gameId", gameId.toString());
                 pushMap(ctx, msg);
             }

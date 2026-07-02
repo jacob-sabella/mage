@@ -133,6 +133,9 @@ export interface CombatGroup {
   attackers: string[]
   blockers: string[]
   defender?: string | null
+  // UUID of the defender: a player id, or the permanent id of a defending
+  // planeswalker/battle — resolvable against the battlefield position map.
+  defenderId?: string | null
   blocked: boolean
 }
 

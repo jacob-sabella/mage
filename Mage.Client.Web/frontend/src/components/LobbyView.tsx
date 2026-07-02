@@ -9,7 +9,8 @@ import {
   joinTable,
   respond,
   sendChat,
-  watchGame,
+  watchStop,
+  watchTable,
 } from '../api'
 import type { MatchDto, RespondKind, TableConfig } from '../api'
 import { useServerEvents } from '../useServerEvents'
@@ -65,6 +66,9 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   const [openTableDeck, setOpenTableDeck] = useState<string | null>(null)
   const [setupOpen, setSetupOpen] = useState(false) // the New-game configuration modal
   const [gameOver, setGameOver] = useState<string | null>(null)
+  // the table we're spectating (set by Watch) so "Watch next game" can re-watch
+  // the same table when a Bo3/multi-game match moves on to its next game
+  const [spectateTableId, setSpectateTableId] = useState<string | null>(null)
   // start with chat collapsed on small/short screens to free space for the board
   const [chatOpen, setChatOpen] = useState(
     () => !(typeof window !== 'undefined' && window.matchMedia('(max-width: 760px), (max-height: 540px)').matches),
@@ -84,6 +88,12 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
     document.documentElement.classList.toggle('board-max', maximized)
     return () => document.documentElement.classList.remove('board-max')
   }, [maximized])
+  // in-game the nav tabs and view heading are dead weight — reclaim their rows
+  // for the board (Back lives in the game toolbar)
+  useEffect(() => {
+    document.documentElement.classList.toggle('game-on', !!activeGameId)
+    return () => document.documentElement.classList.remove('game-on')
+  }, [activeGameId])
   // Esc exits maximized
   useEffect(() => {
     if (!maximized) return
@@ -144,8 +154,20 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
       setGameOver(null)
       setGame(null)
       setPrompt(null)
+      setSpectateTableId(null) // we're a player now, not a spectator
       pushToast('Game started')
       playCue('start')
+    } else if (e.type === 'watchGame' && e.gameId) {
+      // answer to a watch-table request: the gateway resolved the table's CURRENT
+      // game — adopt it as the board we're spectating (mirrors gameStart, but
+      // non-interactive). Also fires when "Watch next game" re-watches a table.
+      activeRef.current = e.gameId
+      lastActiveRef.current = null
+      setActiveGameId(e.gameId)
+      setInteractive(false)
+      setGame(null)
+      setPrompt(null)
+      setGameOver(null)
     } else if (e.type === 'game') {
       // adopt the game if we're expecting one but missed the gameStart frame
       if (!activeRef.current && e.gameId && pendingPlay) {
@@ -222,19 +244,69 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
     setDraftState(null)
   }, [])
 
+  // tear down all in-game state and return to the lobby list (shared by leaving
+  // a game, a failed watch, and post-rematch cleanup)
+  const resetGameView = useCallback(() => {
+    activeRef.current = null
+    setActiveGameId(null)
+    setInteractive(false)
+    setGame(null)
+    setPrompt(null)
+    setGameLog([])
+    lastTurnRef.current = null
+    setPendingPlay(false)
+    setPlayStatus(null)
+    setGameOver(null)
+    setSpectateTableId(null)
+  }, [])
+
+  // Spectate a table: ask the gateway to watch its CURRENT game. The resolved
+  // game id arrives asynchronously as a `watchGame` frame (handled above); until
+  // then we optimistically open the board on the last game id we know of.
   const handleWatch = useCallback(
-    (gameId: string) => {
-      activeRef.current = gameId
-      setActiveGameId(gameId)
+    (t: TableDto) => {
+      const fallback = t.games.length > 0 ? t.games[t.games.length - 1] : null
+      setSpectateTableId(t.id)
+      activeRef.current = fallback
+      setActiveGameId(fallback)
       setInteractive(false)
       setGame(null)
       setPrompt(null)
-      watchGame(session.token, gameId).catch(() => {
-        /* the board simply won't arrive; user can go back */
-      })
+      setGameOver(null)
+      watchTable(session.token, t.id)
+        .then((r) => {
+          if (!r.ok) throw new Error('the server refused')
+        })
+        .catch((err) => {
+          pushToast(`Could not watch: ${err instanceof Error ? err.message : 'error'}`, 'error')
+          resetGameView()
+        })
     },
-    [session.token],
+    [session.token, resetGameView],
   )
+
+  // Spectator's "Watch next game": re-watch the same table so the gateway picks
+  // up the match's next game (the finished game's id is stale by then).
+  const handleWatchNext = useCallback(() => {
+    if (!spectateTableId) return
+    if (activeRef.current) {
+      watchStop(session.token, activeRef.current).catch(() => {})
+      activeRef.current = null // discard frames for the finished game
+    }
+    setGame(null)
+    setPrompt(null)
+    setGameOver(null)
+    setGameLog([])
+    lastTurnRef.current = null
+    watchTable(session.token, spectateTableId)
+      .then((r) => {
+        if (!r.ok) throw new Error('the server refused')
+      })
+      .catch((err) => {
+        pushToast(`Could not watch the next game: ${err instanceof Error ? err.message : 'error'}`, 'error')
+        resetGameView()
+      })
+  }, [spectateTableId, session.token, resetGameView])
 
   // deck picker drives Join, New-game-vs-AI and New-game-vs-Player; remember which
   const [deckIntent, setDeckIntent] = useState<{ mode: 'join' | 'create'; tableId?: string; vsHuman?: boolean } | null>(null)
@@ -332,29 +404,17 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   }, [prompt, handleRespond])
 
   const handleLeaveGame = useCallback(() => {
-    activeRef.current = null
-    setActiveGameId(null)
-    setInteractive(false)
-    setGame(null)
-    setPrompt(null)
-    setGameLog([])
-    lastTurnRef.current = null
-    setPendingPlay(false)
-    setPlayStatus(null)
-    setGameOver(null)
-  }, [])
+    // spectators tell the gateway to drop the watch subscription server-side
+    if (!interactive && activeRef.current) {
+      watchStop(session.token, activeRef.current).catch(() => {})
+    }
+    resetGameView()
+  }, [interactive, session.token, resetGameView])
 
   // rematch: tear down the finished game and start a fresh one with the same deck + AI count
   const handlePlayAgain = useCallback(() => {
     if (!lastCreate) return
-    activeRef.current = null
-    setActiveGameId(null)
-    setInteractive(false)
-    setGame(null)
-    setPrompt(null)
-    setGameLog([])
-    lastTurnRef.current = null
-    setGameOver(null)
+    resetGameView()
     setPendingPlay(true)
     setPlayStatus('Starting rematch…')
     createGameVsAi(session.token, lastCreate.path, lastCreate.opponents)
@@ -362,7 +422,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
         if (!r.ok) setPlayStatus('Could not start the rematch (deck still valid?)')
       })
       .catch((err) => setPlayStatus(`Could not start: ${err instanceof Error ? err.message : 'error'}`))
-  }, [lastCreate, session.token])
+  }, [lastCreate, session.token, resetGameView])
 
   const handleSendChat = useCallback(
     (message: string) => {
@@ -462,7 +522,8 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
               maximized={maximized}
               onToggleMaximize={toggleMaximized}
               onLeave={handleLeaveGame}
-              onPlayAgain={lastCreate ? handlePlayAgain : undefined}
+              onPlayAgain={interactive && lastCreate ? handlePlayAgain : undefined}
+              onWatchNext={!interactive && spectateTableId ? handleWatchNext : undefined}
             />
           ) : openTableId ? (
             <WaitingRoom
@@ -524,7 +585,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
                       <td>{t.state}</td>
                       <td className="row-actions">
                         {t.games.length > 0 && (
-                          <button className="btn watch-btn" onClick={() => handleWatch(t.games[0])}>
+                          <button className="btn watch-btn" onClick={() => handleWatch(t)}>
                             Watch
                           </button>
                         )}

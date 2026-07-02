@@ -121,7 +121,7 @@ export interface Prefs {
   seatSpread: number // distance between playmats (seat radius)
 }
 
-const DEFAULTS: Prefs = { cardImages: true, avatarId: 0, flagName: '', theme: 'synthwave', manaIcons: true, panelOpacity: 0.72, reduceMotion: false, sound: false, handSize: 'medium', defaultCamera: 'auto', boardZoom: 0.75, cardGap: 1, matW: 1, matH: 1, seatSpread: 1 }
+const DEFAULTS: Prefs = { cardImages: true, avatarId: 0, flagName: '', theme: 'synthwave', manaIcons: true, panelOpacity: 0.72, reduceMotion: false, sound: false, handSize: 'medium', defaultCamera: 'auto', boardZoom: 1.0, cardGap: 1, matW: 1, matH: 1, seatSpread: 1 }
 const KEY = 'mage.prefs'
 
 function load(): Prefs {

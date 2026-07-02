@@ -186,11 +186,31 @@ public class ServerConnection {
      * callbacks (carrying a GameView) for this game id.
      */
     public boolean watchGame(UUID gameId) {
-        return gameId != null && session.watchGame(gameId);
+        if (gameId == null) {
+            return false;
+        }
+        if (session.watchGame(gameId)) {
+            return true;
+        }
+        // the server rejects a second watch of the same game (stale watcher from
+        // a reload); drop the old registration and retry once
+        session.stopWatching(gameId);
+        return session.watchGame(gameId);
     }
 
     public boolean stopWatching(UUID gameId) {
         return gameId != null && session.stopWatching(gameId);
+    }
+
+    /**
+     * Ask the server to watch a TABLE: it resolves the table's current game and
+     * answers with a WATCHGAME callback carrying that game's id. Unlike watching
+     * a fixed game id, this survives multi-game matches (Bo3, 2v2) where the
+     * lobby's game id goes stale once game 1 ends.
+     */
+    public boolean watchTable(UUID tableId) {
+        UUID roomId = session.getMainRoomId();
+        return roomId != null && tableId != null && session.watchTable(roomId, tableId);
     }
 
     /**

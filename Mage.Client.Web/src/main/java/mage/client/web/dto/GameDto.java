@@ -76,6 +76,7 @@ public class GameDto {
         public List<String> attackers = new ArrayList<>();
         public List<String> blockers = new ArrayList<>();
         public String defender;
+        public String defenderId;
         public boolean blocked;
 
         static CombatDto from(mage.view.CombatGroupView cg) {
@@ -93,6 +94,9 @@ public class GameDto {
                 }
             }
             dto.defender = cg.getDefenderName();
+            // the id as well: planeswalker/battle defenders are battlefield cards,
+            // which the web board resolves by id (names aren't unique)
+            dto.defenderId = cg.getDefenderId() == null ? null : cg.getDefenderId().toString();
             dto.blocked = cg.isBlocked();
             return dto;
         }
