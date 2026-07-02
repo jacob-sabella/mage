@@ -115,7 +115,7 @@ export const SAMPLE = {
     ],
     stack: [],
     canPlay: ['h1', 'h3', 'b3', 'cmd1'],
-    myHand: [card('h1', 'Lightning Bolt', ['Instant'], { colors: 'R', manaCost: '{R}' }), card('h2', 'Mountain', ['Land'], { colors: 'R' }), card('h3', 'Mulldrifter', ['Creature'], { power: '2', toughness: '2', colors: 'U', manaCost: '{4}{U}' }), card('h4', 'Counterspell', ['Instant'], { colors: 'U', manaCost: '{U}{U}' })],
+    myHand: [card('h1', 'Lightning Bolt', ['Instant'], { colors: 'R', manaCost: '{R}', rules: ['Lightning Bolt deals 3 damage to any target.'] }), card('h2', 'Mountain', ['Land'], { colors: 'R' }), card('h3', 'Mulldrifter', ['Creature'], { power: '2', toughness: '2', colors: 'U', manaCost: '{4}{U}' }), card('h4', 'Counterspell', ['Instant'], { colors: 'U', manaCost: '{U}{U}' })],
     combat: [] as unknown[],
     special: [] as { id: string; name: string }[],
     revealed: [] as { name: string; cards: C[] }[],

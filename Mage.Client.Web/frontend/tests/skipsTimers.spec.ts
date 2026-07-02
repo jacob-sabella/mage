@@ -41,3 +41,15 @@ test('match clock renders m:ss per player and ticks while running', async ({ pag
   const before = await running.textContent()
   await expect.poll(async () => running.textContent(), { timeout: 4000 }).not.toBe(before)
 })
+
+test('clicking your own mana pip sends a mana payment respond', async ({ page }) => {
+  await gotoScreen(page, 'game') // harness: You holds a select prompt + {U}{U}{R} pool
+  const sent: string[] = []
+  await page.route('**/api/game/respond', (route) => {
+    const b = JSON.parse(route.request().postData() || '{}')
+    if (b.kind === 'mana') sent.push(b.value)
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
+  })
+  await page.locator('button.mana-pip-pay').first().click()
+  await expect.poll(() => sent).toContain('BLUE:me')
+})

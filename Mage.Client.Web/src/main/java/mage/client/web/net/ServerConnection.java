@@ -2,6 +2,7 @@ package mage.client.web.net;
 
 import mage.cards.decks.DeckCardLists;
 import mage.cards.decks.importer.DeckImporter;
+import mage.constants.ManaType;
 import mage.constants.MultiplayerAttackOption;
 import mage.constants.PlayerAction;
 import mage.constants.RangeOfInfluence;
@@ -623,6 +624,13 @@ public class ServerConnection {
 
     public boolean sendAction(UUID gameId, PlayerAction action) {
         return gameId != null && action != null && session.sendPlayerAction(action, gameId, null);
+    }
+
+    /** Offer a specific mana from the player's pool for the current payment
+     *  (the legacy client's click-a-pool-pip behavior). */
+    public boolean sendManaType(UUID gameId, UUID playerId, ManaType manaType) {
+        return gameId != null && playerId != null && manaType != null
+                && session.sendPlayerManaType(gameId, playerId, manaType);
     }
 
     public boolean concede(UUID gameId) {

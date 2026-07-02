@@ -112,6 +112,8 @@ export interface GameCard {
   // of an ability. Drives the board's source→target arrows.
   targets?: string[]
   sourceId?: string | null
+  // soulbond partner permanent id — draws the green pair arrow
+  pairedCard?: string | null
   // counters on this permanent (+1/+1, loyalty, charge, …); [] when absent
   counters?: CounterDto[]
   // ids of permanents attached TO this permanent, and the id this one is

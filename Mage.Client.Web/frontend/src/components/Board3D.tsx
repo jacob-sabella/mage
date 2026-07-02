@@ -1198,7 +1198,9 @@ function ActiveSeatGlow({ seat }: { seat: Seat }) {
 }
 
 // attackBlocked = legacy-client gray: a blocked attacker no longer threatens the defender
-const ARROW_COLOR: Record<string, string> = { attack: '#ff3b3b', attackBlocked: '#9aa0a6', block: '#ffb13b', target: '#3bd6ff' }
+// palette ↔ legacy semantics: attack red, blocked-attack gray, block orange
+// (legacy blue), target cyan (legacy red), paired green (matches legacy PAIRED)
+const ARROW_COLOR: Record<string, string> = { attack: '#ff3b3b', attackBlocked: '#9aa0a6', block: '#ffb13b', target: '#3bd6ff', paired: '#39d98a' }
 
 /** A single arced 3D arrow (tube shaft + cone head + glow) from `from` to `to`.
  *  The control point bows the arc UP *and* SIDEWAYS — a purely vertical arc on a
@@ -1287,6 +1289,17 @@ function BoardArrows({
             if (bp) out.push({ from: bp, to: ap, kind: 'block' })
           }
         }
+      }
+    }
+    // soulbond pairs: one subtle arrow per pair (legacy draws these green).
+    // Dedupe by drawing only from the lexically-smaller id so a pair doesn't
+    // produce two overlapping arrows.
+    for (const s of seats) {
+      for (const c of s.player.battlefield) {
+        if (!c.pairedCard || c.id >= c.pairedCard) continue
+        const a = pos.get(c.id)
+        const b = pos.get(c.pairedCard)
+        if (a && b) out.push({ from: a, to: b, kind: 'paired' })
       }
     }
     // fallback origin for a spell not yet on the stack (active-target prompt)

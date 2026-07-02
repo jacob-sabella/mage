@@ -72,7 +72,8 @@ export function joinTable(token: string, tableId: string, deckPath: string): Pro
   })
 }
 
-export type RespondKind = 'boolean' | 'uuid' | 'integer' | 'string' | 'action' | 'concede'
+// 'mana' pays/unlocks from the mana pool; its value is "MANATYPE:playerId"
+export type RespondKind = 'boolean' | 'uuid' | 'integer' | 'string' | 'action' | 'concede' | 'mana'
 
 export function respond(
   token: string,

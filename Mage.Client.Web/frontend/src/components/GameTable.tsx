@@ -355,7 +355,16 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
                 // zone counts must not swallow the targeting click
                 onOpenZone={canTarget ? undefined : (zone) => setZoneBrowser({ playerName: p.name, zone })}
               />
-              {p.manaPool && <ManaPool pool={p.manaPool} />}
+              {p.manaPool && (
+                <ManaPool
+                  pool={p.manaPool}
+                  onPay={
+                    interactive && prompt && p.name === game.me && !canTarget
+                      ? (t) => onRespond('mana', `${t}:${p.id}`)
+                      : undefined
+                  }
+                />
+              )}
               {p.name === game.activePlayer && <span className="chip active-chip">Active</span>}
             </button>
           )
@@ -773,16 +782,36 @@ function PlayerCounters({ counters, designations }: { counters?: CounterDto[]; d
   )
 }
 
-function ManaPool({ pool }: { pool: string }) {
+const MANA_TYPE: Record<string, string> = { W: 'WHITE', U: 'BLUE', B: 'BLACK', R: 'RED', G: 'GREEN', C: 'COLORLESS' }
+
+/** Floating mana pips. When `onPay` is set (your own pool while a prompt is
+ *  up) each pip is a button — clicking it offers that mana for the current
+ *  payment, like clicking the pool in the legacy client. */
+function ManaPool({ pool, onPay }: { pool: string; onPay?: (manaType: string) => void }) {
   const syms = pool.match(/\{(\w)\}/g)?.map((s) => s[1]) ?? []
   if (syms.length === 0) return null
   return (
-    <span className="mana-pool" title="Mana pool">
-      {syms.map((c, i) => (
-        <span key={i} className="mana-pip" style={{ background: MANA_COLOR[c] ?? '#9aa0ad' }}>
-          {c}
-        </span>
-      ))}
+    <span className="mana-pool" title={onPay ? 'Mana pool — click to pay' : 'Mana pool'}>
+      {syms.map((c, i) =>
+        onPay && MANA_TYPE[c] ? (
+          <button
+            key={i}
+            className="mana-pip mana-pip-pay"
+            style={{ background: MANA_COLOR[c] ?? '#9aa0ad' }}
+            aria-label={`Pay ${MANA_TYPE[c].toLowerCase()} mana`}
+            onClick={(e) => {
+              e.stopPropagation() // the seat chip behind is itself a button
+              onPay(MANA_TYPE[c])
+            }}
+          >
+            {c}
+          </button>
+        ) : (
+          <span key={i} className="mana-pip" style={{ background: MANA_COLOR[c] ?? '#9aa0ad' }}>
+            {c}
+          </span>
+        ),
+      )}
     </span>
   )
 }
@@ -965,6 +994,13 @@ function CardPreview({ card }: { card: CardType | null }) {
         </div>
         <div className="card-preview-type muted">{(card.types ?? []).join(' ')}</div>
         {(pt || loy) && <div className="card-preview-pt">{pt ?? loy}</div>}
+        {(card.rules?.length ?? 0) > 0 && (
+          <div className="card-preview-rules">
+            {card.rules!.map((r, i) => (
+              <p key={i}>{plain(r)}</p>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

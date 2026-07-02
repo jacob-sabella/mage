@@ -437,6 +437,18 @@ public class WebClientApp {
                     return;
                 }
                 break;
+            case "mana":
+                // value is "MANATYPE:playerId" — pay/unlock that mana for the
+                // current payment, like clicking a pool pip in the legacy client
+                try {
+                    String[] parts = req.value.split(":", 2);
+                    ok = conn.sendManaType(gameId, UUID.fromString(parts[1]),
+                            mage.constants.ManaType.valueOf(parts[0]));
+                } catch (Exception e) {
+                    ctx.status(400).json(error("invalid mana value"));
+                    return;
+                }
+                break;
             case "concede":
                 ok = conn.concede(gameId);
                 break;
@@ -1378,7 +1390,7 @@ public class WebClientApp {
     public static class RespondRequest {
         public String token;
         public String gameId;
-        public String kind;  // boolean | uuid | integer | string | action | concede
+        public String kind;  // boolean | uuid | integer | string | action | concede | mana
         public String value;
     }
 

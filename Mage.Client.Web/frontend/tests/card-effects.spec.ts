@@ -197,6 +197,22 @@ test.describe('Card-effect visual verification (1v1)', () => {
       .toEqual(['attackBlocked', 'block'])
   })
 
+  test('soulbond-paired creatures draw a green pair arrow (one per pair)', async ({ page }) => {
+    await boot(page, {
+      myField: [
+        card('sb1', 'Trusted Forcemage', ['Creature'], { power: '2', toughness: '2', colors: 'G', pairedCard: 'sb2' }),
+        card('sb2', 'Wolfir Avenger', ['Creature'], { power: '3', toughness: '3', colors: 'G', pairedCard: 'sb1' }),
+      ],
+    })
+    await expect
+      .poll(async () =>
+        (
+          (await page.evaluate(() => (window as unknown as { __board3d: { arrows(): { kind: string }[] } }).__board3d.arrows())) ?? []
+        ).map((a) => a.kind),
+      )
+      .toEqual(['paired'])
+  })
+
   test('a spell on the stack draws an arrow to its target (no prompt needed)', async ({ page }) => {
     await boot(page, {
       oppField: [card('victim', 'Goblin Guide', ['Creature'], { power: '2', toughness: '2', colors: 'R' })],

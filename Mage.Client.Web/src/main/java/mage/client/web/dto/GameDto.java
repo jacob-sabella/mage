@@ -323,8 +323,8 @@ public class GameDto {
         public boolean isCopy;
         // for command zone objects: "commander" | "emblem" | "plane" | "dungeon" (null otherwise)
         public String commandType;
-        // rules text; only filled for command objects without a printed card
-        // face (emblems/planes/dungeons), null otherwise
+        // rules/oracle text lines — the hover preview shows these under the
+        // card image (and emblems/planes render entirely from them)
         public List<String> rules;
         // Set only for stack abilities: identifies the source card so the UI can
         // show the right name and look up the card image.
@@ -336,6 +336,8 @@ public class GameDto {
         // so the arrow can start from the actual permanent.
         public List<String> targets = new ArrayList<>();
         public String sourceId;
+        // soulbond partner (a battlefield permanent id) — drives the pair arrow
+        public String pairedCard;
 
         static CardDto from(CardView card) {
             CardDto dto = new CardDto();
@@ -356,6 +358,10 @@ public class GameDto {
             dto.faceDown = card.isFaceDown();
             dto.isToken = card.isToken();
             dto.isCopy = card.isOriginalACopy();
+            dto.pairedCard = card.getPairedCard() == null ? null : card.getPairedCard().toString();
+            if (card.getRules() != null && !card.getRules().isEmpty()) {
+                dto.rules = new ArrayList<>(card.getRules());
+            }
             if (card.getCounters() != null) {
                 for (CounterView counter : card.getCounters()) {
                     dto.counters.add(new CounterDto(counter.getName(), counter.getCount()));

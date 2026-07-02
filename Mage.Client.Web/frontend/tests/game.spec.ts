@@ -219,6 +219,12 @@ test.describe('Game board (3D)', () => {
     await expect(page.locator('.card-preview')).toHaveCount(0)
   })
 
+  test('the preview shows oracle text when the server ships it', async ({ page }) => {
+    await gotoScreen(page, 'game')
+    await page.locator('.play-chip', { hasText: 'Lightning Bolt' }).hover()
+    await expect(page.locator('.card-preview-rules')).toContainText('deals 3 damage to any target')
+  })
+
   test('snap-view buttons switch the active view', async ({ page }) => {
     await gotoScreen(page, 'game')
     await page.locator('.view-fab').click()
