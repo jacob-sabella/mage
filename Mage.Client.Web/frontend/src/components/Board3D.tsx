@@ -375,6 +375,7 @@ function Card3D({
   onHoverCard,
   onOpenMenu,
   occludeBadges,
+  worldScale,
 }: {
   card: GameCard
   position: [number, number, number]
@@ -392,6 +393,8 @@ function Card3D({
   // only raycast-occlude the DOM badges when there's a central stack to hide them
   // behind — avoids per-frame badge flicker the rest of the time
   occludeBadges?: boolean
+  // battlefield card-size pref: scales the whole card group about its position
+  worldScale?: number
 }) {
   const [art, setArt] = useState<THREE.Texture | null>(null)
   const [hover, setHover] = useState(false)
@@ -477,7 +480,7 @@ function Card3D({
   const hitY = standing ? CARD_H / 2 : 0.02
 
   return (
-    <group position={position}>
+    <group position={position} scale={worldScale ?? 1}>
       {/* Invisible stable hit area: stays at the original y regardless of hover state.
           Pointer events are handled here; the visual content is a separate group. */}
       <mesh
@@ -949,12 +952,12 @@ function PlayerZone({
     <group position={[seat.x, TABLE_LIFT, seat.z]} rotation={[0, seat.yaw, 0]}>
       <SeatMat color={matColor} active={active} pileX={pileX} maxW={matMaxW} />
       {placed.map(({ card, pos, stackCount, members, gap }) => (
-        <Card3D key={card.id} card={card} position={pos} stackCount={stackCount} members={members} rowGap={gap} cardProps={cardProps} onHoverCard={onHoverCard} onOpenMenu={onOpenMenu} occludeBadges={occludeBadges} />
+        <Card3D key={card.id} card={card} position={pos} stackCount={stackCount} members={members} rowGap={gap} cardProps={cardProps} onHoverCard={onHoverCard} onOpenMenu={onOpenMenu} occludeBadges={occludeBadges} worldScale={cardScale} />
       ))}
       {/* attached permanents (auras/equipment) tucked under their hosts —
           same positions BoardArrows anchors to */}
       {layout.attachments.map(({ card, pos, gap }) => (
-        <Card3D key={card.id} card={card} position={pos} rowGap={gap} cardProps={cardProps} onHoverCard={onHoverCard} onOpenMenu={onOpenMenu} occludeBadges={occludeBadges} />
+        <Card3D key={card.id} card={card} position={pos} rowGap={gap} cardProps={cardProps} onHoverCard={onHoverCard} onOpenMenu={onOpenMenu} occludeBadges={occludeBadges} worldScale={cardScale} />
       ))}
       {/* overflow badges: show +N when a row is clipped */}
       {!expanded &&
@@ -1494,6 +1497,53 @@ function BoardDebug({ zoom, mode, look }: { zoom: number; mode: ViewMode; look: 
   return null
 }
 
+/** Live board-layout sliders floating over the board, so the effect of each
+ *  slider is visible while dragging (the Settings page mirrors these prefs). */
+function BoardTuner() {
+  const [open, setOpen] = useState(false)
+  const { prefs, setPref } = usePrefs()
+  const SLIDERS: [keyof typeof prefs & ('cardScale' | 'cardGap' | 'rowGap' | 'matW' | 'matH' | 'seatSpread'), string, number, number][] = [
+    ['cardScale', 'Card size', 0.7, 1.4],
+    ['cardGap', 'Card spacing ↔', 0.5, 2],
+    ['rowGap', 'Row spacing ↕', 0.7, 1.6],
+    ['matW', 'Mat width', 0.5, 2],
+    ['matH', 'Mat depth', 0.5, 2],
+    ['seatSpread', 'Table spread', 0.5, 2],
+  ]
+  return (
+    <div className={`board-tuner${open ? ' open' : ''}`}>
+      <button className="btn tuner-fab" onClick={() => setOpen((o) => !o)} title="Board layout" aria-label="Board layout settings">
+        ⚙
+      </button>
+      {open && (
+        <div className="tuner-panel" role="group" aria-label="Board layout settings">
+          {SLIDERS.map(([key, label, min, max]) => (
+            <label className="tuner-row" key={key}>
+              <span className="tuner-label">
+                {label} <em>{Math.round((prefs[key] || 1) * 100)}%</em>
+              </span>
+              <input
+                type="range"
+                min={min}
+                max={max}
+                step={0.05}
+                value={prefs[key] || 1}
+                onChange={(e) => setPref(key, Number(e.target.value))}
+              />
+            </label>
+          ))}
+          <button
+            className="btn tuner-reset"
+            onClick={() => SLIDERS.forEach(([key]) => setPref(key, 1))}
+          >
+            Reset layout
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 /** Compact +/− zoom strip shown in 3D and 2D modes. */
 function ZoomBar({ zoom, onZoom }: { zoom: number; onZoom: (z: number) => void }) {
   return (
@@ -1764,6 +1814,7 @@ export function Board3D({
     <div className="board3d">
       <ViewMenu mode={mode} setMode={setModeUser} views={views} view={view} setView={setView} />
       {mode !== 'free' && <ZoomBar zoom={zoom} onZoom={setZoom} />}
+      <BoardTuner />
       <Canvas
         shadows
         camera={{ position: isMobile ? [0, 16, 0.01] : [0, 5.4, 10], fov: 46 }}

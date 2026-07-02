@@ -137,7 +137,9 @@ function SettingsView() {
         </label>
         {(
           [
+            ['cardScale', 'Card size', 'How big battlefield cards render'],
             ['cardGap', 'Card spacing', 'How far apart cards sit in a row'],
+            ['rowGap', 'Row spacing', 'Vertical distance between battlefield rows'],
             ['matW', 'Playmat width', 'Horizontal size of each playmat'],
             ['matH', 'Playmat depth', 'Vertical size of each playmat'],
             ['seatSpread', 'Playmat distance', 'How far apart the playmats sit'],

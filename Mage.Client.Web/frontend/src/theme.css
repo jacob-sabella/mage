@@ -1107,6 +1107,27 @@ input::placeholder { color: var(--text-dim); }
 .view-btn.view-radial:hover { background: rgba(255, 255, 255, 0.1); border-color: color-mix(in srgb, var(--accent) 45%, var(--stroke)); }
 .view-radial.active { background: var(--accent); color: #0d1119; border-color: transparent; }
 /* hide the zoom bar while the menu is open so it doesn't overlap the panel */
+/* ----- board layout tuner (live sliders over the board) ----- */
+.board-tuner { position: absolute; top: 110px; left: 16px; z-index: 5; }
+.tuner-fab {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(14, 16, 22, 0.7); backdrop-filter: blur(6px);
+  border: 1px solid var(--stroke); color: var(--text-dim);
+  cursor: pointer; font-size: 15px; line-height: 1;
+}
+.tuner-fab:hover, .board-tuner.open .tuner-fab { color: var(--text); border-color: var(--accent); }
+.tuner-panel {
+  position: absolute; top: 40px; left: 0; width: 224px;
+  display: flex; flex-direction: column; gap: 8px;
+  background: rgba(14, 16, 22, 0.82); backdrop-filter: blur(8px);
+  border: 1px solid var(--stroke); border-radius: 12px; padding: 10px 12px;
+}
+.tuner-row { display: flex; flex-direction: column; gap: 2px; }
+.tuner-label { font-size: 11.5px; color: var(--text-dim); display: flex; justify-content: space-between; }
+.tuner-label em { font-style: normal; color: var(--text); font-variant-numeric: tabular-nums; }
+.tuner-row input[type='range'] { width: 100%; accent-color: var(--accent); }
+.tuner-reset { padding: 5px 10px; font-size: 12px; align-self: flex-start; }
+
 .view-menu.open ~ .zoom-bar { display: none; }
 .zoom-bar {
   position: absolute; top: 68px; left: 16px; z-index: 4;
@@ -2124,6 +2145,8 @@ html, body { overflow-x: hidden; }
      the turn bar / player chips, and move the exit button clear of the dock */
   .board-focus .view-menu { top: 70px; left: 8px; }
   .board-focus .zoom-bar { top: 70px; left: 56px; }
+  .board-focus .board-tuner { top: 112px; left: 56px; }
+  .board-focus .board-tuner { top: 112px; left: 56px; }
   .board-focus .board-wrap .game-log { top: 70px; right: 8px; bottom: auto; }
   .board-focus .board-wrap .overlay-tr { top: 116px; left: 8px; right: auto; }
   .board-focus .focus-toggle { top: 50%; bottom: auto; right: 6px; transform: translateY(-50%); }
