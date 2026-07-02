@@ -5,11 +5,13 @@ const GROUPS: { title: string; items: { keys: string; label: string }[] }[] = [
   {
     title: 'In a game',
     items: [
-      { keys: 'F2', label: 'Next turn' },
-      { keys: 'F4', label: 'End turn' },
-      { keys: 'F9', label: 'Skip until my turn' },
-      { keys: 'F10', label: 'Resolve / stop on next ability' },
-      { keys: 'F6', label: 'Cancel skips' },
+      { keys: 'F4', label: 'Skip to next turn' },
+      { keys: 'F5', label: 'Skip to end step' },
+      { keys: 'F6', label: 'Skip to next main phase' },
+      { keys: 'F8', label: 'Skip until stack resolved' },
+      { keys: 'F9', label: 'Skip until my next turn' },
+      { keys: 'F11', label: 'Skip to end step before my turn' },
+      { keys: 'F3', label: 'Cancel skips' },
       { keys: 'D', label: 'Done / confirm selection' },
       { keys: 'P / Space', label: 'Pass priority' },
       { keys: 'Y / N', label: 'Answer yes / no (Mulligan / Keep)' },

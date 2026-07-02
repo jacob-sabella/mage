@@ -997,6 +997,17 @@ input::placeholder { color: var(--text-dim); }
 .skip-bar { display: flex; flex-wrap: wrap; gap: 8px; }
 .skip-btn { padding: 7px 12px; font-size: 13px; }
 .skip-key { color: var(--text-dim); font-size: 11px; margin-left: 4px; }
+/* an armed skip stays lit until it fires or F3 cancels it */
+.skip-btn.armed {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/* ----- per-player match clock ----- */
+.pstat-clock { font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.pstat-clock.running { color: var(--text); }
+.pstat-clock.low { color: var(--danger); font-weight: 700; }
 
 /* ----- combat panel ----- */
 .combat-panel { padding: 12px 14px; border-color: var(--danger); }

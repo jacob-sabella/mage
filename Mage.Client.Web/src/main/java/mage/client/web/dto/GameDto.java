@@ -195,6 +195,13 @@ public class GameDto {
         public List<CounterDto> counters = new ArrayList<>();
         // designations such as "Monarch", "Initiative", "City's Blessing"
         public List<String> designations = new ArrayList<>();
+        // match clock: seconds left on this player's priority timer, null when
+        // the match has no time limit (server reports 0 in that case)
+        public Integer timeLeft;
+        public boolean timerActive;
+        // armed skip actions, as PlayerAction enum names, so the client can
+        // light up the matching skip buttons (cleared server-side by F3/cancel)
+        public List<String> skips = new ArrayList<>();
 
         static PlayerDto from(PlayerView player) {
             PlayerDto dto = new PlayerDto();
@@ -245,6 +252,27 @@ public class GameDto {
                         dto.designations.add(designation);
                     }
                 }
+            }
+            int secs = player.getPriorityTimeLeftSecs();
+            dto.timeLeft = secs > 0 ? secs : null;
+            dto.timerActive = player.isTimerActive();
+            if (player.isPassedTurn()) {
+                dto.skips.add("PASS_PRIORITY_UNTIL_NEXT_TURN");
+            }
+            if (player.isPassedUntilEndOfTurn()) {
+                dto.skips.add("PASS_PRIORITY_UNTIL_TURN_END_STEP");
+            }
+            if (player.isPassedUntilNextMain()) {
+                dto.skips.add("PASS_PRIORITY_UNTIL_NEXT_MAIN_PHASE");
+            }
+            if (player.isPassedUntilStackResolved()) {
+                dto.skips.add("PASS_PRIORITY_UNTIL_STACK_RESOLVED");
+            }
+            if (player.isPassedAllTurns()) {
+                dto.skips.add("PASS_PRIORITY_UNTIL_MY_NEXT_TURN");
+            }
+            if (player.isPassedUntilEndStepBeforeMyTurn()) {
+                dto.skips.add("PASS_PRIORITY_UNTIL_END_STEP_BEFORE_MY_NEXT_TURN");
             }
             return dto;
         }

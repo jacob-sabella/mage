@@ -94,6 +94,8 @@ export const SAMPLE = {
         ],
         graveyard: [card('ag', 'Shock', ['Instant'], { colors: 'R' })], exile: [],
         command: [], counters: [{ name: 'poison', count: 3 }], designations: ['Monarch'],
+        // match clock + an armed skip — exercises the timer chip and lit skip button
+        timeLeft: 1180, timerActive: false, skips: [],
       },
       {
         id: 'me', name: 'You', life: 20, libraryCount: 28, handCount: 4, graveyardCount: 0, active: true, manaPool: '{U}{U}{R}',
@@ -108,6 +110,7 @@ export const SAMPLE = {
         // castable commander in the command zone (cmd1 is also in canPlay)
         command: [card('cmd1', 'Ghalta, Primal Hunger', ['Legendary', 'Creature'], { power: '12', toughness: '12', colors: 'G', manaCost: '{10}{G}{G}', commandType: 'commander' })],
         counters: [{ name: 'energy', count: 2 }], designations: [],
+        timeLeft: 1421, timerActive: true, skips: ['PASS_PRIORITY_UNTIL_STACK_RESOLVED'],
       },
     ],
     stack: [],

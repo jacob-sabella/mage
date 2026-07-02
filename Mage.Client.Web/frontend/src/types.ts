@@ -146,6 +146,12 @@ export interface GamePlayer {
   counters: CounterDto[]
   // designations like Monarch / Initiative / City's Blessing; [] when none
   designations: string[]
+  // match clock: seconds left on this player's priority timer; null/absent
+  // when the match has no time limit. timerActive = the clock is running now.
+  timeLeft?: number | null
+  timerActive?: boolean
+  // armed skip actions (PlayerAction enum names) — lights the skip buttons
+  skips?: string[]
 }
 
 /** A named group of revealed / looked-at cards (one per reveal source).

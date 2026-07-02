@@ -26,7 +26,7 @@ test.describe('Game board (3D)', () => {
     await gotoScreen(page, 'game')
     await expect(page.getByRole('button', { name: 'Pass' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Done' })).toBeVisible()
-    await expect(page.getByRole('button', { name: /Next turn/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /^Turn/ })).toBeVisible()
     // the game log now lives as a tab in the chat panel, not floating on the board
     await page.getByRole('tab', { name: 'Game log' }).click()
     await expect(page.locator('.chat-log')).toContainText('Precombat Main')

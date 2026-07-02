@@ -35,19 +35,25 @@ type MenuState = {
 }
 
 // F-key skip shortcuts -> PlayerAction names sent via /api/game/respond (action).
+// Key map matches the legacy Swing client: F3 cancel, F4 turn, F5 end step,
+// F6 next main, F8 stack resolved, F9 my turn, F11 end step before my turn.
 const SKIP_KEYS: Record<string, string> = {
-  F2: 'PASS_PRIORITY_UNTIL_NEXT_TURN',
-  F4: 'PASS_PRIORITY_UNTIL_TURN_END_STEP',
-  F6: 'PASS_PRIORITY_CANCEL_ALL_ACTIONS',
+  F3: 'PASS_PRIORITY_CANCEL_ALL_ACTIONS',
+  F4: 'PASS_PRIORITY_UNTIL_NEXT_TURN',
+  F5: 'PASS_PRIORITY_UNTIL_TURN_END_STEP',
+  F6: 'PASS_PRIORITY_UNTIL_NEXT_MAIN_PHASE',
+  F8: 'PASS_PRIORITY_UNTIL_STACK_RESOLVED',
   F9: 'PASS_PRIORITY_UNTIL_MY_NEXT_TURN',
-  F10: 'PASS_PRIORITY_UNTIL_STACK_RESOLVED',
+  F11: 'PASS_PRIORITY_UNTIL_END_STEP_BEFORE_MY_NEXT_TURN',
 }
 const SKIP_BUTTONS = [
-  { label: 'Next turn', key: 'F2', action: 'PASS_PRIORITY_UNTIL_NEXT_TURN' },
-  { label: 'End turn', key: 'F4', action: 'PASS_PRIORITY_UNTIL_TURN_END_STEP' },
-  { label: 'My turn', key: 'F9', action: 'PASS_PRIORITY_UNTIL_MY_NEXT_TURN' },
-  { label: 'Resolve', key: 'F10', action: 'PASS_PRIORITY_UNTIL_STACK_RESOLVED' },
-  { label: 'Cancel skips', key: 'F6', action: 'PASS_PRIORITY_CANCEL_ALL_ACTIONS' },
+  { label: 'Turn', key: 'F4', action: 'PASS_PRIORITY_UNTIL_NEXT_TURN', title: 'Skip to the next turn' },
+  { label: 'End step', key: 'F5', action: 'PASS_PRIORITY_UNTIL_TURN_END_STEP', title: 'Skip to this turn’s end step' },
+  { label: 'Main', key: 'F6', action: 'PASS_PRIORITY_UNTIL_NEXT_MAIN_PHASE', title: 'Skip to the next main phase' },
+  { label: 'Resolve', key: 'F8', action: 'PASS_PRIORITY_UNTIL_STACK_RESOLVED', title: 'Skip until the stack is resolved' },
+  { label: 'My turn', key: 'F9', action: 'PASS_PRIORITY_UNTIL_MY_NEXT_TURN', title: 'Skip everything until your next turn' },
+  { label: 'Pre-turn', key: 'F11', action: 'PASS_PRIORITY_UNTIL_END_STEP_BEFORE_MY_NEXT_TURN', title: 'Skip until the end step just before your turn' },
+  { label: 'Cancel', key: 'F3', action: 'PASS_PRIORITY_CANCEL_ALL_ACTIONS', title: 'Cancel all armed skips' },
 ]
 
 export function GameTable({ game, prompt, interactive, result, onRespond, onTapMany, maximized, onToggleMaximize, onLeave, onPlayAgain, onWatchNext }: Props) {
@@ -338,6 +344,7 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
             >
               <span className="pstat-name">{p.name}</span>
               <LifeTotal life={p.life} />
+              {p.timeLeft != null && <MatchClock secs={p.timeLeft} running={!!p.timerActive} />}
               <PlayerCounters counters={p.counters} designations={p.designations} />
               <PStatCounts
                 hand={p.handCount}
@@ -584,16 +591,19 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
       {interactive && (
         <div className="control-dock panel">
           <div className="dock-skips">
-            {SKIP_BUTTONS.map((s) => (
-              <button
-                key={s.action}
-                className="btn skip-btn"
-                onClick={() => onRespond('action', s.action)}
-                title={`${s.label} (${s.key})`}
-              >
-                {s.label} <span className="skip-key">{s.key}</span>
-              </button>
-            ))}
+            {(() => {
+              const armed = game.players.find((p) => p.name === game.me)?.skips ?? []
+              return SKIP_BUTTONS.filter((s) => s.key !== 'F3' || armed.length > 0).map((s) => (
+                <button
+                  key={s.action}
+                  className={`btn skip-btn${armed.includes(s.action) ? ' armed' : ''}`}
+                  onClick={() => onRespond('action', s.action)}
+                  title={`${s.title} (${s.key})`}
+                >
+                  {s.label} <span className="skip-key">{s.key}</span>
+                </button>
+              ))
+            })()}
           </div>
           {/* special actions: the server ships a single "Special" entry when any
               exist; responding {kind:'string', value:'special'} makes it follow
@@ -715,6 +725,26 @@ function PStatCounts({
 
 // player-counter glyphs for the common kinds (others render as `name:N`)
 const COUNTER_ICON: Record<string, string> = { poison: '☠', energy: '⚡', experience: '✦' }
+
+/** Per-player match clock (only shown when the match has a time limit). The
+ *  server sends seconds-left with each push; between pushes we tick locally
+ *  while the player's timer is running. Goes red under a minute. */
+function MatchClock({ secs, running }: { secs: number; running: boolean }) {
+  const [left, setLeft] = useState(secs)
+  useEffect(() => setLeft(secs), [secs])
+  useEffect(() => {
+    if (!running) return
+    const t = setInterval(() => setLeft((s) => Math.max(0, s - 1)), 1000)
+    return () => clearInterval(t)
+  }, [running, secs])
+  const m = Math.floor(left / 60)
+  const s = String(left % 60).padStart(2, '0')
+  return (
+    <span className={`pstat-clock${left < 60 ? ' low' : ''}${running ? ' running' : ''}`} title="Match time left">
+      ⏱{m}:{s}
+    </span>
+  )
+}
 
 /** Player counters (poison/energy/experience/…) + designations (Monarch, …) as
  *  compact one-line chips right after the life total. Zero-count counters are

@@ -454,9 +454,9 @@ suite('Game board · modalities', () => {
     await expect.poll(() => answered).toBe('true')
   })
 
-  test('hotkey: F2 fires the "skip until next turn" player action', async ({ page }) => {
+  test('hotkey: F4 fires the "skip until next turn" player action (legacy key map)', async ({ page }) => {
     await gotoScreen(page, 'game')
-    await expect(page.getByRole('button', { name: /Next turn/ })).toBeVisible() // game is interactive
+    await expect(page.getByRole('button', { name: /^Turn/ })).toBeVisible() // game is interactive
     await page.locator('.turn-label').click() // ensure focus isn't in an input
     let action: string | null = null
     await page.route('**/api/game/respond', (route) => {
@@ -464,7 +464,7 @@ suite('Game board · modalities', () => {
       if (b.kind === 'action') action = b.value
       return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
     })
-    await page.keyboard.press('F2')
+    await page.keyboard.press('F4')
     await expect.poll(() => action).toBe('PASS_PRIORITY_UNTIL_NEXT_TURN')
   })
 
@@ -476,7 +476,7 @@ suite('Game board · modalities', () => {
       if (b.kind === 'action') action = b.value
       return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
     })
-    await page.getByRole('button', { name: /End turn/ }).click()
+    await page.getByRole('button', { name: /End step/ }).click()
     await expect.poll(() => action).toBe('PASS_PRIORITY_UNTIL_TURN_END_STEP')
   })
 
@@ -823,7 +823,7 @@ suite('Keyboard reachability', () => {
 
   test('game control-dock buttons are focusable', async ({ page }) => {
     await gotoScreen(page, 'game')
-    for (const name of ['Done', 'Pass', 'Next turn', 'End turn', 'Concede']) {
+    for (const name of ['Done', 'Pass', 'Turn', 'End step', 'Concede']) {
       await expectFocusable(page.getByRole('button', { name: new RegExp(name) }).first())
     }
   })
