@@ -18,6 +18,16 @@ export function TournamentModal({
 }) {
   const [data, setData] = useState<TournamentDto | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // deck-construction countdown: resyncs from each poll, ticks locally between
+  const [buildLeft, setBuildLeft] = useState<number | null>(null)
+  useEffect(() => {
+    setBuildLeft(data?.constructionTimeLeft ?? null)
+  }, [data?.constructionTimeLeft])
+  useEffect(() => {
+    if (buildLeft == null) return
+    const t = setInterval(() => setBuildLeft((s) => (s == null || s <= 0 ? 0 : s - 1)), 1000)
+    return () => clearInterval(t)
+  }, [buildLeft == null]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     let alive = true
@@ -57,6 +67,14 @@ export function TournamentModal({
             <span className="muted">
               {data ? `${data.type} · ${data.state}${data.runningInfo ? ` · ${data.runningInfo}` : ''}` : 'Loading…'}
             </span>
+            {buildLeft != null && (
+              <span
+                className={`sb-timer tournament-build-timer${buildLeft < 30 ? ' urgent' : ''}`}
+                title="Time left to build decks"
+              >
+                ⏱ Deck building: {Math.floor(buildLeft / 60)}:{String(buildLeft % 60).padStart(2, '0')}
+              </span>
+            )}
           </div>
           <button className="btn ghost" onClick={onClose} aria-label="Close tournament view">
             ✕

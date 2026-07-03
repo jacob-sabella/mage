@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { submitDraftDeck } from '../api'
 import type { DraftDeckCard } from '../api'
 import type { DraftBasics, DraftCard } from '../types'
@@ -25,16 +25,27 @@ export function ConstructView({
   token,
   tableId,
   pool,
+  time = null,
   onLeave,
 }: {
   token: string
   tableId: string
   pool: DraftCard[]
+  // seconds allowed for deck construction; null = untimed
+  time?: number | null
   onLeave: () => void
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [basics, setBasics] = useState<DraftBasics>({ plains: 0, island: 0, swamp: 0, mountain: 0, forest: 0 })
   const [status, setStatus] = useState<string | null>(null)
+  // construction countdown (informational — the server enforces the deadline)
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(time)
+  useEffect(() => {
+    setSecondsLeft(time)
+    if (time == null) return
+    const t = setInterval(() => setSecondsLeft((s) => (s == null || s <= 0 ? 0 : s - 1)), 1000)
+    return () => clearInterval(t)
+  }, [time])
   const basicsTotal = (Object.values(basics) as number[]).reduce((a, b) => a + b, 0)
   const total = selected.size + basicsTotal
 
@@ -109,6 +120,11 @@ export function ConstructView({
         </button>
         <h1 className="h1">Build your deck</h1>
         <span className={`chip${total >= 40 ? '' : ' under'}`}>{total} cards</span>
+        {secondsLeft != null && (
+          <span className={`sb-timer${secondsLeft < 30 ? ' urgent' : ''}`} title="Time left to build">
+            ⏱ {Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, '0')}
+          </span>
+        )}
         {status && <span className="muted">{status}</span>}
         <span className="spacer" />
         <button className="btn" onClick={autoBuild}>

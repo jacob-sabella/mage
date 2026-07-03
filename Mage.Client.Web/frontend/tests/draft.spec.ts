@@ -8,8 +8,40 @@ test.describe('Booster draft', () => {
     // current pack
     await expect(page.locator('.draft-card', { hasText: 'Loxodon Line Breaker' })).toBeVisible()
     await expect(page.locator('.draft-card', { hasText: 'Disperse' })).toBeVisible()
-    // already-picked pile
-    await expect(page.locator('.draft-pick-chip', { hasText: 'Goblin Instigator' })).toBeVisible()
+    // already-picked pile renders card thumbnails (image + name), not text chips
+    const pick = page.locator('.draft-pick-thumb', { hasText: 'Goblin Instigator' })
+    await expect(pick).toBeVisible()
+    await expect(pick.locator('img[alt="Goblin Instigator"]')).toBeVisible()
+  })
+
+  test('shows the pack/pick position header and a ticking pick timer', async ({ page }) => {
+    await gotoScreen(page, 'draft')
+    // "Pack 1 · Pick 2 — Core Set 2019" comes from the draft frame's DraftDto fields
+    const pos = page.getByTestId('draft-position')
+    await expect(pos).toContainText('Pack 1 · Pick 2')
+    await expect(pos).toContainText('Core Set 2019')
+    // the countdown starts from draft.timeout (75s) and ticks down
+    const timer = page.locator('.draft-timer')
+    await expect(timer).toBeVisible()
+    await expect(timer).toContainText('1:1') // 75s → 1:15, ticking through 1:1x
+    await expect(timer).not.toHaveClass(/urgent/) // red only at ≤10s
+    // a fresh draftPick frame with a short clock restarts the countdown in the red
+    await page.evaluate(() =>
+      (window as unknown as { __emit: (o: unknown) => void }).__emit({
+        type: 'draftPick',
+        draftId: 'd-1',
+        draft: {
+          booster: [{ id: 'd9', name: 'Shock', set: 'M19', num: '156' }],
+          picks: [],
+          timeout: 8,
+          boosterNum: 1,
+          cardNum: 3,
+          setNames: ['Core Set 2019'],
+        },
+      }),
+    )
+    await expect(timer).toHaveClass(/urgent/)
+    await expect(pos).toContainText('Pack 1 · Pick 3')
   })
 
   test('clicking a card sends a pick for that card', async ({ page }) => {

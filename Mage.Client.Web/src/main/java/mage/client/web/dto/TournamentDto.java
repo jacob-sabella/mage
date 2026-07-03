@@ -22,6 +22,8 @@ public class TournamentDto {
     public String state;
     public String runningInfo;
     public boolean watchingAllowed;
+    // seconds remaining in the deck-construction step; null unless constructing
+    public Integer constructionTimeLeft;
     public List<PlayerDto> players = new ArrayList<>();
     public List<RoundDto> rounds = new ArrayList<>();
 
@@ -32,6 +34,11 @@ public class TournamentDto {
         dto.state = view.getTournamentState();
         dto.runningInfo = view.getRunningInfo();
         dto.watchingAllowed = view.isWatchingAllowed();
+        if ("Constructing".equals(view.getTournamentState())
+                && view.getStepStartTime() != null && view.getServerTime() != null) {
+            long used = (view.getServerTime().getTime() - view.getStepStartTime().getTime()) / 1000;
+            dto.constructionTimeLeft = (int) (view.getConstructionTime() - used);
+        }
         for (TournamentPlayerView p : view.getPlayers()) {
             PlayerDto pd = new PlayerDto();
             pd.name = p.getName();

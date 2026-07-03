@@ -1,24 +1,29 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   createDraft,
   createGameVsAi,
   createTable,
   disconnect,
   fetchMatches,
+  fetchRoomUsers,
+  fetchServerMessages,
   fetchTables,
   joinTable,
+  joinTournament,
   respond,
   sendChat,
   watchStop,
   watchTable,
   watchTournament,
 } from '../api'
-import type { MatchDto, RespondKind, TableConfig } from '../api'
+import type { MatchDto, RespondKind, RoomUserDto, TableConfig } from '../api'
 import { useServerEvents } from '../useServerEvents'
 import { setReportSnapshot } from '../reportState'
 import { pushToast } from '../toast'
 import { notifyIfHidden } from '../notify'
 import { playCue } from '../sound'
+import { plain } from '../text'
+import { usePrefs } from '../prefs'
 import { ChatPanel } from './ChatPanel'
 import { DeckPicker } from './DeckPicker'
 import { TableSetup } from './TableSetup'
@@ -26,8 +31,18 @@ import { WaitingRoom } from './WaitingRoom'
 import { TournamentModal } from './TournamentModal'
 import { ConstructView } from './ConstructView'
 import { DraftView } from './DraftView'
+import { SideboardView } from './SideboardView'
 import { GameTable } from './GameTable'
-import type { ChatLine, DraftCard, DraftState, GameState, Prompt, Session, TableDto } from '../types'
+import type {
+  ChatLine,
+  DraftCard,
+  DraftState,
+  GameState,
+  Prompt,
+  Session,
+  TableDto,
+  UserRequestOption,
+} from '../types'
 
 // a table is joinable when it has an open seat and isn't already in a game
 function isJoinable(t: TableDto): boolean {
@@ -35,6 +50,11 @@ function isJoinable(t: TableDto): boolean {
   if (!m) return false
   const state = (t.state || '').toLowerCase()
   return Number(m[1]) < Number(m[2]) && !/duel|finish|sideboard|draft|construct/.test(state)
+}
+
+// a table looks like a limited (draft/sealed) event — its players don't bring a deck
+function looksLimited(t: TableDto): boolean {
+  return /limited|draft|sealed/i.test(`${t.deckType ?? ''} ${t.gameType ?? ''}`)
 }
 
 // Default deck used when sitting down at a table (a .dck path on the server).
@@ -45,6 +65,62 @@ interface Props {
   onOnlineChange: (online: boolean) => void
 }
 
+const TABLE_FILTERS: { id: 'all' | 'open' | 'running' | 'tournament'; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'open', label: 'Open seats' },
+  { id: 'running', label: 'In progress' },
+  { id: 'tournament', label: 'Tournaments' },
+]
+
+/** Small inline password prompt for joining a 🔒 password-protected table. */
+function PasswordDialog({
+  title,
+  onSubmit,
+  onCancel,
+}: {
+  title: string
+  onSubmit: (password: string) => void
+  onCancel: () => void
+}) {
+  const [pw, setPw] = useState('')
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onCancel()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onCancel])
+  return (
+    <div className="confirm-overlay" role="dialog" aria-modal="true" aria-label={title} onClick={onCancel}>
+      <div className="confirm-card panel" onClick={(e) => e.stopPropagation()}>
+        <div className="confirm-title">🔒 {title}</div>
+        <div className="confirm-msg">This table is password-protected — ask the host for the password.</div>
+        <input
+          className="picker-search pw-input"
+          type="password"
+          autoFocus
+          placeholder="Table password"
+          aria-label="Table password"
+          value={pw}
+          onChange={(e) => setPw(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && onSubmit(pw)}
+        />
+        <div className="confirm-actions">
+          <button className="btn ghost" onClick={onCancel}>
+            Cancel
+          </button>
+          <button className="btn primary" onClick={() => onSubmit(pw)}>
+            Join
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   const [tables, setTables] = useState<TableDto[]>([])
   const [refreshing, setRefreshing] = useState(false)
@@ -53,7 +129,33 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   const [activeGameId, setActiveGameId] = useState<string | null>(null)
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null)
   const [draftState, setDraftState] = useState<DraftState | null>(null)
-  const [construct, setConstruct] = useState<{ tableId: string; pool: DraftCard[] } | null>(null)
+  const [construct, setConstruct] = useState<{ tableId: string; pool: DraftCard[]; time: number | null } | null>(null)
+  // between-games sideboarding (seq remounts the editor on a re-pushed frame)
+  const [sideboard, setSideboard] = useState<{
+    seq: number
+    tableId: string
+    main: DraftCard[]
+    side: DraftCard[]
+    time: number | null
+    limited: boolean
+  } | null>(null)
+  // a server question (userRequest frame) answered with one of its option buttons
+  const [userReq, setUserReq] = useState<{
+    gameId: string | null
+    title: string | null
+    message: string | null
+    options: UserRequestOption[]
+  } | null>(null)
+  // who's online (polled while the lobby list is visible)
+  const [roomUsers, setRoomUsers] = useState<RoomUserDto[]>([])
+  const [usersOpen, setUsersOpen] = useState(true)
+  // server broadcast messages (dismissible banner above the table list)
+  const [serverMsgs, setServerMsgs] = useState<string[]>([])
+  const [msgsDismissed, setMsgsDismissed] = useState(false)
+  // table-list filtering: the chip is a persisted pref, the text filter is local
+  const { prefs, setPref } = usePrefs()
+  const tableFilter = prefs.lobbyFilter ?? 'all'
+  const [tableQuery, setTableQuery] = useState('')
   const [interactive, setInteractive] = useState(false)
   const [game, setGame] = useState<GameState | null>(null)
   const [prompt, setPrompt] = useState<Prompt | null>(null)
@@ -141,7 +243,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
     if (e.type === 'chat') {
       setChat((prev) => [
         ...prev.slice(-199),
-        { user: e.user, text: e.text ?? '', color: e.color, time: e.time },
+        { user: e.user, text: e.text ?? '', color: e.color, time: e.time, messageType: e.messageType },
       ])
     } else if (e.type === 'gameStart' && e.gameId) {
       // a match we joined has started - switch to the interactive board
@@ -153,6 +255,7 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
       setPlayStatus(null)
       setOpenTableId(null) // the table started — no longer cancellable
       setConstruct(null)
+      setSideboard(null) // sideboarding is over once the next game starts
       setGameOver(null)
       setGame(null)
       setPrompt(null)
@@ -220,14 +323,64 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
     } else if (e.type === 'draftPick') {
       if (e.draftId) setActiveDraftId(e.draftId)
       setDraftState(e.draft ?? null)
+    } else if (e.type === 'draftUpdate') {
+      // pack/pick position update — merge into the current draft state
+      if (e.draftId) setActiveDraftId(e.draftId)
+      setDraftState((prev) =>
+        prev
+          ? {
+              ...prev,
+              boosterNum: e.boosterNum ?? prev.boosterNum,
+              cardNum: e.cardNum ?? prev.cardNum,
+              setNames: e.setNames ?? prev.setNames,
+            }
+          : prev,
+      )
     } else if (e.type === 'draftOver') {
       setActiveDraftId(null)
       setDraftState(null)
     } else if (e.type === 'construct' && e.tableId) {
-      // draft finished → build a deck from the pool
+      // draft finished → build a deck from the pool. Clears any lingering game /
+      // game-over state so the construct screen actually surfaces (the timer is
+      // running server-side — the player must not burn it on the result overlay).
       setActiveDraftId(null)
       setDraftState(null)
-      setConstruct({ tableId: e.tableId, pool: e.pool ?? [] })
+      setSideboard(null)
+      activeRef.current = null
+      setActiveGameId(null)
+      setInteractive(false)
+      setGame(null)
+      setPrompt(null)
+      setGameOver(null)
+      setConstruct({ tableId: e.tableId, pool: e.pool ?? [], time: e.time ?? null })
+    } else if (e.type === 'sideboard') {
+      // between-games sideboarding — surfaces IMMEDIATELY, even over the
+      // game-over overlay: the sideboard window is ticking server-side.
+      activeRef.current = null
+      setActiveGameId(null)
+      setInteractive(false)
+      setGame(null)
+      setPrompt(null)
+      setGameOver(null)
+      setGameLog([])
+      lastTurnRef.current = null
+      setConstruct(null)
+      setSideboard((prev) => ({
+        seq: (prev?.seq ?? 0) + 1,
+        tableId: e.tableId ?? '',
+        main: e.main ?? [],
+        side: e.side ?? [],
+        time: e.time ?? null,
+        limited: !!e.limited,
+      }))
+    } else if (e.type === 'userRequest') {
+      // a server question with option buttons (rollback votes, permission asks…)
+      setUserReq({
+        gameId: e.gameId ?? null,
+        title: e.title ?? null,
+        message: e.message ?? null,
+        options: e.options ?? [],
+      })
     } else if (e.type === 'event') {
       refresh()
     }
@@ -316,12 +469,49 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
       })
   }, [spectateTableId, session.token, resetGameView])
 
-  // deck picker drives Join, New-game-vs-AI and New-game-vs-Player; remember which
-  const [deckIntent, setDeckIntent] = useState<{ mode: 'join' | 'create'; tableId?: string; vsHuman?: boolean } | null>(null)
+  // deck picker drives Join (regular tables + tournaments); remember which table
+  const [deckIntent, setDeckIntent] = useState<{ table: TableDto } | null>(null)
+  // a passworded table waiting on its password (after the deck was picked)
+  const [pwPrompt, setPwPrompt] = useState<{ table: TableDto; deckPath?: string } | null>(null)
   // the last vs-AI setup, so "Play again" can rematch without re-picking a deck
   const [lastCreate, setLastCreate] = useState<{ path: string; opponents: number } | null>(null)
 
-  const handleJoin = useCallback((tableId: string) => setDeckIntent({ mode: 'join', tableId }), [])
+  // actually sit down: tournaments go through /api/tournament/join, everything
+  // else through /api/join. Password (if any) was collected beforehand.
+  const doJoin = useCallback(
+    (table: TableDto, deckPath: string | undefined, password: string | undefined) => {
+      setPendingPlay(true)
+      setPlayStatus('Joining…')
+      const req = table.isTournament
+        ? joinTournament(session.token, table.id, deckPath, password)
+        : joinTable(session.token, table.id, deckPath ?? '', password)
+      req
+        .then((r) => {
+          if (!r.ok) throw new Error('the server refused')
+          if (table.isTournament) setPlayStatus('Joined — waiting for the tournament to start…')
+        })
+        .catch((err) => {
+          setPendingPlay(false)
+          setPlayStatus(`Could not join: ${err instanceof Error ? err.message : 'error'}`)
+        })
+    },
+    [session.token],
+  )
+
+  // Join clicked on a lobby row: limited tournaments skip the deck picker
+  // entirely (the deck is built after the draft/sealed pool), everything else
+  // picks a deck first; passworded tables then prompt for the password.
+  const handleJoin = useCallback(
+    (table: TableDto) => {
+      if (table.isTournament && looksLimited(table)) {
+        if (table.passwordProtected) setPwPrompt({ table, deckPath: undefined })
+        else doJoin(table, undefined, undefined)
+        return
+      }
+      setDeckIntent({ table })
+    },
+    [doJoin],
+  )
 
   // leave the waiting room (WaitingRoom removes the table itself); just reset state
   const handleCancelTable = useCallback(() => {
@@ -331,19 +521,19 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
     setPlayStatus(null)
   }, [])
 
-  // the deck picker now only drives Join (table creation goes through TableSetup)
+  // the deck picker resolved (a deck, or explicitly "no deck" for limited events)
   const onDeckPicked = useCallback(
-    (path: string) => {
+    (path: string | undefined) => {
       const intent = deckIntent
       setDeckIntent(null)
-      if (!intent || !intent.tableId) return
-      setPendingPlay(true)
-      setPlayStatus('Joining…')
-      joinTable(session.token, intent.tableId, path).catch((err) =>
-        setPlayStatus(`Could not join: ${err instanceof Error ? err.message : 'error'}`),
-      )
+      if (!intent) return
+      if (intent.table.passwordProtected) {
+        setPwPrompt({ table: intent.table, deckPath: path })
+        return
+      }
+      doJoin(intent.table, path, undefined)
     },
-    [deckIntent, session.token],
+    [deckIntent, doJoin],
   )
 
   const handleNewGame = useCallback(() => setSetupOpen(true), [])
@@ -378,10 +568,10 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   )
 
   const handleRespond = useCallback(
-    (kind: RespondKind, value?: string) => {
+    (kind: RespondKind, value?: string, data?: number) => {
       if (!activeGameId) return
       setPrompt(null) // optimistic - the next state push will refresh it
-      respond(session.token, activeGameId, kind, value).catch(() => {
+      respond(session.token, activeGameId, kind, value, data).catch(() => {
         /* ignore; server will re-prompt if needed */
       })
     },
@@ -445,6 +635,45 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
     refresh()
   }, [refresh])
 
+  // who's online: poll every 30s while the lobby (not a game board) is visible
+  useEffect(() => {
+    if (activeGameId) return
+    let alive = true
+    const load = () =>
+      fetchRoomUsers(session.token)
+        .then((u) => {
+          if (alive) setRoomUsers(u)
+        })
+        .catch(() => {
+          /* keep the last known list */
+        })
+    load()
+    const t = setInterval(load, 30000)
+    return () => {
+      alive = false
+      clearInterval(t)
+    }
+  }, [session.token, activeGameId])
+
+  // server broadcast messages (message of the day) — fetched once per session
+  useEffect(() => {
+    fetchServerMessages(session.token)
+      .then((r) => setServerMsgs(r.messages ?? []))
+      .catch(() => setServerMsgs([]))
+  }, [session.token])
+
+  // client-side table filtering (chip + free-text on name/format)
+  const visibleTables = useMemo(() => {
+    const q = tableQuery.trim().toLowerCase()
+    return tables.filter((t) => {
+      if (tableFilter === 'open' && !isJoinable(t)) return false
+      if (tableFilter === 'running' && !/duel|playing|sideboard|draft|construct/i.test(t.state || '')) return false
+      if (tableFilter === 'tournament' && !t.isTournament) return false
+      if (q && !`${t.name} ${t.gameType} ${t.deckType ?? ''}`.toLowerCase().includes(q)) return false
+      return true
+    })
+  }, [tables, tableFilter, tableQuery])
+
   useEffect(() => {
     onOnlineChange(online)
   }, [online, onOnlineChange])
@@ -463,12 +692,28 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
     return <DraftView token={session.token} draftId={activeDraftId} draft={draftState} onLeave={leaveDraft} />
   }
 
-  if (construct && !activeGameId) {
+  // between-games sideboarding takes over the whole view (its window is timed)
+  if (sideboard) {
+    return (
+      <SideboardView
+        key={`${sideboard.tableId}:${sideboard.seq}`}
+        token={session.token}
+        tableId={sideboard.tableId}
+        initialMain={sideboard.main}
+        initialSide={sideboard.side}
+        time={sideboard.time}
+        limited={sideboard.limited}
+      />
+    )
+  }
+
+  if (construct) {
     return (
       <ConstructView
         token={session.token}
         tableId={construct.tableId}
         pool={construct.pool}
+        time={construct.time}
         onLeave={() => setConstruct(null)}
       />
     )
@@ -571,65 +816,126 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
               </table>
             </div>
           ) : (
-            <div className="panel table-wrap">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Table</th>
-                    <th>Game type</th>
-                    <th>Host</th>
-                    <th>Seats</th>
-                    <th>State</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tables.map((t) => (
-                    <tr key={t.id}>
-                      <td>{t.name}</td>
-                      <td>{t.gameType}</td>
-                      <td>{t.controller}</td>
-                      <td>{t.seats}</td>
-                      <td>{t.state}</td>
-                      <td className="row-actions">
-                        {t.isTournament ? (
-                          <button
-                            className="btn watch-btn"
-                            onClick={() => {
-                              watchTournament(session.token, t.id).then((r) => {
-                                if (!r.ok) pushToast('Could not open the tournament', 'error')
-                              }).catch(() => pushToast('Could not open the tournament', 'error'))
-                            }}
-                          >
-                            🏆 Watch
-                          </button>
-                        ) : t.games.length > 0 ? (
-                          <button className="btn watch-btn" onClick={() => handleWatch(t)}>
-                            Watch
-                          </button>
-                        ) : null}
-                        {isJoinable(t) && (
-                          <button className="btn watch-btn" onClick={() => handleJoin(t.id)}>
-                            Join
-                          </button>
-                        )}
-                        {!isJoinable(t) && t.games.length === 0 && !t.isTournament && <span className="muted">—</span>}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {tables.length === 0 && tablesLoaded && (
-                <div className="empty-state">
-                  <div className="empty-state-icon" aria-hidden>🃏</div>
-                  <p className="empty-state-title">No open tables right now</p>
-                  <p className="empty-state-sub muted">Start a game against the AI, or open a table for other players to join.</p>
-                  <button className="btn primary" onClick={handleNewGame}>
-                    New game
+            <>
+              {serverMsgs.length > 0 && !msgsDismissed && (
+                <div className="server-messages panel" role="status">
+                  <div className="server-messages-body">
+                    {serverMsgs.map((m, i) => (
+                      <p className="server-message" key={i}>
+                        {plain(m)}
+                      </p>
+                    ))}
+                  </div>
+                  <button
+                    className="btn ghost server-messages-close"
+                    aria-label="Dismiss server messages"
+                    title="Dismiss"
+                    onClick={() => setMsgsDismissed(true)}
+                  >
+                    ✕
                   </button>
                 </div>
               )}
-            </div>
+              <div className="table-filters" role="group" aria-label="Filter tables">
+                {TABLE_FILTERS.map((f) => (
+                  <button
+                    key={f.id}
+                    className={`btn filter-chip${tableFilter === f.id ? ' primary' : ''}`}
+                    aria-pressed={tableFilter === f.id}
+                    onClick={() => setPref('lobbyFilter', f.id)}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+                <input
+                  className="picker-search table-filter-text"
+                  placeholder="Filter by name or format…"
+                  aria-label="Filter tables by name or format"
+                  value={tableQuery}
+                  onChange={(e) => setTableQuery(e.target.value)}
+                />
+              </div>
+              <div className="panel table-wrap">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Table</th>
+                      <th>Game type</th>
+                      <th>Host</th>
+                      <th>Seats</th>
+                      <th>State</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleTables.map((t) => (
+                      <tr key={t.id}>
+                        <td>
+                          {t.passwordProtected && (
+                            <span className="table-lock" title="Password protected" aria-label="Password protected">
+                              🔒{' '}
+                            </span>
+                          )}
+                          <span>{t.name}</span>
+                        </td>
+                        <td>{t.gameType}</td>
+                        <td>{t.controller}</td>
+                        <td>{t.seats}</td>
+                        <td>{t.state}</td>
+                        <td className="row-actions">
+                          {t.isTournament ? (
+                            <button
+                              className="btn watch-btn"
+                              onClick={() => {
+                                watchTournament(session.token, t.id).then((r) => {
+                                  if (!r.ok) pushToast('Could not open the tournament', 'error')
+                                }).catch(() => pushToast('Could not open the tournament', 'error'))
+                              }}
+                            >
+                              🏆 Watch
+                            </button>
+                          ) : t.games.length > 0 ? (
+                            <button className="btn watch-btn" onClick={() => handleWatch(t)}>
+                              Watch
+                            </button>
+                          ) : null}
+                          {isJoinable(t) && (
+                            <button className="btn watch-btn" onClick={() => handleJoin(t)}>
+                              Join
+                            </button>
+                          )}
+                          {!isJoinable(t) && t.games.length === 0 && !t.isTournament && <span className="muted">—</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {tables.length > 0 && visibleTables.length === 0 && (
+                  <div className="empty-state">
+                    <p className="empty-state-title">No tables match the filter</p>
+                    <button
+                      className="btn"
+                      onClick={() => {
+                        setPref('lobbyFilter', 'all')
+                        setTableQuery('')
+                      }}
+                    >
+                      Clear filters
+                    </button>
+                  </div>
+                )}
+                {tables.length === 0 && tablesLoaded && (
+                  <div className="empty-state">
+                    <div className="empty-state-icon" aria-hidden>🃏</div>
+                    <p className="empty-state-title">No open tables right now</p>
+                    <p className="empty-state-sub muted">Start a game against the AI, or open a table for other players to join.</p>
+                    <button className="btn primary" onClick={handleNewGame}>
+                      New game
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
 
@@ -638,6 +944,37 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
             <button className="btn ghost chat-toggle" onClick={() => setChatOpen(false)} title="Hide chat">
               Chat ✕
             </button>
+            {!activeGameId && (
+              <div className="panel room-users">
+                <button
+                  className="room-users-head"
+                  aria-expanded={usersOpen}
+                  onClick={() => setUsersOpen((o) => !o)}
+                  title={usersOpen ? 'Collapse the player list' : 'Expand the player list'}
+                >
+                  <span className="stack-title">Players online ({roomUsers.length})</span>
+                  <span className="overlay-toggle" aria-hidden>
+                    {usersOpen ? '▾' : '▸'}
+                  </span>
+                </button>
+                {usersOpen && (
+                  <div className="room-users-list">
+                    {roomUsers.length === 0 && <p className="muted room-users-empty">Nobody else is online.</p>}
+                    {roomUsers.map((u) => (
+                      <div className="room-user" key={u.name}>
+                        <span className="room-user-name">{u.name}</span>
+                        {u.flagName && <span className="room-user-flag muted">{u.flagName}</span>}
+                        {u.matchHistory && (
+                          <span className="room-user-record muted" title="Match record">
+                            {u.matchHistory}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <ChatPanel lines={chat} log={activeGameId ? gameLog : undefined} onSend={handleSendChat} />
           </div>
         ) : (
@@ -664,7 +1001,50 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
           title="Pick a deck to join with"
           onPick={(d) => onDeckPicked(d.path)}
           onClose={() => setDeckIntent(null)}
+          // tournaments may be limited events where no deck is needed up front
+          onNoDeck={deckIntent.table.isTournament ? () => onDeckPicked(undefined) : undefined}
         />
+      )}
+      {pwPrompt && (
+        <PasswordDialog
+          title={`Join ${pwPrompt.table.name}`}
+          onSubmit={(pw) => {
+            const p = pwPrompt
+            setPwPrompt(null)
+            doJoin(p.table, p.deckPath, pw)
+          }}
+          onCancel={() => setPwPrompt(null)}
+        />
+      )}
+      {userReq && (
+        <div
+          className="confirm-overlay user-request"
+          role="dialog"
+          aria-modal="true"
+          aria-label={plain(userReq.title || userReq.message || 'Server request')}
+        >
+          <div className="confirm-card panel" onClick={(e) => e.stopPropagation()}>
+            <div className="confirm-title">{plain(userReq.title || 'Question')}</div>
+            {userReq.message && <div className="confirm-msg">{plain(userReq.message)}</div>}
+            <div className="confirm-actions">
+              {(userReq.options.length > 0 ? userReq.options : [{ label: 'OK', action: null }]).map((o, i) => (
+                <button
+                  key={i}
+                  className={`btn ${o.action ? 'primary' : 'ghost'}`}
+                  onClick={() => {
+                    const rq = userReq
+                    setUserReq(null)
+                    if (o.action && rq.gameId) {
+                      respond(session.token, rq.gameId, 'action', o.action).catch(() => {})
+                    }
+                  }}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
       {setupOpen && (
         <TableSetup token={session.token} onCreate={handleTableCreate} onClose={() => setSetupOpen(false)} />

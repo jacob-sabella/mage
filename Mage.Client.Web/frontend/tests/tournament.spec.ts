@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { gotoScreen } from './harness'
+import { gotoScreen, SAMPLE } from './harness'
 
 /* Tournament spectating: 🏆 Watch on a tournament table opens the standings/
  * pairings panel; a running pairing's Watch spectates its sub-table duel. */
@@ -35,4 +35,20 @@ test('watching a pairing spectates its sub-table', async ({ page }) => {
   await expect.poll(() => tables).toContain('sub-t1')
   // modal closed, board view engaged (connecting state until frames arrive)
   await expect(page.locator('.tournament-modal')).toHaveCount(0)
+})
+
+test('a constructing tournament shows the deck-building countdown', async ({ page }) => {
+  await gotoScreen(page, 'lobby')
+  await page.waitForFunction(() => typeof (window as unknown as { __emit?: unknown }).__emit === 'function')
+  await page.route('**/api/tournament?**', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({ ...SAMPLE.tournament, state: 'Constructing', constructionTimeLeft: 125 }),
+    }),
+  )
+  await page.evaluate(() => (window as unknown as { __emit: (o: unknown) => void }).__emit({ type: 'showTournament', tournamentId: 'trn-1' }))
+  const timer = page.locator('.tournament-build-timer')
+  await expect(timer).toBeVisible()
+  await expect(timer).toContainText('2:0') // 125s → 2:05, ticking down through 2:0x
+  await expect(timer).not.toHaveClass(/urgent/)
 })

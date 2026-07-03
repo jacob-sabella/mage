@@ -76,6 +76,7 @@ export function TableSetup({ token, onCreate, onClose }: Props) {
   const [spectatorsAllowed, setSpectatorsAllowed] = useState(true)
   const [rollbackAllowed, setRollbackAllowed] = useState(true)
   const [winsNeeded, setWinsNeeded] = useState(1)
+  const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -115,6 +116,7 @@ export function TableSetup({ token, onCreate, onClose }: Props) {
       deckPath, gameName: gameName.trim() || undefined, gameType, aiOpponents, openSeats,
       timeLimit, bufferTime, mulliganType, freeMulligans, skillLevel, range, attackOption,
       rated, spectatorsAllowed, rollbackAllowed, winsNeeded,
+      password: password.trim() || undefined,
     })
   }
 
@@ -195,6 +197,19 @@ export function TableSetup({ token, onCreate, onClose }: Props) {
                   {(current?.useAttackOption ?? false) && <Select label="Attack option" value={attackOption} set={setAttackOption} opts={ATTACKS} />}
                 </div>
               )}
+              <div className="ts-row">
+                <label className="ts-field ts-grow">
+                  <span>Join password (optional)</span>
+                  <input
+                    className="picker-search"
+                    type="text"
+                    placeholder="Anyone can join when empty"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="off"
+                  />
+                </label>
+              </div>
               <div className="ts-row ts-checks">
                 <label className="ts-check"><input type="checkbox" checked={rated} onChange={(e) => setRated(e.target.checked)} /> Rated</label>
                 <label className="ts-check"><input type="checkbox" checked={spectatorsAllowed} onChange={(e) => setSpectatorsAllowed(e.target.checked)} /> Allow spectators</label>

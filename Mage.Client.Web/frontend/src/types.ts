@@ -8,6 +8,8 @@ export interface TableDto {
   state: string
   skillLevel: string
   isTournament?: boolean
+  // the table owner set a join password — joining prompts for it
+  passwordProtected?: boolean
   games: string[]
 }
 
@@ -18,6 +20,8 @@ export interface TournamentDto {
   state: string
   runningInfo: string
   watchingAllowed: boolean
+  // seconds left in the deck-construction phase (limited tournaments); null/absent otherwise
+  constructionTimeLeft?: number | null
   players: { name: string; state: string; points: number; results: string; quit: boolean }[]
   rounds: { round: number; games: TournamentGame[] }[]
 }
@@ -56,6 +60,26 @@ export interface ServerEvent {
   tableId?: string
   // present on showTournament frames (answer to a tournament watch)
   pool?: DraftCard[]
+  // present on the sideboard frame (between games of a match)
+  main?: DraftCard[]
+  side?: DraftCard[]
+  limited?: boolean
+  // present on userRequest frames (a server question with option buttons)
+  title?: string | null
+  message?: string | null
+  relatedUserName?: string | null
+  options?: UserRequestOption[]
+  // present on draftUpdate frames (pack/pick position, top-level)
+  boosterNum?: number
+  cardNum?: number
+  setNames?: string[]
+}
+
+/** One answer button of a `userRequest` frame — respond('action', action).
+ *  A null action is a dismiss-only button (just closes the dialog). */
+export interface UserRequestOption {
+  label: string
+  action: string | null
 }
 
 export interface DraftBasics {
@@ -78,6 +102,10 @@ export interface DraftState {
   booster: DraftCard[]
   picks: DraftCard[]
   timeout: number
+  // pack/pick position + the drafted set names, when the server ships them
+  boosterNum?: number
+  cardNum?: number
+  setNames?: string[]
 }
 
 export interface PromptChoice {
@@ -219,6 +247,8 @@ export interface ChatLine {
   text: string
   color?: string | null
   time?: number | null
+  // server MessageType enum name (TALK, WHISPER_FROM, WHISPER_TO, USER_INFO, STATUS, GAME, …)
+  messageType?: string | null
 }
 
 export interface Session {

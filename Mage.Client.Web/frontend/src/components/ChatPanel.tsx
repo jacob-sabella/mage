@@ -96,18 +96,32 @@ export function ChatPanel({ lines, log = [], onSend }: Props) {
         <>
           <div className="chat-messages" ref={scrollRef}>
             {lines.length === 0 && <p className="muted chat-empty">No messages yet.</p>}
-            {lines.map((l, i) => (
-              <div className="chat-line" key={i}>
-                {l.user && (
-                  <span className="chat-user" style={{ color: l.color ? COLOR[l.color] : undefined }}>
-                    {l.user}:{' '}
+            {lines.map((l, i) => {
+              const mt = l.messageType ?? ''
+              const whisper = mt === 'WHISPER_FROM' || mt === 'WHISPER_TO'
+              const info = mt === 'USER_INFO' || mt === 'STATUS'
+              const cls = `chat-line${whisper ? ' chat-whisper' : ''}${info ? ' chat-info' : ''}`
+              return (
+                <div className={cls} key={i}>
+                  {whisper && (
+                    <span className="chat-whisper-tag" title={mt === 'WHISPER_TO' ? 'Whisper you sent' : 'Whisper to you'}>
+                      → whisper{' '}
+                    </span>
+                  )}
+                  {l.user && (
+                    <span className="chat-user" style={{ color: !whisper && l.color ? COLOR[l.color] : undefined }}>
+                      {l.user}:{' '}
+                    </span>
+                  )}
+                  <span
+                    className="chat-text"
+                    style={!l.user && !whisper && !info && l.color ? { color: COLOR[l.color] } : undefined}
+                  >
+                    {plain(l.text)}
                   </span>
-                )}
-                <span className="chat-text" style={!l.user && l.color ? { color: COLOR[l.color] } : undefined}>
-                  {plain(l.text)}
-                </span>
-              </div>
-            ))}
+                </div>
+              )
+            })}
           </div>
           <div className="quick-chat" role="group" aria-label="Quick messages">
             {QUICK_CHAT.map((q) => (
@@ -121,7 +135,8 @@ export function ChatPanel({ lines, log = [], onSend }: Props) {
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && submit()}
-              placeholder="Message the room…"
+              placeholder="Message the room… (/w name message to whisper)"
+              title="Send a message — whisper a player with /w name message"
             />
             <button className="btn primary" onClick={submit}>
               Send

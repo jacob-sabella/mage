@@ -11,7 +11,7 @@ interface Props {
   prompt: Prompt | null
   interactive: boolean
   result?: string | null
-  onRespond: (kind: RespondKind, value?: string) => void
+  onRespond: (kind: RespondKind, value?: string, data?: number) => void
   // tap several lands from a same-named stack in sequence (one priority round each)
   onTapMany?: (ids: string[]) => void
   // desktop in-tab "maximize the board" mode (owned by LobbyView so it can also
@@ -67,6 +67,8 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
   }, [game])
   const [menu, setMenu] = useState<MenuState | null>(null)
   const [confirmConcede, setConfirmConcede] = useState(false)
+  // small rollback picker (ask the other players to rewind 0/1 turns)
+  const [rollbackOpen, setRollbackOpen] = useState(false)
   // zone browser (graveyard / exile / command), opened from the player strip's
   // zone counts or by clicking a pile on the 3D board. Keyed by player NAME so
   // a fresh game push re-resolves to live cards.
@@ -322,6 +324,15 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
         {revealGroups.length > 0 && (
           <button className="btn ghost revealed-chip" onClick={() => setRevealOpen(true)} title="Show revealed cards">
             Revealed ({revealGroups.reduce((a, g) => a + g.cards.length, 0)})
+          </button>
+        )}
+        {interactive && (
+          <button
+            className="btn ghost rollback-btn"
+            onClick={() => setRollbackOpen(true)}
+            title="Ask to roll the game back a turn (needs every player's OK)"
+          >
+            ↩ Rollback
           </button>
         )}
         {interactive && (
@@ -597,6 +608,44 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
               </div>
             )
           })()}
+
+        {rollbackOpen && (
+          <div
+            className="confirm-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Rollback turns"
+            onClick={() => setRollbackOpen(false)}
+          >
+            <div className="confirm-card panel" onClick={(e) => e.stopPropagation()}>
+              <div className="confirm-title">Roll the game back?</div>
+              <div className="confirm-msg">Asks every player to rewind the game — anyone can refuse.</div>
+              <div className="confirm-actions">
+                <button className="btn ghost" onClick={() => setRollbackOpen(false)}>
+                  Cancel
+                </button>
+                <button
+                  className="btn"
+                  onClick={() => {
+                    setRollbackOpen(false)
+                    onRespond('action', 'ROLLBACK_TURNS', 0)
+                  }}
+                >
+                  Restart this turn
+                </button>
+                <button
+                  className="btn primary"
+                  onClick={() => {
+                    setRollbackOpen(false)
+                    onRespond('action', 'ROLLBACK_TURNS', 1)
+                  }}
+                >
+                  Back one turn
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {confirmConcede && (
           <ConfirmDialog

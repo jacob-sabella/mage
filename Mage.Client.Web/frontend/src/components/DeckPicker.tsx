@@ -8,10 +8,12 @@ interface Props {
   onPick: (deck: DeckListItem, opponents: number) => void
   onClose: () => void
   showOpponents?: boolean // show an AI-opponent count selector (game creation)
+  // limited events (draft/sealed) build the deck later — offer a no-deck option
+  onNoDeck?: () => void
 }
 
 /** Modal browser for prebuilt / saved .dck files — no file paths needed. */
-export function DeckPicker({ title = 'Choose a deck', onPick, onClose, showOpponents = false }: Props) {
+export function DeckPicker({ title = 'Choose a deck', onPick, onClose, showOpponents = false, onNoDeck }: Props) {
   useEscapeClose(onClose)
   const [decks, setDecks] = useState<DeckListItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -86,6 +88,12 @@ export function DeckPicker({ title = 'Choose a deck', onPick, onClose, showOppon
         )}
 
         <div className="picker-list">
+          {onNoDeck && (
+            <button className="picker-item picker-no-deck" onClick={onNoDeck}>
+              <span className="picker-name">No deck (limited)</span>
+              <span className="muted picker-cat">build it after the draft / sealed pool</span>
+            </button>
+          )}
           {loading && <p className="muted">Loading decks…</p>}
           {error && <p className="deck-error">{error}</p>}
           {!loading && filtered.length === 0 && <p className="muted">No decks match.</p>}

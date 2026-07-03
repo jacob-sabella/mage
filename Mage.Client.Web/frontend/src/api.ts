@@ -65,10 +65,34 @@ export function watchStop(token: string, gameId: string): Promise<{ ok: boolean 
   })
 }
 
-export function joinTable(token: string, tableId: string, deckPath: string): Promise<{ ok: boolean }> {
+export function joinTable(
+  token: string,
+  tableId: string,
+  deckPath: string,
+  password?: string,
+): Promise<{ ok: boolean }> {
   return request<{ ok: boolean }>('/api/join', {
     method: 'POST',
-    body: JSON.stringify({ token, tableId, deckPath }),
+    body: JSON.stringify({ token, tableId, deckPath, ...(password ? { password } : {}) }),
+  })
+}
+
+// Sit down at a tournament table (deckPath optional for limited tournaments,
+// password required when the table is password-protected).
+export function joinTournament(
+  token: string,
+  tableId: string,
+  deckPath?: string,
+  password?: string,
+): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>('/api/tournament/join', {
+    method: 'POST',
+    body: JSON.stringify({
+      token,
+      tableId,
+      ...(deckPath ? { deckPath } : {}),
+      ...(password ? { password } : {}),
+    }),
   })
 }
 
@@ -80,10 +104,12 @@ export function respond(
   gameId: string,
   kind: RespondKind,
   value?: string,
+  // extra numeric payload for 'action' responds (e.g. ROLLBACK_TURNS turn count)
+  data?: number,
 ): Promise<{ ok: boolean }> {
   return request<{ ok: boolean }>('/api/game/respond', {
     method: 'POST',
-    body: JSON.stringify({ token, gameId, kind, value: value ?? '' }),
+    body: JSON.stringify({ token, gameId, kind, value: value ?? '', ...(data !== undefined ? { data } : {}) }),
   })
 }
 
@@ -327,11 +353,51 @@ export function submitDraftDeck(
   tableId: string,
   cards: DraftDeckCard[],
   basics: { plains: number; island: number; swamp: number; mountain: number; forest: number },
+  // cards kept in the sideboard (post-game sideboarding), same {name,set,num,qty}
+  // encoding as `cards`; [] when n/a
+  sideboard: DraftDeckCard[] = [],
 ): Promise<{ ok: boolean }> {
   return request<{ ok: boolean }>('/api/draft/submit', {
     method: 'POST',
-    body: JSON.stringify({ token, tableId, cards, basics }),
+    body: JSON.stringify({ token, tableId, cards, basics, sideboard }),
   })
+}
+
+// Debounced autosave of an in-progress deck build (sideboarding / construction),
+// so a timeout keeps the work done so far. Same card encoding as draft/submit.
+export function updateDeck(
+  token: string,
+  tableId: string,
+  cards: DraftDeckCard[],
+  sideboard: DraftDeckCard[],
+): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>('/api/deck/update', {
+    method: 'POST',
+    body: JSON.stringify({ token, tableId, cards, sideboard }),
+  })
+}
+
+/** One row of the lobby's who's-online panel. */
+export interface RoomUserDto {
+  name: string
+  flagName: string
+  matchHistory: string
+  tourneyHistory: string
+  matchQuitRatio: number
+  tourneyQuitRatio: number
+  infoGames?: string
+  infoPing?: string
+  generalRating?: number
+  constructedRating?: number
+  limitedRating?: number
+}
+
+export function fetchRoomUsers(token: string): Promise<RoomUserDto[]> {
+  return request<RoomUserDto[]>(`/api/room/users?token=${encodeURIComponent(token)}`)
+}
+
+export function fetchServerMessages(token: string): Promise<{ messages: string[] }> {
+  return request<{ messages: string[] }>(`/api/server/messages?token=${encodeURIComponent(token)}`)
 }
 
 export interface ReportContext {

@@ -22,6 +22,11 @@ public class DraftDto {
     public List<DraftCard> booster = new ArrayList<>();
     public List<DraftCard> picks = new ArrayList<>();
     public int timeout;
+    // pack/pick position + booster set names, from the DraftView (when the
+    // callback carries one)
+    public Integer boosterNum;
+    public Integer cardNum;
+    public List<String> setNames;
 
     public static class DraftCard {
         public String id;
@@ -75,5 +80,15 @@ public class DraftDto {
         }
         dto.timeout = v.getTimeout();
         return dto;
+    }
+
+    /** Fold the draft-progress indicators from a DraftView into this dto. */
+    public DraftDto withDraftView(mage.view.DraftView v) {
+        if (v != null) {
+            this.boosterNum = v.getBoosterNum();
+            this.cardNum = v.getCardNum();
+            this.setNames = new ArrayList<>(v.getSetNames());
+        }
+        return this;
     }
 }

@@ -235,12 +235,35 @@ public class ServerConnection {
      * which {@link #joinGame} subscribes to the live decision callbacks.
      */
     public boolean joinTable(UUID tableId, String deckPath) {
+        return joinTable(tableId, deckPath, "");
+    }
+
+    /** Sit down at an existing open table, supplying the table password (if any). */
+    public boolean joinTable(UUID tableId, String deckPath, String password) {
         UUID roomId = session.getMainRoomId();
         if (roomId == null || tableId == null) {
             return false;
         }
         DeckCardLists deck = DeckImporter.importDeckFromFile(deckPath, false);
-        return session.joinTable(roomId, tableId, playerName, PlayerType.HUMAN, 1, deck, "");
+        return session.joinTable(roomId, tableId, playerName, PlayerType.HUMAN, 1, deck,
+                password == null ? "" : password);
+    }
+
+    /**
+     * Sit down at an open tournament table. Limited (draft/sealed) tournaments
+     * need no deck — cards are drafted/opened — so a null/empty deckPath seats
+     * the player with an empty deck, like the legacy JoinTableDialog does.
+     */
+    public boolean joinTournamentTable(UUID tableId, String deckPath, String password) {
+        UUID roomId = session.getMainRoomId();
+        if (roomId == null || tableId == null) {
+            return false;
+        }
+        DeckCardLists deck = deckPath == null || deckPath.isEmpty()
+                ? new DeckCardLists()
+                : DeckImporter.importDeckFromFile(deckPath, false);
+        return session.joinTournamentTable(roomId, tableId, playerName, PlayerType.HUMAN, 1, deck,
+                password == null ? "" : password);
     }
 
     private volatile UUID activeGameId; // the game this session is in (for reload-rejoin)
@@ -360,6 +383,12 @@ public class ServerConnection {
     /** Submit a constructed deck for a (draft) tournament table - starts the matches. */
     public boolean submitDeck(UUID tableId, DeckCardLists deck) {
         return tableId != null && deck != null && session.submitDeck(tableId, deck);
+    }
+
+    /** Save in-progress deck edits during construction/sideboarding WITHOUT
+     *  submitting, so a construction timeout keeps the edits. */
+    public boolean updateDeck(UUID tableId, DeckCardLists deck) {
+        return tableId != null && deck != null && session.updateDeck(tableId, deck);
     }
 
     public UUID createGameVsAi(String deckPath) {
@@ -638,7 +667,13 @@ public class ServerConnection {
     }
 
     public boolean sendAction(UUID gameId, PlayerAction action) {
-        return gameId != null && action != null && session.sendPlayerAction(action, gameId, null);
+        return sendAction(gameId, action, null);
+    }
+
+    /** Some actions carry a payload the server requires (e.g. ROLLBACK_TURNS
+     *  needs an Integer turn count). */
+    public boolean sendAction(UUID gameId, PlayerAction action, Object data) {
+        return gameId != null && action != null && session.sendPlayerAction(action, gameId, data);
     }
 
     /** Offer a specific mana from the player's pool for the current payment
@@ -650,6 +685,30 @@ public class ServerConnection {
 
     public boolean concede(UUID gameId) {
         return gameId != null && session.quitMatch(gameId);
+    }
+
+    /** Users present in the main room (the lobby's who's-online list). Empty on error. */
+    public Collection<mage.view.RoomUsersView> getRoomUsers() {
+        try {
+            UUID roomId = session.getMainRoomId();
+            if (roomId == null) {
+                return Collections.emptyList();
+            }
+            Collection<mage.view.RoomUsersView> users = session.getRoomUsers(roomId);
+            return users == null ? Collections.emptyList() : users;
+        } catch (MageRemoteException e) {
+            return Collections.emptyList();
+        }
+    }
+
+    /** Server news/promotion messages shown in the lobby. Empty on error. */
+    public java.util.List<String> getServerMessages() {
+        try {
+            java.util.List<String> messages = session.getServerMessages();
+            return messages == null ? Collections.emptyList() : messages;
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
     }
 
     /** Finished matches in the main room (history). Empty on error. */

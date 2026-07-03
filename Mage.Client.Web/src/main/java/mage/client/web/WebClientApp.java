@@ -143,6 +143,10 @@ public class WebClientApp {
         app.post("/api/tournament/watch", this::handleTournamentWatch);
         app.get("/api/tournament", this::handleTournamentGet);
         app.post("/api/join", this::handleJoin);
+        app.post("/api/tournament/join", this::handleTournamentJoin);
+        app.post("/api/deck/update", this::handleDeckUpdate);
+        app.get("/api/room/users", this::handleRoomUsers);
+        app.get("/api/server/messages", this::handleServerMessages);
         app.get("/api/gametypes", this::handleGameTypes);
         app.post("/api/tables/create", this::handleCreateTable);
         app.post("/api/tables/remove", this::handleRemoveTable);
@@ -384,7 +388,7 @@ public class WebClientApp {
         }
         boolean ok;
         try {
-            ok = conn.joinTable(UUID.fromString(req.tableId), req.deckPath);
+            ok = conn.joinTable(UUID.fromString(req.tableId), req.deckPath, req.password);
         } catch (IllegalArgumentException e) {
             ctx.status(400).json(error("invalid tableId"));
             return;
@@ -392,6 +396,68 @@ public class WebClientApp {
         // The table owner starts the match from the waiting room (manual start), so
         // joining just seats this player; START_GAME arrives when the owner starts.
         ctx.json(Map.of("ok", ok));
+    }
+
+    private void handleTournamentJoin(Context ctx) {
+        JoinRequest req = ctx.bodyAsClass(JoinRequest.class);
+        ServerConnection conn = sessions.get(req == null ? null : req.token);
+        if (conn == null) {
+            ctx.status(401).json(error("not connected"));
+            return;
+        }
+        if (req.tableId == null) {
+            ctx.status(400).json(error("tableId is required"));
+            return;
+        }
+        boolean ok;
+        try {
+            // deckPath is optional: limited (draft/sealed) tournaments seat with an
+            // empty deck; START_TOURNAMENT/START_DRAFT arrive on the WS
+            ok = conn.joinTournamentTable(UUID.fromString(req.tableId), req.deckPath, req.password);
+        } catch (IllegalArgumentException e) {
+            ctx.status(400).json(error("invalid tableId"));
+            return;
+        }
+        ctx.json(Map.of("ok", ok));
+    }
+
+    private void handleRoomUsers(Context ctx) {
+        ServerConnection conn = sessions.get(ctx.queryParam("token"));
+        if (conn == null) {
+            ctx.status(401).json(error("not connected"));
+            return;
+        }
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (mage.view.RoomUsersView view : conn.getRoomUsers()) {
+            if (view.getUsersView() == null) {
+                continue;
+            }
+            for (mage.view.UsersView u : view.getUsersView()) {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("name", u.getUserName());
+                m.put("flagName", u.getFlagName());
+                m.put("matchHistory", u.getMatchHistory());
+                m.put("tourneyHistory", u.getTourneyHistory());
+                m.put("matchQuitRatio", u.getMatchQuitRatio());
+                m.put("tourneyQuitRatio", u.getTourneyQuitRatio());
+                m.put("infoGames", u.getInfoGames());
+                m.put("infoPing", u.getInfoPing());
+                m.put("generalRating", u.getGeneralRating());
+                m.put("constructedRating", u.getConstructedRating());
+                m.put("limitedRating", u.getLimitedRating());
+                out.add(m);
+            }
+        }
+        ctx.json(out);
+    }
+
+    private void handleServerMessages(Context ctx) {
+        ServerConnection conn = sessions.get(ctx.queryParam("token"));
+        if (conn == null) {
+            ctx.status(401).json(error("not connected"));
+            return;
+        }
+        ctx.json(Map.of("messages", conn.getServerMessages()));
     }
 
     private void handleRespond(Context ctx) {
@@ -434,7 +500,8 @@ public class WebClientApp {
                 break;
             case "action":
                 try {
-                    ok = conn.sendAction(gameId, PlayerAction.valueOf(req.value));
+                    // some actions need a payload (ROLLBACK_TURNS wants an Integer)
+                    ok = conn.sendAction(gameId, PlayerAction.valueOf(req.value), req.data);
                 } catch (IllegalArgumentException e) {
                     ctx.status(400).json(error("unknown action"));
                     return;
@@ -1124,7 +1191,8 @@ public class WebClientApp {
             Map<String, Object> msg = new LinkedHashMap<>();
             msg.put("type", "draftPick");
             msg.put("draftId", draftId == null ? null : draftId.toString());
-            msg.put("draft", dm.getDraftPickView() == null ? null : DraftDto.from(dm.getDraftPickView()));
+            msg.put("draft", dm.getDraftPickView() == null ? null
+                    : DraftDto.from(dm.getDraftPickView()).withDraftView(dm.getDraftView()));
             pushMap(ctx, msg);
             if (draftId != null) {
                 runAsync("fx-boosterack", () -> conn.setBoosterLoaded(draftId));
@@ -1132,7 +1200,18 @@ public class WebClientApp {
             return;
         }
         if (method == ClientCallbackMethod.DRAFT_UPDATE) {
-            push(ctx, "draftUpdate", "");
+            Map<String, Object> msg = new LinkedHashMap<>();
+            msg.put("type", "draftUpdate");
+            msg.put("draftId", cb.getObjectId() == null ? null : cb.getObjectId().toString());
+            if (cb.getData() instanceof mage.view.DraftClientMessage) {
+                mage.view.DraftView dv = ((mage.view.DraftClientMessage) cb.getData()).getDraftView();
+                if (dv != null) {
+                    msg.put("boosterNum", dv.getBoosterNum());
+                    msg.put("cardNum", dv.getCardNum());
+                    msg.put("setNames", dv.getSetNames());
+                }
+            }
+            pushMap(ctx, msg);
             return;
         }
         if (method == ClientCallbackMethod.DRAFT_OVER) {
@@ -1140,8 +1219,7 @@ public class WebClientApp {
             return;
         }
         // deck construction from the drafted pool (after the draft)
-        if ((method == ClientCallbackMethod.CONSTRUCT || method == ClientCallbackMethod.SIDEBOARD)
-                && cb.getData() instanceof TableClientMessage) {
+        if (method == ClientCallbackMethod.CONSTRUCT && cb.getData() instanceof TableClientMessage) {
             TableClientMessage tm = (TableClientMessage) cb.getData();
             java.util.List<DraftDto.DraftCard> pool = new java.util.ArrayList<>();
             if (tm.getDeck() != null) {
@@ -1152,6 +1230,22 @@ public class WebClientApp {
             msg.put("type", "construct");
             msg.put("tableId", tm.getCurrentTableId() == null ? null : tm.getCurrentTableId().toString());
             msg.put("pool", pool);
+            msg.put("time", tm.getTime() > 0 ? tm.getTime() : null);
+            pushMap(ctx, msg);
+            return;
+        }
+        // between-games sideboarding: unlike CONSTRUCT the main/side split matters
+        if (method == ClientCallbackMethod.SIDEBOARD && cb.getData() instanceof TableClientMessage) {
+            TableClientMessage tm = (TableClientMessage) cb.getData();
+            Map<String, Object> msg = new LinkedHashMap<>();
+            msg.put("type", "sideboard");
+            msg.put("tableId", tm.getCurrentTableId() == null ? null : tm.getCurrentTableId().toString());
+            msg.put("main", tm.getDeck() == null ? java.util.Collections.emptyList()
+                    : DraftDto.cardsFrom(tm.getDeck().getCards()));
+            msg.put("side", tm.getDeck() == null ? java.util.Collections.emptyList()
+                    : DraftDto.cardsFrom(tm.getDeck().getSideboard()));
+            msg.put("time", tm.getTime() > 0 ? tm.getTime() : null);
+            msg.put("limited", tm.getFlag());
             pushMap(ctx, msg);
             return;
         }
@@ -1190,6 +1284,26 @@ public class WebClientApp {
         // live game state (spectating or our own board update): GAME_INIT / GAME_UPDATE
         if (cb.getData() instanceof GameView) {
             pushGame(ctx, cb.getObjectId(), (GameView) cb.getData(), null);
+            return;
+        }
+        // server-driven confirmation dialog (rollback consent, concede-game
+        // offers, …): buttons carry the PlayerAction to answer with; a null
+        // action means "just dismiss"
+        if (method == ClientCallbackMethod.USER_REQUEST_DIALOG
+                && cb.getData() instanceof mage.view.UserRequestMessage) {
+            mage.view.UserRequestMessage um = (mage.view.UserRequestMessage) cb.getData();
+            Map<String, Object> msg = new LinkedHashMap<>();
+            msg.put("type", "userRequest");
+            msg.put("gameId", um.getGameId() == null ? null : um.getGameId().toString());
+            msg.put("title", um.getTitle());
+            msg.put("message", um.getMessage());
+            msg.put("relatedUserName", um.getRelatedUserName());
+            List<Map<String, Object>> options = new ArrayList<>();
+            addUserRequestOption(options, um.getButton1Text(), um.getButton1Action());
+            addUserRequestOption(options, um.getButton2Text(), um.getButton2Action());
+            addUserRequestOption(options, um.getButton3Text(), um.getButton3Action());
+            msg.put("options", options);
+            pushMap(ctx, msg);
             return;
         }
         // table changes etc. - a cue for the browser to refresh
@@ -1238,15 +1352,7 @@ public class WebClientApp {
         }
         DeckCardLists lists = new DeckCardLists();
         lists.setName("Draft deck");
-        List<DeckCardInfo> cards = new ArrayList<>();
-        if (req.cards != null) {
-            for (DeckCardReq c : req.cards) {
-                if (c == null || c.name == null || c.qty <= 0) {
-                    continue;
-                }
-                cards.add(new DeckCardInfo(c.name, c.num == null ? "" : c.num, c.set == null ? "" : c.set, c.qty));
-            }
-        }
+        List<DeckCardInfo> cards = toDeckCards(req.cards);
         // basic lands, resolved to a real printing from the local DB
         int[] basics = req.basics == null ? new int[5] : new int[]{req.basics.plains, req.basics.island, req.basics.swamp, req.basics.mountain, req.basics.forest};
         for (int i = 0; i < BASIC_LANDS.length; i++) {
@@ -1267,6 +1373,7 @@ public class WebClientApp {
             cards.add(new DeckCardInfo(BASIC_LANDS[i], num, set, basics[i]));
         }
         lists.setCards(cards);
+        lists.setSideboard(toDeckCards(req.sideboard));
         try {
             boolean ok = conn.submitDeck(UUID.fromString(req.tableId), lists);
             if (!ok) {
@@ -1278,6 +1385,46 @@ public class WebClientApp {
             return;
         }
         ctx.json(Map.of("ok", true));
+    }
+
+    private static List<DeckCardInfo> toDeckCards(List<DeckCardReq> reqs) {
+        List<DeckCardInfo> out = new ArrayList<>();
+        if (reqs != null) {
+            for (DeckCardReq c : reqs) {
+                if (c == null || c.name == null || c.qty <= 0) {
+                    continue;
+                }
+                out.add(new DeckCardInfo(c.name, c.num == null ? "" : c.num, c.set == null ? "" : c.set, c.qty));
+            }
+        }
+        return out;
+    }
+
+    /** Autosave path for construction/sideboarding: pushes the current main/side
+     *  split to the server WITHOUT submitting, so a timeout keeps the edits. */
+    private void handleDeckUpdate(Context ctx) {
+        SubmitDeckRequest req = ctx.bodyAsClass(SubmitDeckRequest.class);
+        ServerConnection conn = sessions.get(req == null ? null : req.token);
+        if (conn == null) {
+            ctx.status(401).json(error("not connected"));
+            return;
+        }
+        if (req.tableId == null) {
+            ctx.status(400).json(error("tableId is required"));
+            return;
+        }
+        DeckCardLists lists = new DeckCardLists();
+        lists.setName("Draft deck");
+        lists.setCards(toDeckCards(req.cards));
+        lists.setSideboard(toDeckCards(req.sideboard));
+        boolean ok;
+        try {
+            ok = conn.updateDeck(UUID.fromString(req.tableId), lists);
+        } catch (IllegalArgumentException e) {
+            ctx.status(400).json(error("invalid tableId"));
+            return;
+        }
+        ctx.json(Map.of("ok", ok));
     }
 
     private void handleDraftPick(Context ctx) {
@@ -1298,6 +1445,17 @@ public class WebClientApp {
             return;
         }
         ctx.json(Map.of("ok", true));
+    }
+
+    private static void addUserRequestOption(List<Map<String, Object>> options,
+                                             String label, PlayerAction action) {
+        if (label == null || label.isEmpty()) {
+            return;
+        }
+        Map<String, Object> opt = new LinkedHashMap<>();
+        opt.put("label", label);
+        opt.put("action", action == null ? null : action.name());
+        options.add(opt);
     }
 
     /** Run a (possibly remoting) call off the callback thread to avoid re-entrancy. */
@@ -1420,6 +1578,7 @@ public class WebClientApp {
         public String token;
         public String tableId;
         public List<DeckCardReq> cards;
+        public List<DeckCardReq> sideboard;
         public Basics basics;
     }
 
@@ -1442,6 +1601,7 @@ public class WebClientApp {
         public String token;
         public String tableId;
         public String deckPath;
+        public String password;
     }
 
     public static class RespondRequest {
@@ -1449,6 +1609,7 @@ public class WebClientApp {
         public String gameId;
         public String kind;  // boolean | uuid | integer | string | action | concede | mana
         public String value;
+        public Integer data; // action payload (e.g. ROLLBACK_TURNS turn count)
     }
 
     public static class DeckSaveRequest {
