@@ -198,6 +198,40 @@ test.describe('Card-effect visual verification (1v1)', () => {
       .toEqual(['attackBlocked', 'block'])
   })
 
+  test('a canAttack-flagged creature (not in canPlay) is clickable to declare it', async ({ page }) => {
+    await boot(
+      page,
+      { myField: [card('atk1', 'Grizzly Bears', ['Creature'], { power: '2', toughness: '2', colors: 'G', canAttack: true })] },
+      { kind: 'select', message: 'Select attackers', canCancel: true, min: 0, max: 0, choices: [], targets: [] },
+    )
+    const sent: string[] = []
+    await page.route('**/api/game/respond', (route) => {
+      const b = JSON.parse(route.request().postData() || '{}')
+      if (b.kind === 'uuid') sent.push(b.value)
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
+    })
+    // settle-aware canvas click (the camera glides on slow runners)
+    const readPos = () =>
+      page.evaluate(() => {
+        const c = (window as unknown as { __board3d: { rendered(): { id: string; x: number; y: number }[] } }).__board3d
+          .rendered()
+          .find((r) => r.id === 'atk1')
+        if (!c) return null
+        const r = document.querySelector('.board3d canvas')!.getBoundingClientRect()
+        return { x: c.x + r.x, y: c.y + r.y }
+      })
+    for (let tries = 0; tries < 20 && !sent.includes('atk1'); tries++) {
+      const a = await readPos()
+      await page.waitForTimeout(350)
+      const b = await readPos()
+      if (a && b && Math.hypot(a.x - b.x, a.y - b.y) < 1) {
+        await page.mouse.click(b.x, b.y)
+        await page.waitForTimeout(400)
+      }
+    }
+    expect(sent).toContain('atk1')
+  })
+
   test('soulbond-paired creatures draw a green pair arrow (one per pair)', async ({ page }) => {
     await boot(page, {
       myField: [
