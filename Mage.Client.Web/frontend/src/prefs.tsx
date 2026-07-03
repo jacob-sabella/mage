@@ -127,9 +127,24 @@ export interface Prefs {
 const DEFAULTS: Prefs = { cardImages: true, avatarId: 0, flagName: '', theme: 'synthwave', manaIcons: true, panelOpacity: 0.72, reduceMotion: false, sound: false, handSize: 'medium', defaultCamera: 'auto', boardZoom: 1.0, cardGap: 1, cardScale: 1, rowGap: 1, matW: 1, matH: 1, seatSpread: 1, lobbyFilter: 'all' }
 const KEY = 'mage.prefs'
 
+// v2 layout re-baseline: the board sliders were recalibrated so 100% = the
+// factory look that used to require {1.4, 2.0, 1.6, 1.7, 1.5, 1.75}. Stored
+// values from before divide by those baselines once so nobody's board jumps.
+const LAYOUT_BASE_V2: Partial<Record<keyof Prefs, number>> = {
+  cardScale: 1.4, cardGap: 2.0, rowGap: 1.6, matW: 1.7, matH: 1.5, seatSpread: 1.75,
+}
+
 function load(): Prefs {
   try {
-    return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(KEY) || '{}') }
+    const raw = JSON.parse(localStorage.getItem(KEY) || '{}') as Partial<Prefs> & { layoutBase?: number }
+    if (raw && !raw.layoutBase && Object.keys(raw).some((k) => k in LAYOUT_BASE_V2)) {
+      for (const [k, base] of Object.entries(LAYOUT_BASE_V2)) {
+        const v = raw[k as keyof Prefs]
+        if (typeof v === 'number') (raw as Record<string, unknown>)[k] = Math.min(1.5, Math.max(0.5, v / (base as number)))
+      }
+    }
+    ;(raw as Record<string, unknown>).layoutBase = 2
+    return { ...DEFAULTS, ...raw }
   } catch {
     return DEFAULTS
   }

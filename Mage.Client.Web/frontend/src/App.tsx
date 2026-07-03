@@ -155,7 +155,7 @@ function SettingsView() {
             <input
               type="range"
               min={0.5}
-              max={2}
+              max={1.5}
               step={0.05}
               value={prefs[key]}
               onChange={(e) => setPref(key, Number(e.target.value))}

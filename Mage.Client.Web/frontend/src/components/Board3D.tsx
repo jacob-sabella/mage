@@ -853,6 +853,12 @@ function roundedRectShape(w: number, h: number, r: number): THREE.Shape {
   return s
 }
 
+/* Factory layout baselines — the board the sliders are calibrated around.
+ * A pref of 1.0 (shown as 100%) means BASE×1; sliders swing ±50% from there.
+ * (These fold in the hand-tuned values that used to be slider positions:
+ * card size 140%, spacing 200%, rows 160%, mat 170/150%, spread 175%.) */
+const BASE = { cardScale: 1.4, cardGap: 2.0, rowGap: 1.6, matW: 1.7, matH: 1.5, seatSpread: 1.75 }
+
 const MAT_W = 14.6
 const MAT_H = 7.6 // deep enough for three rows (creatures · others · lands)
 const MAT_Z = 0.35 // pushed slightly toward the player's back row
@@ -867,11 +873,11 @@ function SeatMat({ color, active, pileX, maxW }: { color: string; active: boolea
   const { prefs } = usePrefs()
   // wide enough that the zone piles (at ±pileX) always sit ON the mat, but no
   // wider than the seat's share of the table (3p/4p corners must not overlap)
-  let w = Math.max(MAT_W * prefs.matW, 2 * (pileX + CARD_W / 2 + 0.35))
+  let w = Math.max(MAT_W * prefs.matW * BASE.matW, 2 * (pileX + CARD_W / 2 + 0.35))
   if (maxW) w = Math.min(w, Math.max(maxW, 2 * (pileX + CARD_W / 2 + 0.35)))
   // deep enough for the three battlefield rows + the back pile column even
   // when the mat-height pref is dialed down (shrinking below content is noise)
-  const h = Math.max(MAT_H * prefs.matH, 6.0)
+  const h = Math.max(MAT_H * prefs.matH * BASE.matH, 6.0)
   const fill = useMemo(() => new THREE.ShapeGeometry(roundedRectShape(w, h, 0.5)), [w, h])
   const frame = useMemo(() => new THREE.ShapeGeometry(roundedRectShape(w + 0.18, h + 0.18, 0.56)), [w, h])
   useEffect(() => () => { fill.dispose(); frame.dispose() }, [fill, frame])
@@ -920,9 +926,9 @@ function PlayerZone({
 }) {
   const [expanded, setExpanded] = useState(false)
   const { prefs } = usePrefs()
-  const cardGap = prefs.cardGap
-  const cardScale = prefs.cardScale || 1
-  const rowGap = prefs.rowGap || 1
+  const cardGap = prefs.cardGap * BASE.cardGap
+  const cardScale = (prefs.cardScale || 1) * BASE.cardScale
+  const rowGap = (prefs.rowGap || 1) * BASE.rowGap
 
   // battlefieldLayout is the shared layout helper — BoardArrows anchors to the
   // exact same positions, so arrows always land on rendered cards
@@ -1113,18 +1119,19 @@ function CinematicRig({
       const toSeat = active ?? anchor
       lookTarget = new THREE.Vector3(
         (anchor.x * 0.55 + (toSeat.x * 0.32 - anchor.x * 0.55) * t) * combatPull,
-        -1.45,
+        // pitch scales with the table so bigger layouts stay fully framed
+        -(radius * 0.28),
         (anchor.z * 0.55 + (toSeat.z * 0.32 - anchor.z * 0.55) * t) * combatPull,
       )
-      targetR = (radius + 3.6) / zoom
-      targetY = 7.4 / Math.sqrt(zoom)
+      targetR = (radius * 1.5 + 3.0) / zoom
+      targetY = (radius * 1.05 + 2.0) / Math.sqrt(zoom)
     } else {
       // no viewer or active player (pre-game overview) → slow continuous circle,
       // unless the player asked for reduced motion
       targetTheta = cyl.current.theta + (prefs.reduceMotion ? 0 : 0.5)
       lookTarget = new THREE.Vector3(0, 0.5, 0)
       targetR = (radius + 5.8) / zoom
-      targetY = 9 / Math.sqrt(zoom)
+      targetY = (radius + 3.8) / Math.sqrt(zoom)
     }
 
     // shortest-arc angle lerp → swoosh around the rim; snap when settled so the
@@ -1157,6 +1164,8 @@ function CinematicRig({
  *  be tapped. `fanCards` re-fits when the hand appears/empties. */
 function MobileCamFit({ radius, fanCards }: { radius: number; fanCards: number }) {
   const { camera, gl, size } = useThree()
+  const { prefs } = usePrefs()
+  const effMatH = MAT_H * prefs.matH * BASE.matH
   // the drei OrbitControls (makeDefault) registers itself here; it owns the
   // look-at target in free mode, so the fit must move THAT, not just lookAt
   const controls = useThree((s) => s.controls) as ({ target: THREE.Vector3; update: () => void } & object) | null
@@ -1166,7 +1175,7 @@ function MobileCamFit({ radius, fanCards }: { radius: number; fanCards: number }
     const tan = Math.tan(halfFov)
     const aspect = size.width / Math.max(1, size.height)
     // vertical (world z) half-extent of the board: seat radius + mat depth
-    const ez = radius + MAT_H / 2 + MAT_Z + 0.8
+    const ez = radius + effMatH / 2 + MAT_Z + 0.8
     // fraction of the canvas covered by the hand fan's cards — measured, so it
     // tracks the hand-size pref and mobile scaling; capped so a squat canvas
     // can't shrink the board into a sliver
@@ -1191,7 +1200,7 @@ function MobileCamFit({ radius, fanCards }: { radius: number; fanCards: number }
     } else {
       camera.lookAt(0, 0, lookZ)
     }
-  }, [camera, gl, controls, size.width, size.height, radius, fanCards])
+  }, [camera, gl, controls, size.width, size.height, radius, fanCards, effMatH])
   return null
 }
 
@@ -1275,9 +1284,9 @@ function BoardArrows({
   stack?: GameState['stack']
 }) {
   const { prefs } = usePrefs()
-  const cardGap = prefs.cardGap
-  const cardScale = prefs.cardScale || 1
-  const rowGap = prefs.rowGap || 1
+  const cardGap = prefs.cardGap * BASE.cardGap
+  const cardScale = (prefs.cardScale || 1) * BASE.cardScale
+  const rowGap = (prefs.rowGap || 1) * BASE.rowGap
   const arrows = useMemo(() => {
     // id → world position: battlefield cards via the SAME layout helper the
     // renderer uses (cardGap + MAX_PER_ROW slice included; rows assumed
@@ -1504,12 +1513,12 @@ function BoardTuner() {
   const [open, setOpen] = useState(false)
   const { prefs, setPref } = usePrefs()
   const SLIDERS: [keyof typeof prefs & ('cardScale' | 'cardGap' | 'rowGap' | 'matW' | 'matH' | 'seatSpread'), string, number, number][] = [
-    ['cardScale', 'Card size', 0.7, 1.4],
-    ['cardGap', 'Card spacing ↔', 0.5, 2],
-    ['rowGap', 'Row spacing ↕', 0.7, 1.6],
-    ['matW', 'Mat width', 0.5, 2],
-    ['matH', 'Mat depth', 0.5, 2],
-    ['seatSpread', 'Table spread', 0.5, 2],
+    ['cardScale', 'Card size', 0.5, 1.5],
+    ['cardGap', 'Card spacing ↔', 0.5, 1.5],
+    ['rowGap', 'Row spacing ↕', 0.5, 1.5],
+    ['matW', 'Mat width', 0.5, 1.5],
+    ['matH', 'Mat depth', 0.5, 1.5],
+    ['seatSpread', 'Table spread', 0.5, 1.5],
   ]
   return (
     <div className={`board-tuner${open ? ' open' : ''}`}>
@@ -1682,7 +1691,7 @@ export function Board3D({
 
   // seat all players radially around the table (supports 2..N)
   const { seats, radius, spectating } = useMemo(
-    () => seatPlayers(game.players, game.me, prefs.seatSpread),
+    () => seatPlayers(game.players, game.me, prefs.seatSpread * BASE.seatSpread),
     [game.players, game.me, prefs.seatSpread],
   )
 

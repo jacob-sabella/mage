@@ -19,7 +19,7 @@ test('tuner opens over the board and the spacing slider moves cards live', async
   // widen card spacing → track an off-centre card in a multi-card row (the
   // opponent's third creature): more spacing moves it outward on screen
   const before = await cardX(page, 'a4')
-  await page.locator('.tuner-row', { hasText: 'Card spacing' }).locator('input').fill('1.8')
+  await page.locator('.tuner-row', { hasText: 'Card spacing' }).locator('input').fill('1.4')
   await expect
     .poll(async () => {
       const after = await cardX(page, 'a4')
@@ -28,7 +28,7 @@ test('tuner opens over the board and the spacing slider moves cards live', async
     .toBeGreaterThan(2)
   // the pref persisted (Settings page shares it)
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('mage.prefs') || '{}').cardGap)
-  expect(stored).toBeCloseTo(1.8)
+  expect(stored).toBeCloseTo(1.4)
 })
 
 test('card size and row spacing sliders exist with sane ranges and reset restores 100%', async ({ page }) => {
@@ -38,7 +38,7 @@ test('card size and row spacing sliders exist with sane ranges and reset restore
     await expect(page.locator('.tuner-row', { hasText: label })).toBeVisible()
   }
   await page.locator('.tuner-row', { hasText: 'Card size' }).locator('input').fill('1.4')
-  await page.locator('.tuner-row', { hasText: 'Row spacing' }).locator('input').fill('1.6')
+  await page.locator('.tuner-row', { hasText: 'Row spacing' }).locator('input').fill('1.5')
   await page.getByRole('button', { name: 'Reset layout' }).click()
   const prefs = await page.evaluate(() => JSON.parse(localStorage.getItem('mage.prefs') || '{}'))
   expect(prefs.cardScale).toBe(1)
