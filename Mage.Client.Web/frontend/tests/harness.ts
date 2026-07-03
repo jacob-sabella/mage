@@ -23,6 +23,8 @@ type C = {
   sourceId?: string
   // soulbond partner permanent id (draws the green pair arrow)
   pairedCard?: string
+  canAttack?: boolean
+  canBlock?: boolean
   // permanent counters (+1/+1, charge, …); [] when absent (gateway contract)
   counters?: { name: string; count: number }[]
   // attachment plumbing: ids attached TO this permanent / the host this one is on
@@ -45,7 +47,7 @@ export const card = (
   id, name, set: o.set ?? 'M21', num: o.num ?? '1', types,
   power: o.power ?? null, toughness: o.toughness ?? null, loyalty: o.loyalty ?? null,
   manaCost: o.manaCost ?? '', colors: o.colors ?? '', tapped: !!o.tapped, damage: o.damage ?? 0,
-  targets: o.targets, sourceId: o.sourceId, pairedCard: o.pairedCard,
+  targets: o.targets, sourceId: o.sourceId, pairedCard: o.pairedCard, canAttack: !!o.canAttack, canBlock: !!o.canBlock,
   counters: o.counters ?? [], attachments: o.attachments ?? [], attachedTo: o.attachedTo ?? null,
   faceDown: !!o.faceDown, isToken: !!o.isToken, isCopy: !!o.isCopy,
   commandType: o.commandType ?? null, rules: o.rules ?? null,
@@ -147,7 +149,7 @@ export const SAMPLE = {
         battlefield: [
           card('b1', 'Island', ['Land'], { colors: 'U' }),
           card('b2', 'Island', ['Land'], { colors: 'U' }),
-          card('b3', 'Serra Angel', ['Creature'], { power: '4', toughness: '4', colors: 'W', counters: [{ name: '+1/+1', count: 2 }], attachments: ['att1'], rules: ['Flying, vigilance'] }),
+          card('b3', 'Serra Angel', ['Creature'], { power: '4', toughness: '4', colors: 'W', counters: [{ name: '+1/+1', count: 2 }], attachments: ['att1'], rules: ['Flying, vigilance'], canAttack: true }),
           // an aura attached to the Serra Angel — tucks under its host, no row slot
           card('att1', 'Rancor', ['Enchantment'], { colors: 'G', attachedTo: 'b3' }),
         ],

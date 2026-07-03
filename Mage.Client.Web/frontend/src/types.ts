@@ -163,6 +163,10 @@ export interface GameCard {
   sourceId?: string | null
   // soulbond partner permanent id — draws the green pair arrow
   pairedCard?: string | null
+  // combat eligibility during declare attackers/blockers — an eligible
+  // creature is clickable to toggle it into/out of combat
+  canAttack?: boolean
+  canBlock?: boolean
   // counters on this permanent (+1/+1, loyalty, charge, …); [] when absent
   counters?: CounterDto[]
   // ids of permanents attached TO this permanent, and the id this one is

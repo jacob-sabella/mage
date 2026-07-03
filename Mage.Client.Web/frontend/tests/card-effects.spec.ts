@@ -85,8 +85,9 @@ test.describe('Card-effect visual verification (1v1)', () => {
       ],
     })
     await expect.poll(async () => (await badges(page)).filter((b) => isPT(b.text)).map((b) => b.text).sort()).toEqual(['2/2', '4/4'])
-    // land + artifact get no P/T badge → exactly two, both on-screen
-    expect((await badges(page)).filter((b) => isPT(b.text) && b.onScreen)).toHaveLength(2)
+    // land + artifact get no P/T badge → exactly two, both on-screen (poll:
+    // the camera glides to its resting framing, slower on CI runners)
+    await expect.poll(async () => (await badges(page)).filter((b) => isPT(b.text) && b.onScreen).length).toBe(2)
   })
 
   test('a damaged creature shows its marked combat damage on the board', async ({ page }) => {

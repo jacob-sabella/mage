@@ -132,7 +132,8 @@ test.describe('Game board (3D)', () => {
       )
     await expect.poll(async () => (await readArrows()).map((a) => a.kind).sort()).toEqual(['attackBlocked', 'block', 'target'])
     // and they must actually land on-screen, not just exist in the scene graph
-    expect((await readArrows()).every((a) => a.onScreen)).toBe(true)
+    // (poll: the camera glide takes longer on slow CI runners)
+    await expect.poll(async () => (await readArrows()).every((a) => a.onScreen)).toBe(true)
   })
 
   test('pile choice shows both piles and picks one (boolean)', async ({ page }) => {
@@ -184,7 +185,7 @@ test.describe('Game board (3D)', () => {
     // in-canvas P/T sprites: Serra Angel 4/4 exists + is on-screen; lands get no 0/0
     const badges = () => page.evaluate(() => (window as unknown as { __board3d: { badges(): { text: string; onScreen: boolean }[] } }).__board3d.badges())
     await expect.poll(async () => (await badges()).filter((b) => b.text === '4/4').length).toBe(1)
-    expect((await badges()).some((b) => b.text === '4/4' && b.onScreen)).toBe(true)
+    await expect.poll(async () => (await badges()).some((b) => b.text === '4/4' && b.onScreen)).toBe(true)
     expect((await badges()).some((b) => b.text === '0/0')).toBe(false)
   })
 

@@ -1640,7 +1640,10 @@ html.game-on .lobby-header { display: none; }
 .control-dock .playable-bar {
   background: transparent; border: none; box-shadow: none; padding: 0;
   flex: 1 1 auto; min-width: 0; overflow-x: auto; max-width: 46%;
+  /* one scrollable row — wrapping doubled the dock height and buried the board */
+  flex-wrap: nowrap;
 }
+.control-dock .playable-bar .play-chip { flex: 0 0 auto; }
 
 /* ===== hand fan — fixed screen-space hand at the bottom of the board ===== */
 .hand-fan {
@@ -2292,7 +2295,11 @@ html, body { overflow-x: hidden; }
     backdrop-filter: blur(5px);
   }
   /* the exit button moves up into the now-empty top-right corner */
-  html.board-max .maximize-toggle { top: 8px; right: 16px; }
+  html.board-max .maximize-toggle { top: 10px; right: 14px; z-index: 30; }
+  /* board floaters drop below the fixed toolbar + player strip */
+  html.board-max .view-menu { top: 92px; }
+  html.board-max .zoom-bar { top: 136px; }
+  html.board-max .board-tuner { top: 178px; }
 
   /* chat collapses to its floating toggle; reopening it floats over the board
      instead of taking a docked column */

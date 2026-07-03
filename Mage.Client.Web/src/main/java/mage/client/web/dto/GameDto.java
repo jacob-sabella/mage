@@ -338,6 +338,10 @@ public class GameDto {
         public String sourceId;
         // soulbond partner (a battlefield permanent id) — drives the pair arrow
         public String pairedCard;
+        // combat eligibility during declare attackers/blockers — clicking an
+        // eligible creature toggles it into/out of combat (legacy highlights)
+        public boolean canAttack;
+        public boolean canBlock;
 
         static CardDto from(CardView card) {
             CardDto dto = new CardDto();
@@ -359,6 +363,8 @@ public class GameDto {
             dto.isToken = card.isToken();
             dto.isCopy = card.isOriginalACopy();
             dto.pairedCard = card.getPairedCard() == null ? null : card.getPairedCard().toString();
+            dto.canAttack = card.isCanAttack();
+            dto.canBlock = card.isCanBlock();
             if (card.getRules() != null && !card.getRules().isEmpty()) {
                 dto.rules = new ArrayList<>(card.getRules());
             }

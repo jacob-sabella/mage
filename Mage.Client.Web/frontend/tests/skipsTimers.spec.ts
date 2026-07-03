@@ -53,3 +53,25 @@ test('clicking your own mana pip sends a mana payment respond', async ({ page })
   await page.locator('button.mana-pip-pay').first().click()
   await expect.poll(() => sent).toContain('BLUE:me')
 })
+
+test('an attack-eligible creature is clickable during the select prompt (declare attackers)', async ({ page }) => {
+  await gotoScreen(page, 'game') // harness: b3 Serra Angel has canAttack
+  await page.waitForFunction(() => ((window as { __board3d?: { rendered(): unknown[] } }).__board3d?.rendered().length ?? 0) > 0)
+  const sent: string[] = []
+  await page.route('**/api/game/respond', (route) => {
+    const b = JSON.parse(route.request().postData() || '{}')
+    if (b.kind === 'uuid') sent.push(b.value)
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
+  })
+  // the playable bar lists it too (it's highlighted) — click the 3D card via its
+  // projected position for the real on-canvas path
+  const pos = await page.evaluate(() => {
+    const c = (window as { __board3d?: { rendered(): { id: string; x: number; y: number }[] } }).__board3d!
+      .rendered()
+      .find((r) => r.id === 'b3')!
+    const canvas = document.querySelector('.board3d canvas')!.getBoundingClientRect()
+    return { x: c.x + canvas.x, y: c.y + canvas.y }
+  })
+  await page.mouse.click(pos.x, pos.y)
+  await expect.poll(() => sent).toContain('b3')
+})

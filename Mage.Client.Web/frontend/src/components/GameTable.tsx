@@ -275,6 +275,11 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
         },
       }
     }
+    // declare attackers / blockers: the server flags eligible creatures rather
+    // than listing them in canPlay — clicking one toggles it into/out of combat
+    if (prompt?.kind === 'select' && (card.canAttack || card.canBlock)) {
+      return { highlight: 'play', onClick: () => onRespond('uuid', card.id) }
+    }
     return {}
   }
 
