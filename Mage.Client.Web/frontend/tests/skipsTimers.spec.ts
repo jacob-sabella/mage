@@ -64,14 +64,28 @@ test('an attack-eligible creature is clickable during the select prompt (declare
     return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
   })
   // the playable bar lists it too (it's highlighted) — click the 3D card via its
-  // projected position for the real on-canvas path
-  const pos = await page.evaluate(() => {
-    const c = (window as { __board3d?: { rendered(): { id: string; x: number; y: number }[] } }).__board3d!
-      .rendered()
-      .find((r) => r.id === 'b3')!
-    const canvas = document.querySelector('.board3d canvas')!.getBoundingClientRect()
-    return { x: c.x + canvas.x, y: c.y + canvas.y }
-  })
-  await page.mouse.click(pos.x, pos.y)
-  await expect.poll(() => sent).toContain('b3')
+  // projected position for the real on-canvas path. The camera glides to its
+  // resting framing (slow on CI), so wait for the projection to hold still and
+  // hit-test to the canvas before clicking; retry if a click lands on nothing.
+  const readPos = () =>
+    page.evaluate(() => {
+      const c = (window as { __board3d?: { rendered(): { id: string; x: number; y: number }[] } }).__board3d!
+        .rendered()
+        .find((r) => r.id === 'b3')
+      if (!c) return null
+      const canvas = document.querySelector('.board3d canvas')!.getBoundingClientRect()
+      const x = c.x + canvas.x
+      const y = c.y + canvas.y
+      return { x, y, clear: document.elementFromPoint(x, y)?.tagName === 'CANVAS' }
+    })
+  for (let tries = 0; tries < 20 && !sent.includes('b3'); tries++) {
+    const a = await readPos()
+    await page.waitForTimeout(350)
+    const b = await readPos()
+    if (a && b && b.clear && Math.hypot(a.x - b.x, a.y - b.y) < 1) {
+      await page.mouse.click(b.x, b.y)
+      await page.waitForTimeout(400)
+    }
+  }
+  expect(sent).toContain('b3')
 })
