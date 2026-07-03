@@ -1636,7 +1636,7 @@ html.board-max .hand-fan { bottom: 88px; }
 /* short desktop windows: scale the whole fan down so it stops shadowing the
    viewer's battlefield rows (capped canvas height leaves no clear band otherwise) */
 @media (max-height: 800px) {
-  .hand-fan { transform: translateX(-50%) scale(0.85); transform-origin: bottom center; }
+  .hand-fan { transform: translateX(-50%) scale(0.8); transform-origin: bottom center; }
 }
 
 /* hand-fan size preference (default = medium, the values above) */

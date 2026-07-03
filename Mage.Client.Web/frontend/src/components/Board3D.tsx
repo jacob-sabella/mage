@@ -1113,11 +1113,11 @@ function CinematicRig({
       const toSeat = active ?? anchor
       lookTarget = new THREE.Vector3(
         (anchor.x * 0.55 + (toSeat.x * 0.32 - anchor.x * 0.55) * t) * combatPull,
-        -2.0,
+        -1.45,
         (anchor.z * 0.55 + (toSeat.z * 0.32 - anchor.z * 0.55) * t) * combatPull,
       )
-      targetR = (radius + 3.2) / zoom
-      targetY = 6.5 / Math.sqrt(zoom)
+      targetR = (radius + 3.6) / zoom
+      targetY = 7.4 / Math.sqrt(zoom)
     } else {
       // no viewer or active player (pre-game overview) → slow continuous circle,
       // unless the player asked for reduced motion
@@ -1232,14 +1232,15 @@ function Arrow({ from, to, kind, bend = 1 }: { from: THREE.Vector3; to: THREE.Ve
     const horiz = Math.hypot(dir.x, dir.z) || 0.001
     const perp = new THREE.Vector3(-dir.z, 0, dir.x).normalize()
     const mid = from.clone().lerp(to, 0.5)
-    mid.y += horiz * 0.28 + 0.9 // bow up over the board
-    mid.add(perp.multiplyScalar(Math.min(2.8, horiz * 0.32) * bend)) // and out to the side
+    // low, slim arcs — the camera sits close, so fat high arcs read as walls
+    mid.y += horiz * 0.16 + 0.55 // bow up over the board
+    mid.add(perp.multiplyScalar(Math.min(1.9, horiz * 0.22) * bend)) // and out to the side
     const curve = new THREE.QuadraticBezierCurve3(from, mid, to)
-    const tube = new THREE.TubeGeometry(curve, 40, 0.085, 10, false)
-    const glow = new THREE.TubeGeometry(curve, 40, 0.18, 10, false)
+    const tube = new THREE.TubeGeometry(curve, 40, 0.05, 10, false)
+    const glow = new THREE.TubeGeometry(curve, 40, 0.11, 10, false)
     const tan = curve.getTangentAt(1).normalize()
     const headQuat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), tan)
-    const headPos = to.clone().addScaledVector(tan, -0.4) // pull the cone back so its tip lands on `to`
+    const headPos = to.clone().addScaledVector(tan, -0.3) // pull the cone back so its tip lands on `to`
     return { tube, glow, headPos, headQuat }
   }, [from, to, bend])
   useEffect(() => () => { tube.dispose(); glow.dispose() }, [tube, glow])
@@ -1253,7 +1254,7 @@ function Arrow({ from, to, kind, bend = 1 }: { from: THREE.Vector3; to: THREE.Ve
         <meshBasicMaterial color={color} transparent opacity={0.98} toneMapped={false} depthTest={false} depthWrite={false} />
       </mesh>
       <mesh position={headPos} quaternion={headQuat} renderOrder={999}>
-        <coneGeometry args={[0.32, 0.82, 16]} />
+        <coneGeometry args={[0.2, 0.55, 16]} />
         <meshBasicMaterial color={color} toneMapped={false} depthTest={false} depthWrite={false} />
       </mesh>
     </group>
