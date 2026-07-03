@@ -115,6 +115,52 @@ public class GameDto {
         return dto;
     }
 
+    /**
+     * Same as {@link #from(GameView)}, but also honours the per-callback options
+     * map that carries combat eligibility during declare attackers/blockers.
+     *
+     * <p>The server never sets {@code CardView.canAttack/canBlock} — those flags
+     * are populated client-side from {@code POSSIBLE_ATTACKERS/POSSIBLE_BLOCKERS}
+     * in the callback options (the Swing client does this in GamePanel). The web
+     * board's click handler gates on these flags, so without this step clicking a
+     * creature during declare-attackers does nothing.
+     */
+    public static GameDto from(GameView game, Map<String, java.io.Serializable> options) {
+        GameDto dto = from(game);
+        if (options != null) {
+            applyCombatEligibility(dto, options.get(mage.constants.Constants.Option.POSSIBLE_ATTACKERS), true);
+            applyCombatEligibility(dto, options.get(mage.constants.Constants.Option.POSSIBLE_BLOCKERS), false);
+        }
+        return dto;
+    }
+
+    /** Flag matching battlefield cards as attack- or block-eligible from an id list. */
+    private static void applyCombatEligibility(GameDto dto, java.io.Serializable idList, boolean attack) {
+        if (!(idList instanceof List)) {
+            return;
+        }
+        java.util.Set<String> ids = new java.util.HashSet<>();
+        for (Object o : (List<?>) idList) {
+            if (o != null) {
+                ids.add(o.toString());
+            }
+        }
+        if (ids.isEmpty()) {
+            return;
+        }
+        for (PlayerDto p : dto.players) {
+            for (CardDto c : p.battlefield) {
+                if (c.id != null && ids.contains(c.id)) {
+                    if (attack) {
+                        c.canAttack = true;
+                    } else {
+                        c.canBlock = true;
+                    }
+                }
+            }
+        }
+    }
+
     /** A named group of cards (a reveal window or a look-at window). */
     public static class NamedCardsDto {
         public String name;

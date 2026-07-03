@@ -1272,7 +1272,7 @@ public class WebClientApp {
             if (!isDialog && message.getMessage() != null && !message.getMessage().isEmpty()) {
                 pushLog(ctx, message.getMessage());
             }
-            pushGame(ctx, cb.getObjectId(), message.getGameView(), prompt);
+            pushGame(ctx, cb.getObjectId(), message.getGameView(), prompt, message.getOptions());
             return;
         }
         // choose an ability / mode (different payload type)
@@ -1480,10 +1480,15 @@ public class WebClientApp {
     }
 
     private void pushGame(WsContext ctx, UUID gameId, GameView gameView, PromptDto prompt) {
+        pushGame(ctx, gameId, gameView, prompt, null);
+    }
+
+    private void pushGame(WsContext ctx, UUID gameId, GameView gameView, PromptDto prompt,
+            Map<String, java.io.Serializable> options) {
         Map<String, Object> msg = new LinkedHashMap<>();
         msg.put("type", "game");
         msg.put("gameId", gameId == null ? null : gameId.toString());
-        msg.put("game", gameView == null ? null : GameDto.from(gameView));
+        msg.put("game", gameView == null ? null : GameDto.from(gameView, options));
         msg.put("prompt", prompt);
         pushMap(ctx, msg);
     }
