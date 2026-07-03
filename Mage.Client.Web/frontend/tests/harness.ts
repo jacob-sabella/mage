@@ -55,7 +55,27 @@ export const SAMPLE = {
   tables: [
     { id: 't1', name: "Aggro Duel", gameType: 'Two Player Duel', controller: 'Jaya', seats: '1/2', state: 'Waiting', skillLevel: 'Casual', games: [] as string[] },
     { id: 't2', name: 'Live Duel', gameType: 'Two Player Duel', controller: 'Liliana', seats: '2/2', state: 'Dueling', skillLevel: 'Serious', games: ['g-live'] },
+    { id: 't3', name: 'Friday Draft', gameType: 'Booster Draft', controller: 'Urza', seats: '8/8', state: 'Dueling', skillLevel: 'Serious', isTournament: true, games: [] as string[] },
   ],
+  tournament: {
+    name: 'Friday Draft',
+    type: 'Booster Draft 3 rounds',
+    state: 'Dueling',
+    runningInfo: '',
+    watchingAllowed: true,
+    players: [
+      { name: 'Urza', state: 'Dueling', points: 3, results: '1-0', quit: false },
+      { name: 'Mishra', state: 'Dueling', points: 0, results: '0-1', quit: false },
+    ],
+    rounds: [
+      {
+        round: 1,
+        games: [
+          { round: 1, gameId: 'g-sub1', tableId: 'sub-t1', state: 'Dueling', result: '', players: 'Urza - Mishra' },
+        ],
+      },
+    ],
+  },
   decks: [
     { name: 'Mono Red Aggro', path: '/decks/red.dck', category: 'Decks to Beat' },
     { name: 'Azorius Control', path: '/decks/uw.dck', category: 'Decks to Beat' },
@@ -437,6 +457,8 @@ export async function installMocks(
         constructor(public url: string) {
           setTimeout(() => {
             this.onopen?.({})
+            // test hook: push an arbitrary server frame from a spec
+            ;(window as unknown as { __emit: (o: unknown) => void }).__emit = (o) => this.emit(o)
             this.emit({ type: 'ready', payload: 'connected' })
             this.emit({ type: 'chat', user: 'System', text: 'Welcome.', color: 'BLUE', time: Date.now() })
             if (isGame) {
@@ -527,6 +549,10 @@ export async function installMocks(
   await page.route('**/api/draft/pick', json({ ok: true }))
   await page.route('**/api/game/respond', json({ ok: true }))
   await page.route('**/api/watch', json({ ok: true }))
+  await page.route('**/api/watch-table', json({ ok: true }))
+  await page.route('**/api/watch-stop', json({ ok: true }))
+  await page.route('**/api/tournament/watch', json({ ok: true }))
+  await page.route('**/api/tournament?**', json(SAMPLE.tournament))
   await page.route('**/api/join', json({ ok: true }))
   await page.route('**/api/chat', json({ ok: true }))
   await page.route('**/api/disconnect', json({ ok: true }))

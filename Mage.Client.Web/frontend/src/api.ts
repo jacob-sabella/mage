@@ -87,6 +87,17 @@ export function respond(
   })
 }
 
+export function watchTournament(token: string, tableId: string): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>('/api/tournament/watch', {
+    method: 'POST',
+    body: JSON.stringify({ token, tableId }),
+  })
+}
+
+export function getTournament(token: string, id: string): Promise<import('./types').TournamentDto> {
+  return request(`/api/tournament?token=${encodeURIComponent(token)}&id=${encodeURIComponent(id)}`)
+}
+
 // Card search runs server-side against the engine's local card database; it
 // does not need a session token.
 export interface CardSearchFilters {

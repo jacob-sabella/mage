@@ -23,6 +23,7 @@ public class TableDto {
     public String seats;
     public String state;
     public String skillLevel;
+    public boolean isTournament;
     public List<String> games = new ArrayList<>();
 
     public static TableDto from(TableView table) {
@@ -35,6 +36,7 @@ public class TableDto {
         dto.seats = table.getSeatsInfo();
         dto.state = table.getTableStateText();
         dto.skillLevel = table.getSkillLevel() == null ? null : table.getSkillLevel().toString();
+        dto.isTournament = table.isTournament();
         if (table.getGames() != null) {
             for (UUID gameId : table.getGames()) {
                 dto.games.add(gameId.toString());

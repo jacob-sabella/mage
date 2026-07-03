@@ -11,6 +11,7 @@ import {
   sendChat,
   watchStop,
   watchTable,
+  watchTournament,
 } from '../api'
 import type { MatchDto, RespondKind, TableConfig } from '../api'
 import { useServerEvents } from '../useServerEvents'
@@ -22,6 +23,7 @@ import { ChatPanel } from './ChatPanel'
 import { DeckPicker } from './DeckPicker'
 import { TableSetup } from './TableSetup'
 import { WaitingRoom } from './WaitingRoom'
+import { TournamentModal } from './TournamentModal'
 import { ConstructView } from './ConstructView'
 import { DraftView } from './DraftView'
 import { GameTable } from './GameTable'
@@ -157,6 +159,8 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
       setSpectateTableId(null) // we're a player now, not a spectator
       pushToast('Game started')
       playCue('start')
+    } else if (e.type === 'showTournament' && e.tournamentId) {
+      setTournamentView(e.tournamentId)
     } else if (e.type === 'watchGame' && e.gameId) {
       // answer to a watch-table request: the gateway resolved the table's CURRENT
       // game — adopt it as the board we're spectating (mirrors gameStart, but
@@ -263,6 +267,10 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   // Spectate a table: ask the gateway to watch its CURRENT game. The resolved
   // game id arrives asynchronously as a `watchGame` frame (handled above); until
   // then we optimistically open the board on the last game id we know of.
+  // tournament spectating: the id arrives via a showTournament frame after a
+  // tournament-watch request; non-null renders the standings/pairings modal
+  const [tournamentView, setTournamentView] = useState<string | null>(null)
+
   const handleWatch = useCallback(
     (t: TableDto) => {
       const fallback = t.games.length > 0 ? t.games[t.games.length - 1] : null
@@ -584,17 +592,28 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
                       <td>{t.seats}</td>
                       <td>{t.state}</td>
                       <td className="row-actions">
-                        {t.games.length > 0 && (
+                        {t.isTournament ? (
+                          <button
+                            className="btn watch-btn"
+                            onClick={() => {
+                              watchTournament(session.token, t.id).then((r) => {
+                                if (!r.ok) pushToast('Could not open the tournament', 'error')
+                              }).catch(() => pushToast('Could not open the tournament', 'error'))
+                            }}
+                          >
+                            🏆 Watch
+                          </button>
+                        ) : t.games.length > 0 ? (
                           <button className="btn watch-btn" onClick={() => handleWatch(t)}>
                             Watch
                           </button>
-                        )}
+                        ) : null}
                         {isJoinable(t) && (
                           <button className="btn watch-btn" onClick={() => handleJoin(t.id)}>
                             Join
                           </button>
                         )}
-                        {!isJoinable(t) && t.games.length === 0 && <span className="muted">—</span>}
+                        {!isJoinable(t) && t.games.length === 0 && !t.isTournament && <span className="muted">—</span>}
                       </td>
                     </tr>
                   ))}
@@ -627,6 +646,18 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
           </button>
         )}
       </div>
+
+      {tournamentView && (
+        <TournamentModal
+          token={session.token}
+          tournamentId={tournamentView}
+          onClose={() => setTournamentView(null)}
+          onWatchTable={(tableId, gameId) => {
+            setTournamentView(null)
+            handleWatch({ id: tableId, games: gameId ? [gameId] : [] } as TableDto)
+          }}
+        />
+      )}
 
       {deckIntent && (
         <DeckPicker

@@ -214,6 +214,21 @@ public class ServerConnection {
         return roomId != null && tableId != null && session.watchTable(roomId, tableId);
     }
 
+    /** Watch a TOURNAMENT table: the server replies with a SHOW_TOURNAMENT
+     *  callback carrying the tournament id, which the web client turns into a
+     *  standings/pairings view (sub-table duels spectate via watchTable). */
+    public boolean watchTournamentTable(UUID tableId) {
+        return tableId != null && session.watchTournamentTable(tableId);
+    }
+
+    public mage.view.TournamentView getTournament(UUID tournamentId) {
+        try {
+            return tournamentId == null ? null : session.getTournament(tournamentId);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     /**
      * Sit down at an existing open table with a deck loaded from a .dck file on
      * the server. When the match starts the server pushes START_GAME, after

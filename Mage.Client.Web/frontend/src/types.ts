@@ -7,7 +7,27 @@ export interface TableDto {
   seats: string
   state: string
   skillLevel: string
+  isTournament?: boolean
   games: string[]
+}
+
+/** Tournament standings + pairings (the web spectator's tournament panel). */
+export interface TournamentDto {
+  name: string
+  type: string
+  state: string
+  runningInfo: string
+  watchingAllowed: boolean
+  players: { name: string; state: string; points: number; results: string; quit: boolean }[]
+  rounds: { round: number; games: TournamentGame[] }[]
+}
+export interface TournamentGame {
+  round: number
+  gameId?: string | null
+  tableId?: string | null // the sub-table — spectate via watch-table
+  state: string
+  result: string
+  players: string
 }
 
 export interface ConnectResponse {
@@ -34,6 +54,7 @@ export interface ServerEvent {
   draft?: DraftState
   // present on the construct frame (post-draft deck building)
   tableId?: string
+  // present on showTournament frames (answer to a tournament watch)
   pool?: DraftCard[]
 }
 

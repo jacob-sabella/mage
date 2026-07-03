@@ -17,6 +17,7 @@ import mage.client.web.dto.DraftDto;
 import mage.client.web.dto.GameDto;
 import mage.client.web.dto.PromptDto;
 import mage.client.web.dto.TableDto;
+import mage.client.web.dto.TournamentDto;
 import mage.client.web.net.ServerConnection;
 import mage.constants.PlayerAction;
 import mage.interfaces.callback.ClientCallback;
@@ -139,6 +140,8 @@ public class WebClientApp {
         app.post("/api/watch", this::handleWatch);
         app.post("/api/watch-table", this::handleWatchTable);
         app.post("/api/watch-stop", this::handleWatchStop);
+        app.post("/api/tournament/watch", this::handleTournamentWatch);
+        app.get("/api/tournament", this::handleTournamentGet);
         app.post("/api/join", this::handleJoin);
         app.get("/api/gametypes", this::handleGameTypes);
         app.post("/api/tables/create", this::handleCreateTable);
@@ -457,6 +460,49 @@ public class WebClientApp {
                 return;
         }
         ctx.json(Map.of("ok", ok));
+    }
+
+    private void handleTournamentWatch(Context ctx) {
+        JoinRequest req = ctx.bodyAsClass(JoinRequest.class);
+        ServerConnection conn = sessions.get(req == null ? null : req.token);
+        if (conn == null) {
+            ctx.status(401).json(error("not connected"));
+            return;
+        }
+        if (req.tableId == null) {
+            ctx.status(400).json(error("tableId is required"));
+            return;
+        }
+        boolean ok;
+        try {
+            ok = conn.watchTournamentTable(UUID.fromString(req.tableId));
+        } catch (IllegalArgumentException e) {
+            ctx.status(400).json(error("invalid tableId"));
+            return;
+        }
+        // the tournament id arrives asynchronously as a "showTournament" WS frame
+        ctx.json(Map.of("ok", ok));
+    }
+
+    private void handleTournamentGet(Context ctx) {
+        ServerConnection conn = sessions.get(ctx.queryParam("token"));
+        if (conn == null) {
+            ctx.status(401).json(error("not connected"));
+            return;
+        }
+        UUID id;
+        try {
+            id = UUID.fromString(ctx.queryParam("id"));
+        } catch (Exception e) {
+            ctx.status(400).json(error("invalid tournament id"));
+            return;
+        }
+        mage.view.TournamentView view = conn.getTournament(id);
+        if (view == null) {
+            ctx.status(404).json(error("tournament not found"));
+            return;
+        }
+        ctx.json(TournamentDto.from(view));
     }
 
     private void handleTables(Context ctx) {
@@ -1031,6 +1077,17 @@ public class WebClientApp {
                 Map<String, Object> msg = new LinkedHashMap<>();
                 msg.put("type", "watchGame");
                 msg.put("gameId", gameId.toString());
+                pushMap(ctx, msg);
+            }
+            return;
+        }
+        // answer to a tournament watch: the server names the tournament to show
+        if (method == ClientCallbackMethod.SHOW_TOURNAMENT) {
+            UUID tournamentId = cb.getObjectId();
+            if (tournamentId != null) {
+                Map<String, Object> msg = new LinkedHashMap<>();
+                msg.put("type", "showTournament");
+                msg.put("tournamentId", tournamentId.toString());
                 pushMap(ctx, msg);
             }
             return;
