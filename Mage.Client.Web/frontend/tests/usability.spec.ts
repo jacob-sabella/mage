@@ -1,5 +1,5 @@
 import { test, expect, type Page, type Locator } from '@playwright/test'
-import { gotoScreen, installMocks } from './harness'
+import { gotoScreen, installMocks, gotoCustomGame, SAMPLE, card } from './harness'
 
 /*
  * ===========================================================================
@@ -700,6 +700,118 @@ const getCls = (page: Page) => page.evaluate(() => (window as unknown as { __cls
           box!.height,
           `card preview too short to read (${Math.round(box!.height)}px)`,
         ).toBeGreaterThanOrEqual(225)
+      })
+    })
+  }
+})
+
+// ===========================================================================
+//  PART E — content independence (rule 11): pathological-but-valid content in
+//  one region must never overflow the page, cover a control, or SHOVE the
+//  primary chrome around. We render the board twice — nominal vs. a worst-case
+//  stress state (very long player names, 3-digit / negative life, a fat mana
+//  pool, a jammed hand) — and assert the content-independent anchors (Back,
+//  Concede, the view fab, Pass) keep the same box, with no new overflow or
+//  covered control. A moved anchor is a real defect: the content of one element
+//  reflowed its neighbours. Fix in CSS (clamp/ellipsize), never in the test.
+// ===========================================================================
+
+// Anchors whose position must NOT depend on how much text/how many items other
+// elements hold. (The phase track legitimately flexes, so it isn't pinned — but
+// it, too, is covered by the overflow + not-covered checks below.)
+const PINNED = (p: Page) => [
+  { label: 'Back', loc: p.getByRole('button', { name: /Back/ }) },
+  { label: 'Concede', loc: p.getByRole('button', { name: /Concede/ }) },
+  { label: 'view-fab', loc: p.locator('.view-fab') },
+  { label: 'Pass', loc: p.getByRole('button', { name: /^Pass/ }) },
+]
+
+// A REALISTIC worst-case board — every value is reachable in real play:
+//   - names at the server's max length (14 chars, `maxUserNameLength`), using
+//     wide glyphs so they stress the widest realistic name box;
+//   - a 3-digit life total (routine in Commander) and a negative one;
+//   - a fat-but-plausible mana pool (big ramp / High Tide turns);
+//   - a large hand.
+// Each of these lives inside its own slot and must not push a neighbour.
+function stressGame(): unknown {
+  const g = JSON.parse(JSON.stringify(SAMPLE.game))
+  const me = 'WWWWWWWWWWWWWW' // 14 chars — server max username length
+  const opp = 'MMMMMMMMMMMMMM'
+  g.me = me
+  g.activePlayer = me
+  g.priorityPlayer = me
+  g.players[0].name = opp
+  g.players[0].life = 247
+  g.players[1].name = me
+  g.players[1].life = -9
+  g.players[1].manaPool = '{U}{U}{U}{R}{R}{R}{G}{G}{W}{W}{B}{B}'
+  g.players[1].handCount = 12
+  g.myHand = Array.from({ length: 12 }, (_, i) =>
+    card('jh' + i, 'Lightning Bolt', ['Instant'], { colors: 'R', manaCost: '{R}' }),
+  )
+  return g
+}
+
+async function pinnedBoxes(p: Page): Promise<Record<string, { x: number; y: number; width: number; height: number }>> {
+  // Neutralise any horizontal scroll first. On phones the turn controls sit in
+  // an intentionally scroll-overflowed row; measuring at a stray scrollLeft would
+  // report a scroll offset as if it were a reflow. Zeroing it on both loads makes
+  // the comparison apples-to-apples: does content shift at the SAME scroll origin?
+  await p.evaluate(() => {
+    for (const e of Array.from(document.querySelectorAll('*'))) (e as HTMLElement).scrollLeft = 0
+  })
+  const out: Record<string, { x: number; y: number; width: number; height: number }> = {}
+  for (const a of PINNED(p)) {
+    const loc = a.loc.first()
+    if ((await loc.count()) === 0 || !(await loc.isVisible().catch(() => false))) continue
+    const box = await loc.boundingBox()
+    if (box) out[a.label] = box
+  }
+  return out
+}
+
+;(AUDIT ? test.describe : test.describe.skip)('usability · content independence', () => {
+  for (const vp of REP_VIEWPORTS) {
+    test.describe(`${vp.name} ${vp.w}x${vp.h}`, () => {
+      test.use({ viewport: { width: vp.w, height: vp.h } })
+      const mobile = vp.w <= 760
+      test('board chrome does not reflow under stress content', async ({ page, context }) => {
+        // nominal board
+        await gotoScreen(page, 'game')
+        await page.locator('.board3d canvas').waitFor()
+        await page.getByRole('button', { name: /^Pass/ }).waitFor()
+        await page.waitForTimeout(400) // let the mobile toolbar/strip settle
+        const nominal = await pinnedBoxes(page)
+
+        // stress board on a FRESH page (installing the mock twice on one page
+        // would stack init scripts / WS routes — a new page keeps it clean)
+        const sp = await context.newPage()
+        await sp.setViewportSize({ width: vp.w, height: vp.h })
+        await gotoCustomGame(sp, stressGame())
+        await sp.locator('.board3d canvas').waitFor()
+        await sp.getByRole('button', { name: /^Pass/ }).waitFor()
+        await sp.waitForTimeout(400) // match the nominal settle before measuring
+
+        const errs: string[] = []
+        errs.push(...(await checkOverflow(sp))) // rule 1 still holds under stress
+        // only compare anchors that were actually present nominally (some
+        // controls legitimately don't render at a given viewport)
+        const present = PINNED(sp).filter((c) => nominal[c.label])
+        for (const c of present) errs.push(...(await checkControl(sp, c.loc, c.label, mobile))) // rule 2/3
+        const stress = await pinnedBoxes(sp)
+        for (const label of Object.keys(nominal)) {
+          const a = nominal[label]
+          const b = stress[label]
+          if (!b) {
+            errs.push(`${label}: present nominally but missing under stress`)
+            continue
+          }
+          const dx = Math.abs(a.x - b.x)
+          const dy = Math.abs(a.y - b.y)
+          if (dx > 1 || dy > 1) errs.push(`${label} moved ${dx.toFixed(1)},${dy.toFixed(1)}px under stress content`)
+        }
+        await sp.close()
+        expect(errs, `\n  ${errs.join('\n  ')}\n`).toEqual([])
       })
     })
   }

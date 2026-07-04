@@ -514,6 +514,11 @@ input::placeholder { color: var(--text-dim); }
 /* ----- game table ----- */
 .game-table { display: flex; flex-direction: column; gap: 3px; height: 100%; position: relative; }
 .game-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+/* buttons keep their natural width on one line — a wide turn-label must squeeze
+   the flexible turn-label/phase-track (which ellipsize/shrink), never the
+   buttons (whose labels would wrap to 2 lines and grow the toolbar height,
+   pushing the board down) */
+.game-toolbar > button { flex: 0 0 auto; white-space: nowrap; }
 /* phase-track inline inside the toolbar: fills remaining space between turn info and right controls */
 .game-toolbar .phase-track { flex: 1; min-width: 0; margin: 0 4px; }
 .game-toolbar .phase-seg { padding: 3px 5px; }
@@ -1050,7 +1055,9 @@ input::placeholder { color: var(--text-dim); }
 }
 
 /* ----- per-player match clock ----- */
-.pstat-clock { font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+/* single line + never squeezed: a crowded pstat (fat mana pool) must not wrap the
+   clock to two lines, which would grow the strip and shove the board down */
+.pstat-clock { font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; flex: 0 0 auto; }
 .pstat-clock.running { color: var(--text); }
 .pstat-clock.low { color: var(--danger); font-weight: 700; }
 
@@ -1133,6 +1140,20 @@ input::placeholder { color: var(--text-dim); }
 }
 .view-fab:hover { transform: scale(1.06); }
 .view-menu.open .view-fab { background: var(--accent); color: #0d1119; }
+/* Controlled tooltip for the view fab (replaces the native title, which the
+   browser painted over the open panel). Sits to the right of the fab, clear of
+   the panel that opens below; shown on hover/focus, only while menu is closed. */
+.view-fab-tip {
+  position: absolute; top: 9px; left: 50px; z-index: 6;
+  padding: 4px 9px; border-radius: 8px; white-space: nowrap;
+  font-size: 12px; font-weight: 600; color: var(--text);
+  background: rgba(14, 16, 22, 0.92); border: 1px solid var(--stroke);
+  backdrop-filter: blur(6px);
+  opacity: 0; transform: translateX(-4px); pointer-events: none;
+  transition: opacity 0.14s ease, transform 0.14s ease;
+}
+.view-fab:hover ~ .view-fab-tip,
+.view-fab:focus-visible ~ .view-fab-tip { opacity: 1; transform: none; }
 .view-panel {
   padding: 11px 12px; border-radius: 13px; display: flex; flex-direction: column; gap: 11px;
   min-width: 168px; max-width: 240px; animation: view-panel-in 0.16s ease;
@@ -1204,7 +1225,7 @@ input::placeholder { color: var(--text-dim); }
   50% { box-shadow: 0 0 calc(20px * var(--glow-strength, 1)) color-mix(in srgb, var(--accent) 55%, transparent); }
 }
 .pstat.targetable { cursor: crosshair; box-shadow: 0 0 0 2px var(--accent); }
-.pstat-name { font-weight: 700; font-size: 15px; white-space: nowrap; }
+.pstat-name { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .pstat-life { color: var(--success); font-weight: 800; font-size: 15px; white-space: nowrap; }
 /* one line, ellipsized — never wrapped into 2-3 ragged lines on 4p boards
    (below ~180px the component also swaps to a compact H/L/G form) */
@@ -1508,7 +1529,9 @@ html.reduce-motion .game-over-card, html.reduce-motion .game-over-win .game-over
 .btn.danger:hover { background: var(--danger); }
 
 /* ----- turn / phase progression ----- */
-.turn-label { font-size: 15px; }
+/* one line, ellipsized — a long active-player name must not wrap the label to a
+   second line (which grows the toolbar and shoves the whole board down) */
+.turn-label { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .turn-label b { font-size: 16px; color: var(--text); }
 .prio-chip {
   font-size: 12px; font-weight: 700; padding: 5px 13px; border-radius: 20px;

@@ -1620,9 +1620,17 @@ function ViewMenu({
 
   return (
     <div className={`view-menu${open ? ' open' : ''}`}>
-      <button className="view-fab" onClick={() => setOpen((o) => !o)} title="View options" aria-label="View options">
+      <button className="view-fab" onClick={() => setOpen((o) => !o)} aria-label="View options">
         {open ? '✕' : '⊙'}
       </button>
+      {/* Styled hover tooltip — sits to the RIGHT of the fab, never where the
+          panel opens (below). Only rendered while the panel is closed, so it can
+          never cover the panel's controls (the old native title did). */}
+      {!open && (
+        <span className="view-fab-tip" role="tooltip">
+          View options
+        </span>
+      )}
       {open && (
         <div className="view-panel panel">
           <div className="view-group">

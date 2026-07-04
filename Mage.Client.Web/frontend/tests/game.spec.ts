@@ -417,4 +417,41 @@ test.describe('Multiplayer (Free For All)', () => {
     await page.locator('.view-radial', { hasText: 'Vraska' }).click()
     await expect(page.locator('.view-radial.active', { hasText: 'Vraska' })).toBeVisible()
   })
+
+  // Regression: the fab used a native `title` tooltip that the browser painted
+  // OVER the open camera panel. It's now a controlled tooltip that shows on
+  // hover (panel closed) and is removed entirely while the panel is open, so it
+  // can never cover the panel's controls.
+  test('view-options tooltip is styled and never covers the open panel', async ({ page }) => {
+    await gotoScreen(page, 'game')
+    const fab = page.locator('.view-fab')
+    await fab.waitFor()
+    // the un-styleable native title is gone
+    expect(await fab.getAttribute('title')).toBeNull()
+
+    // closed + hovered → the styled tip fades in to full opacity
+    await fab.hover()
+    const tip = page.locator('.view-fab-tip')
+    await expect(tip).toHaveText('View options')
+    await expect
+      .poll(async () => tip.evaluate((el) => getComputedStyle(el).opacity))
+      .toBe('1')
+
+    // open the panel → the tip is unmounted, so it cannot overlap the panel
+    await fab.click()
+    await expect(page.locator('.view-panel')).toBeVisible()
+    await expect(page.locator('.view-fab-tip')).toHaveCount(0)
+
+    // every mode button hit-tests to itself (nothing painted on top)
+    for (const label of ['Auto', '3D', '2D', 'Free']) {
+      const btn = page.locator('.view-radial.mode', { hasText: new RegExp(`^${label}$`) }).first()
+      const box = await btn.boundingBox()
+      expect(box, `${label} button present`).toBeTruthy()
+      const covered = await btn.evaluate((node, b) => {
+        const e = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)
+        return !(e && (e === node || node.contains(e)))
+      }, box!)
+      expect(covered, `${label} is covered by something on top`).toBe(false)
+    }
+  })
 })

@@ -60,6 +60,45 @@ control, never jumps or jitters, and stays readable and reachable everywhere.
     the app ships a `:focus-visible` styling rule so keyboard users can see
     where they are.
 
+11. **Content independence.** One element's content must never shove its
+    neighbours. The board is rendered twice — nominal vs. a *realistic*
+    worst-case state (player names at the 14-char server maximum, a 3-digit /
+    negative life total, a fat mana pool, a jammed hand) — and the
+    content-independent anchors (Back, Concede, the view fab, Pass) must keep the
+    same box, with no new horizontal overflow and no covered control. Horizontal
+    scroll is neutralised first, so a scroll offset never reads as a reflow. A
+    moved anchor is a real defect: fix it in CSS (clamp / ellipsize / nowrap),
+    never by loosening the check.
+
+## Content independence — layout defects found & fixed
+
+Adding rule 11 (the nominal-vs-stress board) surfaced four real reflows where a
+crowded element grew and pushed the whole board down or sideways (all fixed in
+`theme.css`):
+
+1. **A long active-player name wrapped the turn label to two lines**, growing
+   the toolbar and pushing the board (and the view fab over it) down. Fixed by
+   clamping `.turn-label` to one ellipsized line (`white-space:nowrap;
+   overflow:hidden; text-overflow:ellipsis; min-width:0`).
+2. **A fat mana pool squeezed the player-stat row until the match clock wrapped
+   to two lines**, growing the strip and shoving the board down. Fixed by making
+   `.pstat-clock` single-line and non-squeezable (`white-space:nowrap;
+   flex:0 0 auto`).
+3. **A wide turn label squeezed the toolbar buttons until "↩ Rollback" wrapped
+   to two lines** on the tablet-portrait board (narrow because the chat column
+   sits beside it), growing the toolbar. Fixed by pinning the toolbar buttons to
+   their natural width on one line (`.game-toolbar > button { flex:0 0 auto;
+   white-space:nowrap }`) so the flexible turn-label/phase-track absorb the
+   squeeze instead.
+4. **A long player name widened the player-stat past its slot.** Fixed by
+   ellipsizing `.pstat-name` (`overflow:hidden; text-overflow:ellipsis;
+   min-width:0`).
+
+> Not yet covered: the same nominal-vs-stress technique on the **lobby** (long
+> usernames / table names) and **deck editor** (long deck / card names) needs a
+> harness that can inject arbitrary lobby/deck content — a follow-up. Rule 11
+> currently covers the in-game board, where the reported reflow lived.
+
 ## Dense multiplayer boards — layout defects found & fixed
 
 Adding the `game3p` / `game4p` screens to the matrix surfaced three real layout
