@@ -328,6 +328,38 @@ test.describe('Game board (3D)', () => {
     await expect(page.locator('.hand-grid-overlay')).toHaveCount(0)
   })
 
+  test('hand grid: usable in maximized board and centred with the close visible', async ({ page }) => {
+    await gotoScreen(page, 'game')
+    await page.locator('.board3d canvas').waitFor()
+    await page.getByRole('button', { name: 'Maximize board' }).click()
+    await expect(page.locator('html.board-max')).toHaveCount(1)
+    // the Grid toggle must be reachable in fullscreen (was buried under the dock)
+    const toggle = page.getByRole('button', { name: 'View hand as a grid' })
+    await expect(toggle).toBeVisible()
+    const tBox = (await toggle.boundingBox())!
+    const vp = page.viewportSize()!
+    // it hit-tests to itself (not covered by the control dock)
+    const covered = await toggle.evaluate((node, b) => {
+      const e = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)
+      return !(e && (e === node || node.contains(e)))
+    }, tBox)
+    expect(covered, 'grid toggle is covered in fullscreen').toBe(false)
+    await toggle.click()
+    const overlay = page.locator('.hand-grid-overlay')
+    await expect(overlay).toBeVisible()
+    // the close button and the whole panel sit within the viewport
+    const box = (await overlay.boundingBox())!
+    expect(box.y).toBeGreaterThanOrEqual(0)
+    expect(box.y + box.height).toBeLessThanOrEqual(vp.height)
+    await expect(overlay.getByRole('button', { name: 'Close hand grid' })).toBeVisible()
+    // roughly horizontally centred (within 40px of viewport centre)
+    const cx = box.x + box.width / 2
+    expect(Math.abs(cx - vp.width / 2)).toBeLessThan(40)
+    // clicking the scrim (open board area, left of the centred panel) closes it
+    await page.locator('.hand-grid-scrim').click({ position: { x: 80, y: Math.round(vp.height / 2) } })
+    await expect(page.locator('.hand-grid-overlay')).toHaveCount(0)
+  })
+
   test('hand grid: clicking a playable card sends a respond', async ({ page }) => {
     await gotoScreen(page, 'game')
     let body: { kind?: string; value?: string } | null = null

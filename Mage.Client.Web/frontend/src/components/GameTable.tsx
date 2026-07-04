@@ -559,22 +559,14 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
               🂠 Hand ({game.myHand.length})
             </button>
           ) : (
-            <>
-              <HandFan cards={game.myHand} cardProps={cardProps} onHoverCard={handleHoverCard} onOpenMenu={handleOpenMenu} />
-              <div className="hand-tools">
-                <button
-                  className="hand-grid-toggle"
-                  onClick={() => setHandGrid(true)}
-                  title="View hand as a grid"
-                  aria-label="View hand as a grid"
-                >
-                  ▦
-                </button>
-                <button className="hand-collapse" onClick={() => setHandHidden(true)} title="Hide hand (H)" aria-label="Hide hand">
-                  ▾
-                </button>
-              </div>
-            </>
+            <HandFan
+              cards={game.myHand}
+              cardProps={cardProps}
+              onHoverCard={handleHoverCard}
+              onOpenMenu={handleOpenMenu}
+              onOpenGrid={() => setHandGrid(true)}
+              onHide={() => setHandHidden(true)}
+            />
           ))}
         {handGrid && game.myHand && game.myHand.length > 0 && (
           <HandGrid
@@ -1061,6 +1053,8 @@ function HandGrid({
   }, [onClose])
   const sections = useMemo(() => groupHand(cards, groupBy, cardProps), [cards, groupBy, cardProps])
   return (
+    <>
+      <div className="hand-grid-scrim" onClick={onClose} aria-hidden />
     <div className="hand-grid-overlay panel" role="dialog" aria-label="Your hand (grid)">
       <div className="hand-grid-head">
         <span className="hand-grid-title">Hand ({cards.length})</span>
@@ -1147,6 +1141,7 @@ function HandGrid({
         ))}
       </div>
     </div>
+    </>
   )
 }
 
@@ -1155,11 +1150,15 @@ function HandFan({
   cardProps,
   onHoverCard,
   onOpenMenu,
+  onOpenGrid,
+  onHide,
 }: {
   cards: CardType[]
   cardProps: CardProps
   onHoverCard: (c: CardType | null) => void
   onOpenMenu: (c: CardType, members?: CardType[]) => void
+  onOpenGrid: () => void
+  onHide: () => void
 }) {
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const longPressed = useRef(false)
@@ -1176,6 +1175,17 @@ function HandFan({
   }
   return (
     <div className="hand-fan" role="group" aria-label="Your hand" ref={fanRef} onKeyDown={onKeyDown}>
+      {/* tools live INSIDE the fan so they ride its position — in fullscreen the
+          fan is lifted above the fixed control dock, and the tools come with it
+          instead of being buried under the dock */}
+      <div className="hand-tools">
+        <button className="hand-grid-toggle" onClick={onOpenGrid} title="View hand as a grid" aria-label="View hand as a grid">
+          <span aria-hidden>▦</span> Grid
+        </button>
+        <button className="hand-collapse" onClick={onHide} title="Hide hand (H)" aria-label="Hide hand">
+          ▾
+        </button>
+      </div>
       {cards.map((card, i) => {
         const { highlight, onClick } = cardProps(card)
         const cost = (card.manaCost?.match(/\{([^}]+)\}/g) ?? []).map((s) => s.slice(1, -1))
