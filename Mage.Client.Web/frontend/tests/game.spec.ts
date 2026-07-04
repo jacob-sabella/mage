@@ -300,6 +300,56 @@ test.describe('Game board (3D)', () => {
     expect(bb.x + bb.width, 'bubble should sit left of the right-edge anchor').toBeLessThan(vp.width - 4)
   })
 
+  test('hand grid: opens a grouped, readable overlay and regroups by attribute', async ({ page }) => {
+    await gotoScreen(page, 'game')
+    // no overlay until the grid icon is used
+    await expect(page.locator('.hand-grid-overlay')).toHaveCount(0)
+    await page.getByRole('button', { name: 'View hand as a grid' }).click()
+    const overlay = page.locator('.hand-grid-overlay')
+    await expect(overlay).toBeVisible()
+    // every hand card is present as a big non-overlapping tile (SAMPLE hand = 4)
+    await expect(overlay.locator('.hand-grid-card')).toHaveCount(4)
+    // default grouping is Type — Lightning Bolt (Instant) and Mountain (Land)
+    // land in different sections
+    await expect(overlay.locator('.hand-grid-section-head', { hasText: /Instant/i })).toBeVisible()
+    await expect(overlay.locator('.hand-grid-section-head', { hasText: /Land/i })).toBeVisible()
+    // the tiles are actually large (readability) — >= 110px wide
+    const tile = overlay.locator('.hand-grid-card').first()
+    const box = (await tile.boundingBox())!
+    expect(box.width).toBeGreaterThanOrEqual(110)
+    // regroup by colour — sections change to colour buckets
+    await overlay.getByLabel('Group hand by').selectOption('color')
+    await expect(overlay.locator('.hand-grid-section-head', { hasText: /^\s*Red/i }).first()).toBeVisible()
+    await expect(overlay.locator('.hand-grid-card')).toHaveCount(4)
+    // choice persists to localStorage
+    expect(await page.evaluate(() => localStorage.getItem('mage.handGroupBy'))).toBe('color')
+    // Esc closes it
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.hand-grid-overlay')).toHaveCount(0)
+  })
+
+  test('hand grid: clicking a playable card sends a respond', async ({ page }) => {
+    await gotoScreen(page, 'game')
+    let body: { kind?: string; value?: string } | null = null
+    await page.route('**/api/game/respond', (route) => {
+      try {
+        body = route.request().postDataJSON()
+      } catch {
+        body = {}
+      }
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
+    })
+    await page.getByRole('button', { name: 'View hand as a grid' }).click()
+    // Lightning Bolt is castable in the SAMPLE hand — its tile carries .playable
+    const bolt = page.locator('.hand-grid-card.playable', { hasText: 'Lightning Bolt' }).first()
+    await expect(bolt).toBeVisible()
+    await bolt.click()
+    // grid cards share the fan's action path → a respond for that card id (h1)
+    await expect.poll(() => body).not.toBeNull()
+    expect(body!.kind).toBe('uuid')
+    expect(body!.value).toBe('h1')
+  })
+
   test('H collapses the hand to a pill and restores it', async ({ page }) => {
     await gotoScreen(page, 'game')
     await expect(page.locator('.hand-fan')).toBeVisible()
