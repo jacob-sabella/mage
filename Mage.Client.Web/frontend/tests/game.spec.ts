@@ -241,6 +241,48 @@ test.describe('Game board (3D)', () => {
     await expect(page.locator('.card-hover-bubble')).toHaveCount(0)
   })
 
+  // Regression: in the maximized board (⛶, html.board-max) the toolbar becomes
+  // a fixed top bar — the stack rail's normal top:12 landed under it, and the
+  // floating chat toggle (z-raised, in-flow at the top right) stacked onto
+  // Concede and the exit ✕. Everything in that corner must stay disjoint.
+  test('maximized board: toolbar, stack rail, chat toggle and exit do not overlap', async ({ page }) => {
+    await gotoScreen(page, 'stack') // populated stack → the top-right rail renders
+    await page.locator('.board3d canvas').waitFor()
+    await page.getByRole('button', { name: 'Maximize board' }).click()
+    await expect(page.locator('html.board-max')).toHaveCount(1)
+    const chatFab = page.locator('.chat-reopen')
+    await expect(chatFab).toBeVisible() // maximizing collapses chat to the toggle
+    const boxes: { label: string; box: { x: number; y: number; width: number; height: number } }[] = []
+    const parts: [string, ReturnType<typeof page.locator>][] = [
+      ['Concede', page.getByRole('button', { name: 'Concede' })],
+      ['exit-maximize', page.getByRole('button', { name: 'Exit maximized board' })],
+      ['chat-toggle', chatFab],
+      ['stack-rail', page.locator('.overlay-tr')],
+      ['priority-chip', page.locator('.prio-chip')],
+    ]
+    for (const [label, loc] of parts) {
+      if ((await loc.count()) === 0) continue
+      const box = await loc.first().boundingBox()
+      if (box) boxes.push({ label, box })
+    }
+    expect(boxes.length).toBeGreaterThanOrEqual(4)
+    const TOL = 2
+    const errs: string[] = []
+    for (let i = 0; i < boxes.length; i++) {
+      for (let j = i + 1; j < boxes.length; j++) {
+        const a = boxes[i].box
+        const b = boxes[j].box
+        const ix = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x)
+        const iy = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y)
+        if (ix > TOL && iy > TOL) errs.push(`${boxes[i].label} overlaps ${boxes[j].label}`)
+      }
+    }
+    expect(errs, errs.join(' | ')).toEqual([])
+    // and the maximized layout must not overflow the page horizontally
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+    expect(overflow).toBeLessThanOrEqual(2)
+  })
+
   test('the hover bubble flips to stay on screen at the right edge', async ({ page }) => {
     await gotoScreen(page, 'stack')
     const vp = page.viewportSize()!

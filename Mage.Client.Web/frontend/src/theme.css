@@ -2340,14 +2340,21 @@ html, body { overflow-x: hidden; }
   html.board-max .view-menu { top: 92px; }
   html.board-max .zoom-bar { top: 136px; }
   html.board-max .board-tuner { top: 178px; }
+  /* the stack/combat rail too: its normal top:12 lands under the now-fixed
+     toolbar, piling "Your priority / Concede" onto the stack cards. 104 clears
+     the toolbar (44) + player strip (46) + the chat toggle pinned at 56..100. */
+  html.board-max .board-wrap .overlay-tr { top: 104px; right: 16px; }
 
   /* chat collapses to its floating toggle; reopening it floats over the board
-     instead of taking a docked column */
+     instead of taking a docked column (z 31: above the stack rail it shares the
+     top-right corner with) */
   html.board-max .chat-col {
     position: fixed; top: 92px; right: 16px; bottom: 96px; width: min(360px, 30vw);
-    z-index: 30; margin: 0;
+    z-index: 31; margin: 0;
   }
-  html.board-max .chat-reopen { z-index: 30; }
+  /* the floating chat toggle is an in-flow flex child; pin it below the exit ✕
+     so it stops stacking on Concede and the ✕ in the toolbar corner */
+  html.board-max .chat-reopen { position: fixed; top: 56px; right: 14px; z-index: 30; }
 }
 
 /* deck 4-copy-limit warning */
