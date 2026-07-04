@@ -1634,17 +1634,34 @@ input:focus {
 }
 .board-wrap .game-log .game-log-body { max-height: none; flex: 1; min-height: 0; }
 
-/* card preview: fixed so no ancestor overflow can clip it; animates in on mount */
+/* card hover bubble: the in-game card read-out, floated beside the hovered
+   card instead of pinned in a corner. Fixed so no ancestor overflow clips it;
+   pointer-events:none so it can never steal the hover from the card under it
+   (which would flicker). Positioned by CardHoverBubble (flip + clamp on the
+   measured box), so the CSS carries size, not placement. */
 @keyframes card-preview-pop {
   from { opacity: 0; transform: translateY(10px) scale(0.94); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
-.board-wrap .card-preview {
-  position: fixed; bottom: 20px; left: 20px; z-index: 1000;
-  width: 330px; max-width: 330px;
-  flex: 0 0 auto; height: 420px; /* fixed size on the board (not in a flex column) */
-  animation: card-preview-pop 0.18s ease both;
+.card-hover-bubble {
+  position: fixed; z-index: 1000; width: 300px; pointer-events: none;
+  display: flex; flex-direction: column; overflow: hidden;
+  background: rgba(14, 16, 22, 0.96); border: 1px solid var(--stroke); border-radius: 14px;
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.6);
+  animation: card-preview-pop 0.15s ease both;
 }
+/* the card image dominates the bubble but leaves room for the rules text on
+   short screens; contain keeps the whole card visible, never cropped.
+   flex:0 0 auto overrides the base .card-preview-img flex:1 (basis 0%), whose
+   collapsed first layout made the placement code measure a 127px bubble. */
+.card-hover-bubble .card-preview-img {
+  width: 100%; height: clamp(220px, 42vh, 418px); flex: 0 0 auto;
+  object-fit: contain; background: #11141b; display: block;
+}
+/* readable rules text — the whole point of the bubble */
+.card-hover-bubble .card-preview-rules p { font-size: 14px; line-height: 1.5; }
+.card-hover-bubble .card-preview-rules { max-height: 32vh; overflow: hidden; }
+.card-hover-bubble .card-preview-name { font-size: 16px; }
 
 /* the one control dock — always present, same place every turn */
 /* in-game: the "Playing" heading row is dead weight — hidden (LobbyView toggles

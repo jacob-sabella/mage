@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Board3D, type BrowsableZone } from './Board3D'
 import { ConfirmDialog } from './ConfirmDialog'
 import { ZoneBrowser } from './ZoneBrowser'
@@ -58,6 +58,27 @@ const SKIP_BUTTONS = [
 
 export function GameTable({ game, prompt, interactive, result, onRespond, onTapMany, maximized, onToggleMaximize, onLeave, onPlayAgain, onWatchNext }: Props) {
   const [preview, setPreview] = useState<CardType | null>(null)
+  // where the hover bubble anchors: the cursor position captured when the
+  // hovered card CHANGED (not followed per-pixel — a bubble chasing the mouse
+  // jitters and re-lays-out constantly)
+  const [previewAnchor, setPreviewAnchor] = useState<{ x: number; y: number } | null>(null)
+  const pointerRef = useRef({ x: 0, y: 0 })
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      pointerRef.current = { x: e.clientX, y: e.clientY }
+    }
+    // capture phase on both: window-capture runs BEFORE any element handler
+    // (DOM enter handlers and the 3D canvas's raycast enter both fire mid-event),
+    // so the ref is always fresh by the time handleHoverCard captures the anchor.
+    // pointerover covers the enter-without-move case (bubble-phase pointermove
+    // alone arrived after mouseenter and left the first anchor stale at 0,0).
+    window.addEventListener('pointermove', onMove, { capture: true, passive: true })
+    window.addEventListener('pointerover', onMove, { capture: true, passive: true })
+    return () => {
+      window.removeEventListener('pointermove', onMove, { capture: true })
+      window.removeEventListener('pointerover', onMove, { capture: true })
+    }
+  }, [])
   const [pressedCard, setPressedCard] = useState<CardType | null>(null)
   // resolve combat card ids → names (defenders may be a player name, left as-is)
   const cardName = useMemo(() => {
@@ -162,12 +183,22 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
 
   // Debounce clearing the preview so rapid enter/leave events (from 3D raycasting)
   // don't cause a 1-frame flash of null between cards.
+  const previewIdRef = useRef<string | null>(null)
   const handleHoverCard = useCallback((card: CardType | null) => {
     if (card) {
       if (clearTimerRef.current) clearTimeout(clearTimerRef.current)
+      // (re)anchor the bubble only when the hovered card actually changes;
+      // onPointerMove re-fires with the same card continuously
+      if (previewIdRef.current !== card.id) {
+        previewIdRef.current = card.id
+        setPreviewAnchor({ ...pointerRef.current })
+      }
       setPreview(card)
     } else {
-      clearTimerRef.current = setTimeout(() => setPreview(null), 180)
+      clearTimerRef.current = setTimeout(() => {
+        previewIdRef.current = null
+        setPreview(null)
+      }, 180)
     }
   }, [])
 
@@ -425,7 +456,7 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
           targets={prompt?.kind === 'target' ? prompt.targets : undefined}
           focusSeat={focusSeat}
         />
-        <CardPreview card={preview} />
+        <CardHoverBubble card={preview} anchor={previewAnchor} />
         <CardZoomOverlay card={pressedCard} />
         {menu && (
           <CardMenu
@@ -1027,8 +1058,46 @@ function PlayableBar({
 
 /** A large, fully-readable card panel shown while hovering a card (3D or the
  *  playable bar): art + name + mana cost + type line + P/T or loyalty. */
-function CardPreview({ card }: { card: CardType | null }) {
-  if (!card) return null
+/** Hover-only devices get the floating bubble; touch keeps the long-press zoom. */
+const HOVER_CAPABLE = typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches
+
+/** The card read-out, as a floating bubble beside the hovered card (anchored to
+ *  the cursor position captured when the hover started). Flips to the other
+ *  side of the cursor / clamps vertically to stay fully on screen, and is
+ *  pointer-events:none so it can never steal the hover from the card under it. */
+function CardHoverBubble({ card, anchor }: { card: CardType | null; anchor: { x: number; y: number } | null }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
+  // measure AFTER render (rules length varies per card), then place: prefer the
+  // right of the cursor, flip left when that would overflow, clamp vertically.
+  // offsetWidth/Height (not getBoundingClientRect) so the mount pop animation's
+  // scale doesn't skew the measurement, and a ResizeObserver re-places the
+  // bubble when late layout (image load, font wrap) changes its size.
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!card || !anchor || !el) {
+      setPos(null)
+      return
+    }
+    const place = () => {
+      const w = el.offsetWidth
+      const h = el.offsetHeight
+      const vw = window.innerWidth
+      const vh = window.innerHeight
+      const GAP = 24 // clear of the cursor and the enlarged card under it
+      const M = 8 // viewport margin
+      let left = anchor.x + GAP
+      if (left + w > vw - M) left = anchor.x - GAP - w
+      left = Math.max(M, Math.min(left, vw - w - M))
+      const top = Math.max(M, Math.min(anchor.y - h / 2, vh - h - M))
+      setPos({ left, top })
+    }
+    place()
+    const ro = new ResizeObserver(place)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [card, anchor])
+  if (!card || !anchor || !HOVER_CAPABLE) return null
   const isAbility = !!card.sourceName
   // For abilities on the stack use the source card's image; the ability itself has no art.
   const imgSet = card.sourceSet ?? card.set
@@ -1044,7 +1113,13 @@ function CardPreview({ card }: { card: CardType | null }) {
   const loy = isPw && card.loyalty != null ? `Loyalty ${card.loyalty}` : null
   const displayName = isAbility ? `${card.sourceName} (ability)` : card.name
   return (
-    <div className="card-preview" role="dialog" aria-label={`Card: ${displayName}`}>
+    <div
+      ref={ref}
+      className="card-hover-bubble"
+      role="dialog"
+      aria-label={`Card: ${displayName}`}
+      style={pos ? { left: pos.left, top: pos.top } : { left: 0, top: 0, visibility: 'hidden' }}
+    >
       <img
         key={img}
         className="card-preview-img"

@@ -211,9 +211,12 @@ public class ImageDownloader {
         if (n.isEmpty()) {
             return false;
         }
-        // primary + a variation-tolerant fallback, mirroring ScryfallImageSource
-        String url1 = "https://api.scryfall.com/cards/" + s + "/" + n + "?format=image";
-        String url2 = "https://api.scryfall.com/cards/" + s + "/" + n + "?format=image&include_variations=true";
+        // primary + a variation-tolerant fallback, mirroring ScryfallImageSource.
+        // version=large (672x936) over the default ~488x680: the web board maps
+        // these straight onto 3D card textures, and the default goes soft when
+        // the camera is close.
+        String url1 = "https://api.scryfall.com/cards/" + s + "/" + n + "?format=image&version=large";
+        String url2 = "https://api.scryfall.com/cards/" + s + "/" + n + "?format=image&version=large&include_variations=true";
         return fetch(url1, out) || fetch(url2, out);
     }
 

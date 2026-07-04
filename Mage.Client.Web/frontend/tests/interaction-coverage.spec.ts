@@ -486,13 +486,13 @@ suite('Game board · modalities', () => {
     await expect(item).toBeVisible()
     await item.focus()
     await expect(item).toBeFocused() // was a plain <div> before — now a real button
-    await expect(page.locator('.card-preview')).toBeVisible()
+    await expect(page.locator('.card-hover-bubble')).toBeVisible()
   })
 
   test('mouse: right-click a playable chip is not needed — hover previews it', async ({ page }) => {
     await gotoScreen(page, 'game')
     await page.locator('.play-chip', { hasText: 'Serra Angel' }).hover()
-    await expect(page.locator('.card-preview .card-preview-name')).toHaveText('Serra Angel')
+    await expect(page.locator('.card-hover-bubble .card-preview-name')).toHaveText('Serra Angel')
   })
 
   test('mouse: view menu + zoom controls respond', async ({ page }) => {

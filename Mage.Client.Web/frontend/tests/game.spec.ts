@@ -205,19 +205,57 @@ test.describe('Game board (3D)', () => {
     await expect(page.locator('.hand-card-cost .mana-pip', { hasText: 'U' }).first()).toBeVisible()
   })
 
-  test('hovering a card shows a large readable preview (name, type, P/T)', async ({ page }) => {
+  test('hovering a card shows the read-out bubble BESIDE the hover point', async ({ page }) => {
     await gotoScreen(page, 'game')
-    // no preview until hover
-    await expect(page.locator('.card-preview')).toHaveCount(0)
+    // no bubble until hover; the old fixed corner panel is gone for good
+    await expect(page.locator('.card-hover-bubble')).toHaveCount(0)
+    await expect(page.locator('.board-wrap .card-preview')).toHaveCount(0)
     // hover the Serra Angel chip in the playable bar (a 4/4 creature)
-    await page.locator('.play-chip', { hasText: 'Serra Angel' }).hover()
-    const preview = page.locator('.card-preview')
-    await expect(preview).toBeVisible()
-    await expect(preview.locator('.card-preview-name')).toHaveText('Serra Angel')
-    await expect(preview.locator('.card-preview-pt')).toHaveText('4/4')
+    const chip = page.locator('.play-chip', { hasText: 'Serra Angel' })
+    await chip.hover()
+    const bubble = page.locator('.card-hover-bubble')
+    await expect(bubble).toBeVisible()
+    await expect(bubble.locator('.card-preview-name')).toHaveText('Serra Angel')
+    await expect(bubble.locator('.card-preview-pt')).toHaveText('4/4')
+    // the bubble sits near the hover point (not pinned in a far corner) and
+    // fully on screen
+    const chipBox = (await chip.boundingBox())!
+    const bb = (await bubble.boundingBox())!
+    const cx = chipBox.x + chipBox.width / 2
+    const cy = chipBox.y + chipBox.height / 2
+    const nearestX = Math.max(bb.x, Math.min(cx, bb.x + bb.width))
+    const nearestY = Math.max(bb.y, Math.min(cy, bb.y + bb.height))
+    const dist = Math.hypot(nearestX - cx, nearestY - cy)
+    expect(dist, `bubble is ${Math.round(dist)}px from the hover point`).toBeLessThan(120)
+    const vp = page.viewportSize()!
+    expect(bb.x).toBeGreaterThanOrEqual(0)
+    expect(bb.y).toBeGreaterThanOrEqual(0)
+    expect(bb.x + bb.width).toBeLessThanOrEqual(vp.width)
+    expect(bb.y + bb.height).toBeLessThanOrEqual(vp.height)
+    // its rules text is actually readable (>= 14px)
+    await chip.hover() // keep the hover alive
+    const rulesSize = await bubble.locator('.card-preview-rules p').first().evaluate((el) => parseFloat(getComputedStyle(el).fontSize)).catch(() => 14)
+    expect(rulesSize).toBeGreaterThanOrEqual(14)
     // moving away hides it
     await page.locator('.playable-label').hover()
-    await expect(page.locator('.card-preview')).toHaveCount(0)
+    await expect(page.locator('.card-hover-bubble')).toHaveCount(0)
+  })
+
+  test('the hover bubble flips to stay on screen at the right edge', async ({ page }) => {
+    await gotoScreen(page, 'stack')
+    const vp = page.viewportSize()!
+    // park the pointer at the far right edge — a focus-preview anchors to the
+    // last pointer position, so this forces the "no room on the right" case
+    await page.mouse.move(vp.width - 4, vp.height / 2)
+    const item = page.locator('.stack-item').first()
+    await item.focus()
+    const bubble = page.locator('.card-hover-bubble')
+    await expect(bubble).toBeVisible()
+    // the bubble must flip to the LEFT of the anchor and stay fully on screen
+    const bb = (await bubble.boundingBox())!
+    expect(bb.x + bb.width).toBeLessThanOrEqual(vp.width)
+    expect(bb.x).toBeGreaterThanOrEqual(0)
+    expect(bb.x + bb.width, 'bubble should sit left of the right-edge anchor').toBeLessThan(vp.width - 4)
   })
 
   test('H collapses the hand to a pill and restores it', async ({ page }) => {

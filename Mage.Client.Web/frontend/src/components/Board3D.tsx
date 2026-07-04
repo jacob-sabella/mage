@@ -468,10 +468,12 @@ function Card3D({
   const rot: [number, number, number] = standing
     ? [0, 0, 0]
     : [-Math.PI / 2, 0, card.tapped ? -Math.PI / 2 : 0]
-  // a gentle hover pop (the full-size read is the big bottom-left preview) — a big
-  // lift/scale would rise up over neighbours whose DOM P/T badges then bleed on top
-  const lift = hover ? 0.28 : 0
-  const scale = hover ? 1.14 : 1
+  // a real hover enlarge — big enough to read the card in place. Safe now: the
+  // invisible stable hit-mesh prevents the enter/leave feedback loop, and the
+  // P/T badges are in-scene sprites the lifted card correctly occludes (the old
+  // small pop predates both fixes).
+  const lift = hover ? 0.5 : 0
+  const scale = hover ? 1.4 : 1
   const glow = highlight === 'play' ? '#21e6ff' : highlight === 'target' ? '#ff2e97' : '#ffffff'
   // Fixed y for hit detection — does not move when card lifts on hover.
   // Keeping the interactive mesh stable prevents the feedback loop where lifting
