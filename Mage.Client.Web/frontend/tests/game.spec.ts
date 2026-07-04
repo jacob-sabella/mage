@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { gotoScreen } from './harness'
+import { gotoScreen, gotoCustomGame, SAMPLE } from './harness'
 
 test.describe('Game board (3D)', () => {
   test('renders the 3D board and player status strip', async ({ page }) => {
@@ -196,6 +196,36 @@ test.describe('Game board (3D)', () => {
     // server pushes a buffed board ~0.5s later → the 4/4 badge becomes 6/6
     await expect.poll(async () => (await badges()).some((b) => b.text === '6/6')).toBe(true)
     expect((await badges()).some((b) => b.text === '4/4')).toBe(false)
+  })
+
+  // Regression: the bottom control dock used to change height turn-to-turn as
+  // its contents changed (playable-card count, prompt-message length), which is
+  // jarring. On roomy screens it now holds a constant height.
+  test('the control dock keeps a constant height as its contents change', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 810 })
+    const dockH = () => page.locator('.control-dock').evaluate((el) => Math.round(el.getBoundingClientRect().height))
+
+    // a) default sample — a few playable cards
+    await gotoScreen(page, 'game')
+    await page.getByRole('button', { name: /^Pass/ }).waitFor()
+    const withPlayables = await dockH()
+
+    // b) same board but nothing is castable → the playable bar is gone
+    const g = JSON.parse(JSON.stringify(SAMPLE.game)) as typeof SAMPLE.game
+    g.canPlay = []
+    await gotoCustomGame(page, g)
+    await page.getByRole('button', { name: /^Pass/ }).waitFor()
+    const noPlayables = await dockH()
+
+    // c) a declare-attackers prompt (a longer, 2-line message)
+    await gotoScreen(page, 'combat')
+    await page.locator('.control-dock').waitFor()
+    const combat = await dockH()
+
+    expect(noPlayables, `dock: ${withPlayables} with playables vs ${noPlayables} without`).toBe(withPlayables)
+    expect(combat, `dock: ${withPlayables} normal vs ${combat} combat`).toBe(withPlayables)
+    // and the page never scrolls sideways because of the non-wrapping dock
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(2)
   })
 
   test('hand cards show mana-cost pips', async ({ page }) => {

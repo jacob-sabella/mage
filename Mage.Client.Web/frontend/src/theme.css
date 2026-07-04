@@ -1675,6 +1675,19 @@ html.game-on .lobby-header { display: none; }
   border-color: color-mix(in srgb, var(--accent) 45%, var(--stroke));
   box-shadow: 0 -10px 34px color-mix(in srgb, var(--accent) 16%, transparent);
 }
+/* Stable dock height on roomy screens: reserve the height of the TALLEST normal
+   state (skips row + playable-chips row + the action panel) so the dock stops
+   resizing turn to turn as its contents change (playable-card count, prompt
+   message length). Shorter states centre in the reserved band. Wrap is kept so
+   the playable bar keeps a full row (squeezing it inline clipped its chips).
+   Not applied on small / short screens, where the layout intentionally stacks. */
+@media (min-width: 761px) and (min-height: 641px) {
+  .control-dock { min-height: 168px; box-sizing: border-box; }
+  /* one-line prompt message so a longer prompt (e.g. "Declare attackers …")
+     doesn't wrap to 2 lines and push the reserved height around; the hint line
+     and the Done/Pass buttons carry the rest */
+  .control-dock .action-message { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
 .dock-skips { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
 .dock-skips .btn { padding: 8px 11px; }
 .control-dock .playable-bar {
