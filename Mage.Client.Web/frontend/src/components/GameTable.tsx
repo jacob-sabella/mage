@@ -4,6 +4,7 @@ import { ConfirmDialog } from './ConfirmDialog'
 import { ZoneBrowser } from './ZoneBrowser'
 import type { RespondKind } from '../api'
 import { plain } from '../text'
+import { GROUP_LABEL, HAND_GROUPS, groupCards, type GroupBy } from '../cardGroup'
 import type { CounterDto, GameCard as CardType, GamePlayer, GameState, Prompt } from '../types'
 
 interface Props {
@@ -351,7 +352,7 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
   }
 
   const zoneCards = (p: GamePlayer, zone: BrowsableZone): CardType[] =>
-    zone === 'graveyard' ? p.graveyard : zone === 'exile' ? p.exile : p.command ?? []
+    zone === 'graveyard' ? p.graveyard : zone === 'exile' ? p.exile : zone === 'battlefield' ? p.battlefield : p.command ?? []
   const browserPlayer = zoneBrowser ? game.players.find((pl) => pl.name === zoneBrowser.playerName) : undefined
 
   return (
@@ -419,6 +420,7 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
                 lib={p.libraryCount}
                 grave={p.graveyardCount}
                 exile={p.exile.length}
+                board={p.battlefield.length}
                 // during a target prompt the whole seat is the click target — the
                 // zone counts must not swallow the targeting click
                 onOpenZone={canTarget ? undefined : (zone) => setZoneBrowser({ playerName: p.name, zone })}
@@ -484,11 +486,14 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
           />
         )}
 
-        {/* zone browser: a seat's graveyard / exile / command as a card grid */}
+        {/* zone browser: any seat's battlefield / graveyard / exile / command as
+            a readable, group-able card grid (public zones are visible for every
+            player, per MTG rules) */}
         {zoneBrowser && browserPlayer && (
           <ZoneBrowser
-            title={`${browserPlayer.name} — ${zoneBrowser.zone} (${zoneCards(browserPlayer, zoneBrowser.zone).length})`}
+            title={`${browserPlayer.name} — ${ZONE_TITLE[zoneBrowser.zone]} (${zoneCards(browserPlayer, zoneBrowser.zone).length})`}
             sections={[{ cards: zoneCards(browserPlayer, zoneBrowser.zone) }]}
+            groupable
             onClose={() => setZoneBrowser(null)}
             onHoverCard={handleHoverCard}
             cardAction={zoneCardAction}
@@ -773,6 +778,7 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
 }
 
 const MANA_COLOR: Record<string, string> = { W: '#e9e3c0', U: '#4a90e2', B: '#6b5b73', R: '#e0555f', G: '#3aa55f', C: '#9aa0ad' }
+const ZONE_TITLE: Record<BrowsableZone, string> = { graveyard: 'graveyard', exile: 'exile', command: 'command zone', battlefield: 'battlefield' }
 
 /** Floating mana pool as colored pips (W U B R G C). */
 /** Life total that flashes green/red and floats a +N/-N delta when it changes,
@@ -813,12 +819,14 @@ function PStatCounts({
   lib,
   grave,
   exile,
+  board,
   onOpenZone,
 }: {
   hand: number
   lib: number
   grave: number
   exile: number
+  board: number
   onOpenZone?: (zone: BrowsableZone) => void
 }) {
   const ref = useRef<HTMLSpanElement>(null)
@@ -851,8 +859,14 @@ function PStatCounts({
     <span
       ref={ref}
       className="muted pstat-counts"
-      title={`Hand ${hand} · Library ${lib} · Graveyard ${grave} · Exile ${exile}`}
+      title={`Board ${board} · Hand ${hand} · Library ${lib} · Graveyard ${grave} · Exile ${exile}`}
     >
+      {onOpenZone && (
+        <>
+          {zoneSeg(compact ? `▦${board}` : `▦ ${board}`, 'battlefield', 'battlefield')}
+          {' · '}
+        </>
+      )}
       {compact ? `H${hand} · L${lib} · ` : `Hand ${hand} · Lib ${lib} · `}
       {zoneSeg(compact ? `G${grave}` : `Grave ${grave}`, 'graveyard', 'graveyard')}
       {' · '}
@@ -950,77 +964,7 @@ function ManaPool({ pool, onPay }: { pool: string; onPay?: (manaType: string) =>
  *  table where the camera angle makes it hard to read. Playable cards glow; click
  *  plays (when castable), hover shows the big preview, right-click / long-press
  *  opens the card menu. */
-type GroupBy = 'type' | 'color' | 'mana' | 'castable'
 type CardProps = (c: CardType) => { highlight?: 'play' | 'target'; onClick?: (c: CardType) => void }
-
-const GROUP_LABEL: Record<GroupBy, string> = { type: 'Type', color: 'Color', mana: 'Mana value', castable: 'Castable' }
-const GROUP_OPTIONS: GroupBy[] = ['type', 'color', 'mana', 'castable']
-
-/** Converted mana cost from a `{2}{U}{U}`-style string (X counts as 0). */
-function manaValue(cost?: string | null): number {
-  let mv = 0
-  for (const m of cost?.match(/\{([^}]+)\}/g) ?? []) {
-    const s = m.slice(1, -1)
-    if (/^\d+$/.test(s)) mv += parseInt(s, 10)
-    else if (/^[XYZ]$/.test(s)) mv += 0
-    else mv += 1 // a coloured, hybrid or phyrexian pip
-  }
-  return mv
-}
-
-const TYPE_ORDER = ['Creature', 'Planeswalker', 'Instant', 'Sorcery', 'Enchantment', 'Artifact', 'Battle', 'Land']
-function typeGroup(types: string[]): string {
-  const lc = types.map((t) => t.toLowerCase())
-  for (const t of TYPE_ORDER) if (lc.includes(t.toLowerCase())) return t
-  return 'Other'
-}
-
-const COLOR_NAME: Record<string, string> = { W: 'White', U: 'Blue', B: 'Black', R: 'Red', G: 'Green' }
-function colorGroup(colors?: string | null): string {
-  const c = (colors ?? '').replace(/[^WUBRG]/gi, '').toUpperCase()
-  if (!c) return 'Colorless'
-  if (new Set(c).size > 1) return 'Multicolor'
-  return COLOR_NAME[c[0]] ?? 'Colorless'
-}
-
-// section display order per grouping — keeps buckets in a sensible, stable order
-const SECTION_ORDER: Record<GroupBy, string[]> = {
-  type: [...TYPE_ORDER, 'Other'],
-  color: ['White', 'Blue', 'Black', 'Red', 'Green', 'Multicolor', 'Colorless'],
-  mana: [], // numeric — sorted ascending below
-  castable: ['Playable now', 'Not playable'],
-}
-
-/** Bucket a hand into ordered { key, cards } sections for the chosen attribute. */
-function groupHand(cards: CardType[], by: GroupBy, cardProps: CardProps): { key: string; cards: CardType[] }[] {
-  const keyOf = (c: CardType): string =>
-    by === 'type'
-      ? typeGroup(c.types ?? [])
-      : by === 'color'
-        ? colorGroup(c.colors)
-        : by === 'mana'
-          ? String(manaValue(c.manaCost))
-          : cardProps(c).highlight === 'play'
-            ? 'Playable now'
-            : 'Not playable'
-  const buckets = new Map<string, CardType[]>()
-  for (const c of cards) {
-    const k = keyOf(c)
-    ;(buckets.get(k) ?? buckets.set(k, []).get(k)!).push(c)
-  }
-  const order = SECTION_ORDER[by]
-  const keys = [...buckets.keys()].sort((a, b) => {
-    if (by === 'mana') return Number(a) - Number(b)
-    const ia = order.indexOf(a)
-    const ib = order.indexOf(b)
-    return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib)
-  })
-  // within a section, order by mana value then name so it reads consistently
-  for (const list of buckets.values()) {
-    list.sort((a, b) => manaValue(a.manaCost) - manaValue(b.manaCost) || a.name.localeCompare(b.name))
-  }
-  return keys.map((k) => ({ key: by === 'mana' ? `Mana ${k}` : k, cards: buckets.get(k)! }))
-}
 
 /** The "read my hand" overlay: big, non-overlapping cards in labelled sections
  *  grouped by a switchable attribute. Cards keep the same play/target/menu
@@ -1051,7 +995,10 @@ function HandGrid({
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
-  const sections = useMemo(() => groupHand(cards, groupBy, cardProps), [cards, groupBy, cardProps])
+  const sections = useMemo(
+    () => groupCards(cards, groupBy, (c) => cardProps(c).highlight === 'play'),
+    [cards, groupBy, cardProps],
+  )
   return (
     <>
       <div className="hand-grid-scrim" onClick={onClose} aria-hidden />
@@ -1061,7 +1008,7 @@ function HandGrid({
         <label className="hand-grid-groupby">
           Group by
           <select value={groupBy} onChange={(e) => onGroupBy(e.target.value as GroupBy)} aria-label="Group hand by">
-            {GROUP_OPTIONS.map((g) => (
+            {HAND_GROUPS.map((g) => (
               <option key={g} value={g}>
                 {GROUP_LABEL[g]}
               </option>

@@ -42,7 +42,7 @@ test.describe('Zone browsers', () => {
     await expect(page.locator('.board3d canvas')).toBeVisible()
     const seat = page.locator('.pstat', { hasText: 'Computer' })
     // the grave count is a browse button inside the seat chip
-    await seat.locator('.pstat-zone-btn').first().click()
+    await seat.locator('.pstat-zone-btn', { hasText: 'Grave' }).click()
     const dlg = page.locator('.zone-browser')
     await expect(dlg).toBeVisible()
     await expect(dlg).toContainText('Computer — graveyard (1)')
@@ -52,7 +52,7 @@ test.describe('Zone browsers', () => {
     await page.keyboard.press('Escape')
     await expect(page.locator('.zone-browser')).toHaveCount(0)
     // ✕ closes too
-    await seat.locator('.pstat-zone-btn').first().click()
+    await seat.locator('.pstat-zone-btn', { hasText: 'Grave' }).click()
     await expect(page.locator('.zone-browser')).toBeVisible()
     await page.locator('.zb-close').click()
     await expect(page.locator('.zone-browser')).toHaveCount(0)
@@ -62,10 +62,33 @@ test.describe('Zone browsers', () => {
     await gotoScreen(page, 'game')
     const seat = page.locator('.pstat', { hasText: 'Computer' })
     await expect(seat.locator('.pstat-counts')).toContainText(/Exile 0|E0/)
-    await seat.locator('.pstat-zone-btn').nth(1).click()
+    await seat.locator('.pstat-zone-btn', { hasText: 'Exile' }).click()
     const dlg = page.locator('.zone-browser')
     await expect(dlg).toContainText('Computer — exile (0)')
     await expect(dlg).toContainText('Empty')
+  })
+
+  test('battlefield browses as a group-able grid, for self and opponents', async ({ page }) => {
+    await gotoScreen(page, 'game')
+    await expect(page.locator('.board3d canvas')).toBeVisible()
+    // the viewer's own battlefield (Serra Angel, Rancor, 2 Islands = 4)
+    const you = page.locator('.pstat', { hasText: 'You' })
+    await you.locator('.pstat-zone-btn', { hasText: '▦' }).click()
+    const dlg = page.locator('.zone-browser')
+    await expect(dlg).toContainText('You — battlefield (4)')
+    await expect(dlg.locator('.zb-card')).toHaveCount(4)
+    // grouped by type by default → a Creature and a Land section
+    await expect(dlg.locator('.zb-section-title', { hasText: /Creature/i })).toBeVisible()
+    await expect(dlg.locator('.zb-section-title', { hasText: /Land/i })).toBeVisible()
+    // regroup by mana value → still all 4 cards, choice persists
+    await dlg.getByLabel('Group cards by').selectOption('mana')
+    await expect(dlg.locator('.zb-card')).toHaveCount(4)
+    expect(await page.evaluate(() => localStorage.getItem('mage.zoneGroupBy'))).toBe('mana')
+    await page.keyboard.press('Escape')
+    // an opponent's battlefield is browsable too (public zone)
+    const opp = page.locator('.pstat', { hasText: 'Computer' })
+    await opp.locator('.pstat-zone-btn', { hasText: '▦' }).click()
+    await expect(page.locator('.zone-browser')).toContainText('Computer — battlefield')
   })
 
   test('a playable card inside the browser responds through the normal path', async ({ page }) => {
@@ -78,7 +101,7 @@ test.describe('Zone browsers', () => {
     await gotoCustomGame(page, g)
     await expect(page.locator('.board3d canvas')).toBeVisible()
     const sent = await captureResponds(page)
-    await page.locator('.pstat', { hasText: 'You' }).locator('.pstat-zone-btn').first().click()
+    await page.locator('.pstat', { hasText: 'You' }).locator('.pstat-zone-btn', { hasText: 'Grave' }).click()
     const tile = page.locator('.zone-browser .zb-card', { hasText: 'Lightning Bolt' })
     await expect(tile).toHaveClass(/zb-actionable/)
     await tile.locator('.card-tile-art').click()

@@ -261,7 +261,7 @@ const COUNTER_BG: Record<string, string> = {
 }
 
 /** Which zone browsers a seat can open (public zones — the library stays hidden). */
-export type BrowsableZone = 'graveyard' | 'exile' | 'command'
+export type BrowsableZone = 'graveyard' | 'exile' | 'command' | 'battlefield'
 
 /** A stacked zone pile (library / graveyard / exile). Depth layers fake the
  *  stack height; the top card shows real art when the zone is public (face-up),

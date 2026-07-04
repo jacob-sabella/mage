@@ -2758,6 +2758,11 @@ html, body { overflow-x: hidden; }
 .zb-head { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
 .zb-title { font-weight: 800; font-size: 16px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .zb-close { padding: 4px 10px; flex: 0 0 auto; }
+.zb-groupby { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; font-size: 12.5px; color: var(--text-dim); }
+.zb-groupby select {
+  font: inherit; color: var(--text); background: var(--bg);
+  border: 1px solid var(--stroke); border-radius: 8px; padding: 4px 8px; cursor: pointer;
+}
 .zb-body { overflow-y: auto; min-height: 0; display: flex; flex-direction: column; gap: 14px; }
 .zb-section-title {
   font-size: 12px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase;

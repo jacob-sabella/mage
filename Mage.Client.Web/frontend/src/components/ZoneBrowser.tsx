@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useEscapeClose } from '../useEscapeClose'
+import { GROUP_LABEL, ZONE_GROUPS, groupCards, type GroupBy } from '../cardGroup'
 import type { GameCard } from '../types'
 
 /**
@@ -21,6 +22,7 @@ export function ZoneBrowser({
   onHoverCard,
   cardAction,
   picked,
+  groupable,
   footer,
 }: {
   title: string
@@ -32,20 +34,54 @@ export function ZoneBrowser({
   cardAction?: (c: GameCard) => (() => void) | undefined
   // ids already chosen in a multi-pick (marked in the grid)
   picked?: string[]
+  // when true, show a "Group by" control that re-buckets the cards by type /
+  // colour / mana value (used for the battlefield / graveyard / exile browsers)
+  groupable?: boolean
   footer?: ReactNode
 }) {
   useEscapeClose(onClose)
+  const [groupBy, setGroupBy] = useState<GroupBy>(() => {
+    const s = typeof localStorage !== 'undefined' ? localStorage.getItem('mage.zoneGroupBy') : null
+    return s === 'color' || s === 'mana' || s === 'type' ? s : 'type'
+  })
+  useEffect(() => {
+    try {
+      localStorage.setItem('mage.zoneGroupBy', groupBy)
+    } catch {
+      /* private mode */
+    }
+  }, [groupBy])
+  // when groupable, flatten the incoming cards and re-bucket them by the chosen
+  // attribute; otherwise show the sections exactly as passed
+  const shown = useMemo(() => {
+    if (!groupable) return sections
+    const all = sections.flatMap((s) => s.cards)
+    if (all.length === 0) return [{ cards: [] as GameCard[] }] // keep the "Empty" state
+    return groupCards(all, groupBy).map((g) => ({ name: g.key, cards: g.cards }))
+  }, [groupable, sections, groupBy])
   return (
     <div className="zone-browser-backdrop" onClick={onClose}>
       <div className="zone-browser panel" role="dialog" aria-label={title} onClick={(e) => e.stopPropagation()}>
         <div className="zb-head">
           <span className="zb-title">{title}</span>
+          {groupable && (
+            <label className="zb-groupby">
+              Group by
+              <select value={groupBy} onChange={(e) => setGroupBy(e.target.value as GroupBy)} aria-label="Group cards by">
+                {ZONE_GROUPS.map((g) => (
+                  <option key={g} value={g}>
+                    {GROUP_LABEL[g]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <button className="btn ghost zb-close" onClick={onClose} aria-label="Close" title="Close">
             ✕
           </button>
         </div>
         <div className="zb-body">
-          {sections.map((s, si) => (
+          {shown.map((s, si) => (
             <div key={si} className="zb-section">
               {s.name && (
                 <div className="zb-section-title">
