@@ -123,6 +123,18 @@ test.describe('Game board (3D)', () => {
     await expect.poll(undo).toBe(1)
   })
 
+  test('undo does not soft-lock: a bare board update keeps the priority controls', async ({ page }) => {
+    await gotoScreen(page, 'game')
+    await expect(page.getByRole('button', { name: 'Pass' })).toBeVisible()
+    // simulate the board refresh the server fires AFTER an UNDO: a game frame
+    // carrying NO prompt while the viewer still holds priority (SAMPLE
+    // priorityPlayer === me). The server never re-sends the select prompt after
+    // undo, so the client must keep the priority controls rather than wipe them.
+    await page.evaluate(() => (window as unknown as { __push: (p: unknown) => void }).__push(null))
+    await expect(page.getByRole('button', { name: 'Pass' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Done' })).toBeVisible()
+  })
+
   test('undo: Backspace sends the UNDO action', async ({ page }) => {
     await gotoScreen(page, 'game')
     await page.getByRole('button', { name: /^Pass/ }).waitFor()

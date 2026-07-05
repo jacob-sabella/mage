@@ -33,6 +33,22 @@ import { ConstructView } from './ConstructView'
 import { DraftView } from './DraftView'
 import { SideboardView } from './SideboardView'
 import { GameTable } from './GameTable'
+
+// A stand-in "you have priority" prompt. The server grants priority via a
+// GAME_SELECT dialog, but some board refreshes (notably the one fired after an
+// UNDO) arrive with NO dialog while you still hold priority — the server never
+// re-sends the select prompt. Without this the priority controls would vanish
+// and the game would appear soft-locked, so we synthesise plain priority.
+const PRIORITY_PROMPT: Prompt = {
+  kind: 'select',
+  message: '',
+  canCancel: true,
+  min: 0,
+  max: 0,
+  choices: [],
+  choiceKind: 'string',
+  targets: [],
+}
 import type {
   ChatLine,
   DraftCard,
@@ -303,7 +319,19 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
         }
         setGame(g)
       }
-      setPrompt(e.prompt ?? null)
+      setPrompt((cur) => {
+        // a real decision dialog → always adopt it
+        if (e.prompt) return e.prompt as Prompt
+        // a bare board refresh (no dialog). Don't clobber a still-pending
+        // non-select dialog (target / amount / …) that we haven't answered.
+        if (cur && cur.kind !== 'select') return cur
+        // if we still hold priority (e.g. the refresh fired after an UNDO, which
+        // never re-sends the select prompt), keep the priority controls instead
+        // of wiping them into a soft-lock; otherwise clear (opponent's turn).
+        const g = e.game
+        const holdsPriority = !!(g && g.priorityPlayer && g.me && g.priorityPlayer === g.me)
+        return holdsPriority ? cur ?? PRIORITY_PROMPT : null
+      })
     } else if (e.type === 'gameOver') {
       if (!activeRef.current || (e.gameId && e.gameId !== activeRef.current)) return
       if (e.game) setGame(e.game)
@@ -570,7 +598,12 @@ export function LobbyView({ session, onDisconnected, onOnlineChange }: Props) {
   const handleRespond = useCallback(
     (kind: RespondKind, value?: string, data?: number) => {
       if (!activeGameId) return
-      setPrompt(null) // optimistic - the next state push will refresh it
+      // Optimistically clear so the controls don't linger after you act — EXCEPT
+      // for UNDO, which is a side-action that leaves you at the same priority
+      // (clearing it would flash the pill away and, since the server only fires a
+      // promptless board refresh, briefly soft-lock the board).
+      const isUndo = kind === 'action' && value === 'UNDO'
+      if (!isUndo) setPrompt(null)
       respond(session.token, activeGameId, kind, value, data).catch(() => {
         /* ignore; server will re-prompt if needed */
       })
