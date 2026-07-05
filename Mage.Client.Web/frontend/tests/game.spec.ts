@@ -22,11 +22,14 @@ test.describe('Game board (3D)', () => {
     await expect(page.locator('.pstat', { hasText: 'You' }).locator('.mana-pip')).toHaveCount(3)
   })
 
-  test('priority prompt offers Pass and Done; skip bar + log present', async ({ page }) => {
+  test('priority prompt offers Pass and Done; fast-forward + log present', async ({ page }) => {
     await gotoScreen(page, 'game')
     await expect(page.getByRole('button', { name: 'Pass' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Done' })).toBeVisible()
-    await expect(page.getByRole('button', { name: /^Turn/ })).toBeVisible()
+    // the phase-skip controls now live in the ⏭ fast-forward menu
+    await page.getByRole('button', { name: 'Fast-forward' }).click()
+    await expect(page.locator('.skip-pop-item', { hasText: 'End step' })).toBeVisible()
+    await page.getByRole('button', { name: 'Fast-forward' }).click()
     // the game log now lives as a tab in the chat panel, not floating on the board
     await page.getByRole('tab', { name: 'Game log' }).click()
     await expect(page.locator('.chat-log')).toContainText('Precombat Main')
@@ -69,11 +72,14 @@ test.describe('Game board (3D)', () => {
     await expect.poll(() => conceded).toBe(true)
   })
 
-  test('playable bar lists castable cards and plays one by name', async ({ page }) => {
+  test('command pill ⚡ popover lists castable cards and plays one by name', async ({ page }) => {
     await gotoScreen(page, 'game')
-    const bar = page.locator('.playable-bar')
-    await expect(bar.getByRole('button', { name: 'Lightning Bolt' })).toBeVisible()
-    await expect(bar.getByRole('button', { name: 'Serra Angel' })).toBeVisible()
+    // the plays live behind the ⚡ button on the command pill (on-demand, not a
+    // permanent wide bar)
+    await page.locator('.cmd-plays-btn').click()
+    const pop = page.locator('.cmd-plays-pop')
+    await expect(pop.locator('.cmd-play-item', { hasText: 'Lightning Bolt' })).toBeVisible()
+    await expect(pop.locator('.cmd-play-item', { hasText: 'Serra Angel' })).toBeVisible()
 
     let playedId: string | null = null
     await page.route('**/api/game/respond', (route) => {
@@ -81,15 +87,15 @@ test.describe('Game board (3D)', () => {
       if (b.kind === 'uuid') playedId = b.value
       return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
     })
-    await bar.getByRole('button', { name: 'Lightning Bolt' }).click()
+    await pop.locator('.cmd-play-item', { hasText: 'Lightning Bolt' }).click()
     await expect.poll(() => playedId).toBe('h1')
   })
 
   test('mulligan prompt offers Mulligan/Keep and strips HTML from the message', async ({ page }) => {
     await gotoScreen(page, 'mulligan')
     // server sends "Mulligan <font ...>down to 6 cards</font>?" — must render clean
-    await expect(page.locator('.action-message')).toHaveText('Mulligan down to 6 cards?')
-    await expect(page.locator('.action-message')).not.toContainText('<font')
+    await expect(page.locator('.cmd-label')).toHaveText('Mulligan down to 6 cards?')
+    await expect(page.locator('.cmd-label')).not.toContainText('<font')
     // a mulligan ask reads clearer as Mulligan / Keep than Yes / No
     await expect(page.getByRole('button', { name: 'Mulligan' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Keep' })).toBeVisible()
@@ -97,10 +103,12 @@ test.describe('Game board (3D)', () => {
 
   test('combat: declare-attackers prompt + clicking a creature declares it', async ({ page }) => {
     await gotoScreen(page, 'combat')
-    await expect(page.getByText(/Declare attackers/)).toBeVisible()
-    // my creature (Serra Angel) is offered as a declarable; clicking sends its id
-    const bar = page.locator('.playable-bar')
-    await expect(bar.getByRole('button', { name: 'Serra Angel' })).toBeVisible()
+    // the command pill surfaces the declare-attackers instruction as its label
+    await expect(page.locator('.cmd-label')).toContainText(/Declare attackers/)
+    // my creature (Serra Angel) is offered as a declarable in the ⚡ popover
+    await page.locator('.cmd-plays-btn').click()
+    const pop = page.locator('.cmd-plays-pop')
+    await expect(pop.locator('.cmd-play-item', { hasText: 'Serra Angel' })).toBeVisible()
 
     let declaredId: string | null = null
     await page.route('**/api/game/respond', (route) => {
@@ -108,7 +116,7 @@ test.describe('Game board (3D)', () => {
       if (b.kind === 'uuid') declaredId = b.value
       return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
     })
-    await bar.getByRole('button', { name: 'Serra Angel' }).click()
+    await pop.locator('.cmd-play-item', { hasText: 'Serra Angel' }).click()
     await expect.poll(() => declaredId).toBe('b3')
   })
 
@@ -198,34 +206,41 @@ test.describe('Game board (3D)', () => {
     expect((await badges()).some((b) => b.text === '4/4')).toBe(false)
   })
 
-  // Regression: the bottom control dock used to change height turn-to-turn as
-  // its contents changed (playable-card count, prompt-message length), which is
-  // jarring. On roomy screens it now holds a constant height.
-  test('the control dock keeps a constant height as its contents change', async ({ page }) => {
+  // The command pill replaces the old resizing dock: a compact control that
+  // stays anchored bottom-right and small, whatever the prompt / playable count.
+  test('the command pill is compact and stays anchored as contents change', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 810 })
-    const dockH = () => page.locator('.control-dock').evaluate((el) => Math.round(el.getBoundingClientRect().height))
+    const pill = () => page.locator('.cmd-pill')
+    const box = async () => {
+      const b = (await pill().boundingBox())!
+      return { right: Math.round(1440 - (b.x + b.width)), bottom: Math.round(810 - (b.y + b.height)), h: Math.round(b.height) }
+    }
 
-    // a) default sample — a few playable cards
+    // a) default — a few playable cards (⚡ present)
     await gotoScreen(page, 'game')
     await page.getByRole('button', { name: /^Pass/ }).waitFor()
-    const withPlayables = await dockH()
+    const withPlayables = await box()
 
-    // b) same board but nothing is castable → the playable bar is gone
+    // b) nothing castable → no ⚡, pill is even smaller
     const g = JSON.parse(JSON.stringify(SAMPLE.game)) as typeof SAMPLE.game
     g.canPlay = []
     await gotoCustomGame(page, g)
     await page.getByRole('button', { name: /^Pass/ }).waitFor()
-    const noPlayables = await dockH()
+    const noPlayables = await box()
 
-    // c) a declare-attackers prompt (a longer, 2-line message)
+    // c) declare-attackers (a label appears)
     await gotoScreen(page, 'combat')
-    await page.locator('.control-dock').waitFor()
-    const combat = await dockH()
+    await pill().waitFor()
+    const combat = await box()
 
-    expect(noPlayables, `dock: ${withPlayables} with playables vs ${noPlayables} without`).toBe(withPlayables)
-    expect(combat, `dock: ${withPlayables} normal vs ${combat} combat`).toBe(withPlayables)
-    // and the page never scrolls sideways because of the non-wrapping dock
-    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(2)
+    // it stays pinned to the same corner (right/bottom insets stable) — a far cry
+    // from the old dock that jumped ~65px in height
+    for (const s of [noPlayables, combat]) {
+      expect(Math.abs(s.right - withPlayables.right)).toBeLessThanOrEqual(12)
+      expect(Math.abs(s.bottom - withPlayables.bottom)).toBeLessThanOrEqual(12)
+    }
+    // and it stays compact (a pill, not a tall dock)
+    for (const s of [withPlayables, noPlayables, combat]) expect(s.h).toBeLessThanOrEqual(72)
   })
 
   test('hand cards show mana-cost pips', async ({ page }) => {
@@ -240,8 +255,9 @@ test.describe('Game board (3D)', () => {
     // no bubble until hover; the old fixed corner panel is gone for good
     await expect(page.locator('.card-hover-bubble')).toHaveCount(0)
     await expect(page.locator('.board-wrap .card-preview')).toHaveCount(0)
-    // hover the Serra Angel chip in the playable bar (a 4/4 creature)
-    const chip = page.locator('.play-chip', { hasText: 'Serra Angel' })
+    // hover the Serra Angel row in the ⚡ plays popover (a 4/4 creature)
+    await page.locator('.cmd-plays-btn').click()
+    const chip = page.locator('.cmd-play-item', { hasText: 'Serra Angel' })
     await chip.hover()
     const bubble = page.locator('.card-hover-bubble')
     await expect(bubble).toBeVisible()
@@ -267,7 +283,7 @@ test.describe('Game board (3D)', () => {
     const rulesSize = await bubble.locator('.card-preview-rules p').first().evaluate((el) => parseFloat(getComputedStyle(el).fontSize)).catch(() => 14)
     expect(rulesSize).toBeGreaterThanOrEqual(14)
     // moving away hides it
-    await page.locator('.playable-label').hover()
+    await page.locator('.cmd-plays-title').hover()
     await expect(page.locator('.card-hover-bubble')).toHaveCount(0)
   })
 
@@ -426,7 +442,8 @@ test.describe('Game board (3D)', () => {
 
   test('the preview shows oracle text when the server ships it', async ({ page }) => {
     await gotoScreen(page, 'game')
-    await page.locator('.play-chip', { hasText: 'Lightning Bolt' }).hover()
+    await page.locator('.cmd-plays-btn').click()
+    await page.locator('.cmd-play-item', { hasText: 'Lightning Bolt' }).hover()
     await expect(page.locator('.card-preview-rules')).toContainText('deals 3 damage to any target')
   })
 

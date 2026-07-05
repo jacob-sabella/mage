@@ -90,7 +90,6 @@ const GAME_PANELS = ['.overlay-tr', '.player-strip']
 const GAME_CONTROLS = (p: Page) => [
   { label: 'Pass', loc: p.getByRole('button', { name: /^Pass/ }) },
   { label: 'Done', loc: p.getByRole('button', { name: /^Done/ }) },
-  { label: 'playable chip', loc: p.locator('.play-chip').first() },
   { label: 'view-fab', loc: p.locator('.view-fab') },
 ]
 // land on a dense multiplayer board and wait for the canvas + a primary control

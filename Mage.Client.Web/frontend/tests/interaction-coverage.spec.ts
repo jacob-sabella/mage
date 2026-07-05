@@ -456,7 +456,7 @@ suite('Game board · modalities', () => {
 
   test('hotkey: F4 fires the "skip until next turn" player action (legacy key map)', async ({ page }) => {
     await gotoScreen(page, 'game')
-    await expect(page.getByRole('button', { name: /^Turn/ })).toBeVisible() // game is interactive
+    await expect(page.getByRole('button', { name: 'Pass' })).toBeVisible() // game is interactive
     await page.locator('.turn-label').click() // ensure focus isn't in an input
     let action: string | null = null
     await page.route('**/api/game/respond', (route) => {
@@ -468,7 +468,7 @@ suite('Game board · modalities', () => {
     await expect.poll(() => action).toBe('PASS_PRIORITY_UNTIL_NEXT_TURN')
   })
 
-  test('mouse: skip-bar button sends its player action', async ({ page }) => {
+  test('mouse: a ⏭ fast-forward menu item sends its player action', async ({ page }) => {
     await gotoScreen(page, 'game')
     let action: string | null = null
     await page.route('**/api/game/respond', (route) => {
@@ -476,7 +476,8 @@ suite('Game board · modalities', () => {
       if (b.kind === 'action') action = b.value
       return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
     })
-    await page.getByRole('button', { name: /End step/ }).click()
+    await page.getByRole('button', { name: 'Fast-forward' }).click()
+    await page.locator('.skip-pop-item', { hasText: 'End step' }).click()
     await expect.poll(() => action).toBe('PASS_PRIORITY_UNTIL_TURN_END_STEP')
   })
 
@@ -489,9 +490,10 @@ suite('Game board · modalities', () => {
     await expect(page.locator('.card-hover-bubble')).toBeVisible()
   })
 
-  test('mouse: right-click a playable chip is not needed — hover previews it', async ({ page }) => {
+  test('mouse: hovering a play row in the ⚡ popover previews it', async ({ page }) => {
     await gotoScreen(page, 'game')
-    await page.locator('.play-chip', { hasText: 'Serra Angel' }).hover()
+    await page.locator('.cmd-plays-btn').click()
+    await page.locator('.cmd-play-item', { hasText: 'Serra Angel' }).hover()
     await expect(page.locator('.card-hover-bubble .card-preview-name')).toHaveText('Serra Angel')
   })
 
@@ -525,7 +527,7 @@ suite('Game board · touch', () => {
     await expect.poll(() => responded).toBe(true)
   })
 
-  test('tap a playable chip plays that card', async ({ page }) => {
+  test('tap a play row in the ⚡ popover plays that card', async ({ page }) => {
     await gotoScreen(page, 'game')
     let playedId: string | null = null
     await page.route('**/api/game/respond', (route) => {
@@ -533,7 +535,8 @@ suite('Game board · touch', () => {
       if (b.kind === 'uuid') playedId = b.value
       return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
     })
-    await page.locator('.play-chip', { hasText: 'Lightning Bolt' }).tap()
+    await page.locator('.cmd-plays-btn').tap()
+    await page.locator('.cmd-play-item', { hasText: 'Lightning Bolt' }).tap()
     await expect.poll(() => playedId).toBe('h1')
   })
 
@@ -555,7 +558,7 @@ suite('Game board · touch', () => {
 //  modalities here — the per-viewport LAYOUT of these boards is covered by the
 //  usability suite (game3p / game4p screens).
 suite('Dense multiplayer board · modalities', () => {
-  test('mouse: a play chip on the busy 4-player board plays that card', async ({ page }) => {
+  test('mouse: a play row on the busy 4-player board plays that card', async ({ page }) => {
     await gotoScreen(page, 'game4p')
     await expect(page.locator('.player-strip .pstat')).toHaveCount(4)
     let playedId: string | null = null
@@ -564,7 +567,8 @@ suite('Dense multiplayer board · modalities', () => {
       if (b.kind === 'uuid') playedId = b.value
       return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
     })
-    await page.locator('.play-chip', { hasText: 'Lightning Bolt' }).click()
+    await page.locator('.cmd-plays-btn').click()
+    await page.locator('.cmd-play-item', { hasText: 'Lightning Bolt' }).click()
     await expect.poll(() => playedId).toBe('h1')
   })
 
@@ -627,7 +631,7 @@ suite('Dense multiplayer board · touch (phone)', () => {
     await expect(combat.locator('.combat-group').first()).toBeVisible()
   })
 
-  test('tap a play chip on the dense board plays that card', async ({ page }) => {
+  test('tap a play row on the dense board plays that card', async ({ page }) => {
     await gotoScreen(page, 'game3p')
     let playedId: string | null = null
     await page.route('**/api/game/respond', (route) => {
@@ -635,7 +639,8 @@ suite('Dense multiplayer board · touch (phone)', () => {
       if (b.kind === 'uuid') playedId = b.value
       return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
     })
-    await page.locator('.play-chip', { hasText: 'Mulldrifter' }).tap()
+    await page.locator('.cmd-plays-btn').tap()
+    await page.locator('.cmd-play-item', { hasText: 'Mulldrifter' }).tap()
     await expect.poll(() => playedId).toBe('h3')
   })
 })
@@ -821,9 +826,9 @@ suite('Keyboard reachability', () => {
     }
   })
 
-  test('game control-dock buttons are focusable', async ({ page }) => {
+  test('game command-pill + toolbar buttons are focusable', async ({ page }) => {
     await gotoScreen(page, 'game')
-    for (const name of ['Done', 'Pass', 'Turn', 'End step', 'Concede']) {
+    for (const name of ['Done', 'Pass', 'Fast-forward', 'Concede']) {
       await expectFocusable(page.getByRole('button', { name: new RegExp(name) }).first())
     }
   })

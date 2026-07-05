@@ -1669,6 +1669,87 @@ input:focus {
    reachable mid-game. */
 html.game-on .lobby-header { display: none; }
 
+/* ===== Command Pill — the turn's actions as one compact bottom-right control
+   (replaces the old full-width control dock) ===== */
+.cmd-pill {
+  position: absolute; right: 16px; bottom: 16px; z-index: 22;
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 10px 7px 12px; border-radius: 999px;
+  background: rgba(12, 14, 20, 0.92); backdrop-filter: blur(8px);
+  border: 1px solid color-mix(in srgb, var(--accent) 48%, var(--stroke));
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.5), 0 0 22px color-mix(in srgb, var(--accent) 18%, transparent);
+  animation: cmd-pill-in 0.18s ease both;
+}
+@keyframes cmd-pill-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.cmd-label {
+  font-size: 13px; font-weight: 600; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 34vw;
+}
+.cmd-actions { display: flex; align-items: center; gap: 8px; }
+.cmd-actions .btn { flex: 0 0 auto; }
+.cmd-primary { font-weight: 800; padding: 9px 18px; }
+.cmd-done { padding: 9px 14px; }
+.cmd-actions .choice-list { display: flex; flex-wrap: wrap; gap: 6px; max-width: 46vw; }
+.cmd-actions .pile-choice { display: flex; gap: 8px; }
+
+/* ⚡ plays button + its on-demand popover (folds in the old wide playable bar) */
+.cmd-plays { position: relative; display: flex; }
+.cmd-plays-btn {
+  display: inline-flex; align-items: center; gap: 4px; cursor: pointer;
+  height: 34px; padding: 0 12px; border-radius: 999px; font-size: 13px;
+  color: var(--accent-2); border: 1px solid color-mix(in srgb, var(--accent-2) 55%, var(--stroke));
+  background: color-mix(in srgb, var(--accent-2) 14%, rgba(14, 16, 22, 0.6));
+}
+.cmd-plays-btn b { font-size: 14px; }
+.cmd-plays-btn:hover, .cmd-plays-btn.open { background: color-mix(in srgb, var(--accent-2) 26%, rgba(14, 16, 22, 0.6)); }
+.cmd-plays-pop {
+  position: absolute; right: 0; bottom: calc(100% + 8px); z-index: 40;
+  min-width: 220px; max-width: min(360px, 60vw); max-height: 46vh; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 3px; padding: 8px;
+}
+.cmd-plays-title, .skip-pop-title {
+  font-size: 10.5px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase;
+  color: var(--text-dim); padding: 2px 6px 5px;
+}
+.cmd-play-item {
+  display: flex; align-items: center; gap: 8px; justify-content: space-between;
+  padding: 7px 9px; border-radius: 8px; cursor: pointer; text-align: left;
+  color: var(--text); background: transparent; border: 1px solid transparent; font: inherit;
+}
+.cmd-play-item:hover { background: rgba(255, 255, 255, 0.07); border-color: var(--stroke); }
+.cmd-play-item.special { color: var(--accent-2); font-weight: 700; }
+.cmd-play-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* the ⏭ fast-forward menu in the toolbar (folds in the six skip buttons) */
+.skip-menu { position: relative; display: flex; }
+.skip-fab { position: relative; padding: 6px 10px; font-size: 14px; line-height: 1; }
+.skip-fab.armed { color: var(--accent-2); border-color: var(--accent-2); }
+.skip-fab-dot {
+  position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent-2); box-shadow: 0 0 6px var(--accent-2);
+}
+.skip-pop {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 40;
+  min-width: 200px; display: flex; flex-direction: column; gap: 2px; padding: 8px;
+}
+.skip-pop-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 8px 10px; border-radius: 8px; cursor: pointer; text-align: left;
+  color: var(--text); background: transparent; border: 1px solid transparent; font: inherit; font-size: 13px;
+}
+.skip-pop-item:hover { background: rgba(255, 255, 255, 0.07); border-color: var(--stroke); }
+.skip-pop-item.armed { color: var(--accent-2); border-color: color-mix(in srgb, var(--accent-2) 45%, var(--stroke)); }
+.skip-pop-item .skip-key { opacity: 0.7; }
+
+/* compact "waiting for opponent" pill in the same spot as the command pill */
+.waiting-pill {
+  position: absolute; right: 16px; bottom: 16px; z-index: 22;
+  display: flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 999px;
+  font-size: 13px; color: var(--text-dim);
+  background: rgba(12, 14, 20, 0.9); backdrop-filter: blur(8px);
+}
+
+/* legacy dock (no longer rendered) — kept minimal in case of stragglers */
 .control-dock {
   display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap;
   padding: 8px 12px; flex-shrink: 0; overflow: visible;

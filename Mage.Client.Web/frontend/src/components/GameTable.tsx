@@ -377,6 +377,7 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
             Revealed ({revealGroups.reduce((a, g) => a + g.cards.length, 0)})
           </button>
         )}
+        {interactive && <SkipMenu game={game} onRespond={onRespond} />}
         {interactive && (
           <button
             className="btn ghost rollback-btn"
@@ -730,45 +731,21 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
         )}
       </div>
 
-      {/* one fixed control dock so the turn controls + actions never move around */}
+      {/* the turn's controls, reimagined: a single compact Command Pill at the
+          bottom (morphs to the moment's action + an on-demand ⚡plays popover)
+          instead of a tall, content-resizing dock strip. */}
       {interactive && (
-        <div className="control-dock panel">
-          <div className="dock-skips">
-            {(() => {
-              const armed = game.players.find((p) => p.name === game.me)?.skips ?? []
-              return SKIP_BUTTONS.filter((s) => s.key !== 'F3' || armed.length > 0).map((s) => (
-                <button
-                  key={s.action}
-                  className={`btn skip-btn${armed.includes(s.action) ? ' armed' : ''}`}
-                  onClick={() => onRespond('action', s.action)}
-                  title={`${s.title} (${s.key})`}
-                >
-                  {s.label} <span className="skip-key">{s.key}</span>
-                </button>
-              ))
-            })()}
-          </div>
-          {/* special actions: the server ships a single "Special" entry when any
-              exist; responding {kind:'string', value:'special'} makes it follow
-              up with a choice prompt listing the concrete actions */}
-          {(game.special?.length ?? 0) > 0 && (
-            <div className="dock-special">
-              {game.special.map((s) => (
-                <button key={s.id} className="btn special-btn" onClick={() => onRespond('string', s.id)} title="Special actions">
-                  ✦ {plain(s.name)}
-                </button>
-              ))}
-            </div>
-          )}
-          {prompt?.kind === 'select' && <PlayableBar game={game} onRespond={onRespond} onHoverCard={handleHoverCard} onPressCard={setPressedCard} />}
-          <span className="spacer" />
-          {/* when the ability picker is anchored to a card menu, don't also list
-              the same options in the bottom bar */}
-          <ActionBar prompt={prompt} onRespond={onRespond} hideChoice={!!menu?.abilities} />
-        </div>
+        <CommandPill
+          game={game}
+          prompt={prompt}
+          onRespond={onRespond}
+          onHoverCard={handleHoverCard}
+          onPressCard={setPressedCard}
+          hideChoice={!!menu?.abilities}
+        />
       )}
       {!interactive && !result && game.me && (
-        <div className="control-dock waiting-dock panel">
+        <div className="waiting-pill panel">
           <span className="waiting-spinner" aria-hidden />
           Waiting for {game.activePlayer && game.activePlayer !== game.me ? game.activePlayer : 'opponent'}…
         </div>
@@ -1189,53 +1166,257 @@ function HandFan({
   )
 }
 
-function PlayableBar({
+/** Fast-forward control (toolbar): the six "pass priority until X" skips folded
+ *  into one ⏭ button + popover, replacing the old wide row of skip buttons.
+ *  Armed skips glow the button; the F-keys still fire the same actions. */
+function SkipMenu({ game, onRespond }: { game: GameState; onRespond: (kind: RespondKind, value?: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const armed = game.players.find((p) => p.name === game.me)?.skips ?? []
+  useEffect(() => {
+    if (!open) return
+    const close = () => setOpen(false)
+    window.addEventListener('click', close)
+    return () => window.removeEventListener('click', close)
+  }, [open])
+  return (
+    <div className="skip-menu" onClick={(e) => e.stopPropagation()}>
+      <button
+        className={`btn ghost skip-fab${armed.length ? ' armed' : ''}`}
+        onClick={() => setOpen((o) => !o)}
+        title="Fast-forward — skip priority to a later point"
+        aria-label="Fast-forward"
+        aria-expanded={open}
+      >
+        ⏭{armed.length > 0 && <span className="skip-fab-dot" aria-hidden />}
+      </button>
+      {open && (
+        <div className="skip-pop panel" role="menu">
+          <div className="skip-pop-title">Fast-forward to…</div>
+          {SKIP_BUTTONS.filter((s) => s.key !== 'F3' || armed.length > 0).map((s) => (
+            <button
+              key={s.action}
+              role="menuitem"
+              className={`skip-pop-item${armed.includes(s.action) ? ' armed' : ''}`}
+              onClick={() => {
+                onRespond('action', s.action)
+                setOpen(false)
+              }}
+              title={s.title}
+            >
+              <span>{s.label}</span>
+              <kbd className="skip-key">{s.key}</kbd>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** The Command Pill: one compact, fixed-size control at the bottom that morphs
+ *  to the moment's decision. Replaces the tall content-resizing control dock.
+ *  Its ⚡ button opens an on-demand list of everything castable/activatable
+ *  (hand cards also glow, so this is a convenience, not the only path). */
+function CommandPill({
   game,
+  prompt,
   onRespond,
   onHoverCard,
   onPressCard,
+  hideChoice,
 }: {
   game: GameState
+  prompt: Prompt | null
   onRespond: (kind: RespondKind, value?: string) => void
   onHoverCard?: (c: CardType | null) => void
   onPressCard?: (c: CardType | null) => void
+  hideChoice?: boolean
 }) {
+  const [amount, setAmount] = useState('')
+  const [playsOpen, setPlaysOpen] = useState(false)
+  useEffect(() => {
+    if (!playsOpen) return
+    const close = () => setPlaysOpen(false)
+    window.addEventListener('click', close)
+    return () => window.removeEventListener('click', close)
+  }, [playsOpen])
+
+  // everything castable/activatable right now (hand + board abilities + command)
   const byId: Record<string, CardType> = {}
   game.myHand.forEach((c) => (byId[c.id] = c))
   game.players.forEach((p) => {
     p.battlefield.forEach((c) => (byId[c.id] = c))
-    // a castable commander shows up in the playable bar like any other card
     ;(p.command ?? []).forEach((c) => (byId[c.id] = c))
   })
-  const playable = game.canPlay.map((id) => byId[id]).filter(Boolean)
-  if (playable.length === 0) return null
+  const plays = game.canPlay.map((id) => byId[id]).filter(Boolean)
+  const special = game.special ?? []
+  // the ⚡ plays button only makes sense while you hold priority ('select')
+  const showPlays = prompt?.kind === 'select' && (plays.length > 0 || special.length > 0)
+
+  // a short context label — shown only when it adds something beyond the always-
+  // visible "Your priority" chip up top
+  const label =
+    prompt == null
+      ? 'Your move'
+      : prompt.kind === 'select'
+        ? // plain priority is already signalled by the "Your priority" chip up top;
+          // only surface a select message when it's a real instruction (combat)
+          /attack|block|declare/i.test(prompt.message ?? '')
+          ? plain(prompt.message)
+          : null
+        : plain(prompt.message) || promptFallback(prompt.kind)
+
   return (
-    <div className="playable-bar panel">
-      <span className="muted playable-label">Play / activate:</span>
-      {playable.map((c) => (
-        <button
-          key={c.id}
-          className="btn play-chip"
-          onClick={() => onRespond('uuid', c.id)}
-          onMouseEnter={() => onHoverCard?.(c)}
-          onMouseLeave={() => onHoverCard?.(null)}
-          onMouseDown={() => onPressCard?.(c)}
-        >
-          {c.name}
-          {c.manaCost && (
-            <span className="play-chip-cost">
-              {(c.manaCost.match(/\{([^}]+)\}/g) ?? []).map((s, i) => {
-                const sym = s.slice(1, -1)
-                return (
-                  <span key={i} className="mana-pip" style={{ background: MANA_COLOR[sym] ?? '#6b7280' }}>
-                    {sym}
-                  </span>
-                )
-              })}
-            </span>
+    <div className="cmd-pill" onClick={(e) => e.stopPropagation()}>
+      {showPlays && (
+        <div className="cmd-plays">
+          <button
+            className={`cmd-plays-btn${playsOpen ? ' open' : ''}`}
+            onClick={() => setPlaysOpen((o) => !o)}
+            title="Cards & abilities you can play now"
+            aria-expanded={playsOpen}
+          >
+            ⚡ <b>{plays.length + special.length}</b>
+          </button>
+          {playsOpen && (
+            <div className="cmd-plays-pop panel" role="menu">
+              <div className="cmd-plays-title">Play / activate</div>
+              {special.map((s) => (
+                <button key={s.id} className="cmd-play-item special" role="menuitem" onClick={() => onRespond('string', s.id)}>
+                  ✦ {plain(s.name)}
+                </button>
+              ))}
+              {plays.map((c) => (
+                <button
+                  key={c.id}
+                  className="cmd-play-item"
+                  role="menuitem"
+                  onClick={() => onRespond('uuid', c.id)}
+                  onMouseEnter={() => onHoverCard?.(c)}
+                  onMouseLeave={() => onHoverCard?.(null)}
+                  onMouseDown={() => onPressCard?.(c)}
+                >
+                  <span className="cmd-play-name">{c.name}</span>
+                  {c.manaCost && (
+                    <span className="play-chip-cost">
+                      {(c.manaCost.match(/\{([^}]+)\}/g) ?? []).map((s, i) => {
+                        const sym = s.slice(1, -1)
+                        return (
+                          <span key={i} className="mana-pip" style={{ background: MANA_COLOR[sym] ?? '#6b7280' }}>
+                            {sym}
+                          </span>
+                        )
+                      })}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
           )}
-        </button>
-      ))}
+        </div>
+      )}
+
+      {label && <span className="cmd-label">{label}</span>}
+
+      <div className="cmd-actions">
+        {prompt?.kind === 'select' && (
+          <>
+            {/* Done confirms the current selection (declared attackers/blockers,
+                or an empty selection); Pass yields priority. */}
+            <button className="btn cmd-done" onClick={() => onRespond('boolean', 'true')}>
+              Done <span className="skip-key">D</span>
+            </button>
+            <button className="btn primary cmd-primary" onClick={() => onRespond('boolean', 'false')}>
+              Pass <span className="skip-key">P</span>
+            </button>
+          </>
+        )}
+
+        {prompt?.kind === 'ask' &&
+          (() => {
+            const mull = /mulligan/i.test(prompt.message ?? '')
+            return (
+              <>
+                <button className="btn primary cmd-primary" onClick={() => onRespond('boolean', 'true')}>
+                  {mull ? 'Mulligan' : 'Yes'} <span className="skip-key">Y</span>
+                </button>
+                <button className="btn cmd-done" onClick={() => onRespond('boolean', 'false')}>
+                  {mull ? 'Keep' : 'No'} <span className="skip-key">N</span>
+                </button>
+              </>
+            )
+          })()}
+
+        {prompt?.kind === 'target' && prompt.canCancel && (
+          <button className="btn primary cmd-primary" onClick={() => onRespond('boolean', 'false')}>
+            Done
+          </button>
+        )}
+
+        {prompt?.kind === 'amount' && (
+          <>
+            <input
+              className="amount-input"
+              type="number"
+              min={prompt.min}
+              max={prompt.max}
+              value={amount}
+              placeholder={`${prompt.min}–${prompt.max}`}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+            <button className="btn primary cmd-primary" onClick={() => onRespond('integer', amount === '' ? String(prompt.min) : amount)}>
+              OK
+            </button>
+          </>
+        )}
+
+        {prompt?.kind === 'choice' && !hideChoice && (
+          <div className="choice-list">
+            {prompt.choices.map((c) => (
+              <button key={c.key} className="btn" onClick={() => onRespond(prompt.choiceKind ?? 'string', c.key)}>
+                {c.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {prompt?.kind === 'pile' && (
+          <div className="pile-choice">
+            <div className="pile">
+              <div className="pile-cards">
+                {(prompt.pile1 ?? []).map((c) => (
+                  <span key={c.id} className="pile-card">
+                    {c.name}
+                  </span>
+                ))}
+              </div>
+              <button className="btn primary" onClick={() => onRespond('boolean', 'true')}>
+                Take pile 1
+              </button>
+            </div>
+            <div className="pile">
+              <div className="pile-cards">
+                {(prompt.pile2 ?? []).map((c) => (
+                  <span key={c.id} className="pile-card">
+                    {c.name}
+                  </span>
+                ))}
+              </div>
+              <button className="btn primary" onClick={() => onRespond('boolean', 'false')}>
+                Take pile 2
+              </button>
+            </div>
+          </div>
+        )}
+
+        {prompt?.kind === 'multiAmount' && <MultiAmountControl prompt={prompt} onRespond={onRespond} />}
+
+        {prompt?.kind === 'generic' && prompt.canCancel && (
+          <button className="btn cmd-done" onClick={() => onRespond('boolean', 'false')}>
+            Cancel
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -1503,133 +1684,6 @@ function CardMenu({
           <button className="btn ghost" onClick={onClose}>Close</button>
         </div>
       </div>
-    </div>
-  )
-}
-
-function ActionBar({ prompt, onRespond, hideChoice }: { prompt: Prompt | null; onRespond: (kind: RespondKind, value?: string) => void; hideChoice?: boolean }) {
-  const [amount, setAmount] = useState('')
-
-  if (!prompt) {
-    return (
-      <div className="action-bar">
-        <span className="action-message muted">Waiting — use the buttons on the left to advance the turn.</span>
-      </div>
-    )
-  }
-
-  return (
-    <div className="action-bar">
-      <span className="action-message">{plain(prompt.message) || promptFallback(prompt.kind)}</span>
-      <span className="spacer" />
-
-      {prompt.kind === 'ask' &&
-        (() => {
-          // a mulligan ask reads far clearer as Mulligan / Keep than Yes / No
-          const mull = /mulligan/i.test(prompt.message ?? '')
-          return (
-            <>
-              <button className="btn primary" onClick={() => onRespond('boolean', 'true')}>
-                {mull ? 'Mulligan' : 'Yes'} <span className="skip-key">Y</span>
-              </button>
-              <button className="btn" onClick={() => onRespond('boolean', 'false')}>
-                {mull ? 'Keep' : 'No'} <span className="skip-key">N</span>
-              </button>
-            </>
-          )
-        })()}
-
-      {prompt.kind === 'select' && (
-        <>
-          <span className="muted hint">Click a card to play / declare · Done confirms · Pass skips</span>
-          {/* Done = boolean true: confirms the current selection, e.g. declared
-              attackers/blockers. Pass = boolean false: pass priority. */}
-          <button className="btn" onClick={() => onRespond('boolean', 'true')}>
-            Done <span className="skip-key">D</span>
-          </button>
-          <button className="btn primary" onClick={() => onRespond('boolean', 'false')}>
-            Pass <span className="skip-key">P</span>
-          </button>
-        </>
-      )}
-
-      {prompt.kind === 'target' && (
-        <>
-          <span className="muted hint">Click a target</span>
-          {prompt.canCancel && (
-            <button className="btn" onClick={() => onRespond('boolean', 'false')}>
-              Done
-            </button>
-          )}
-        </>
-      )}
-
-      {prompt.kind === 'amount' && (
-        <>
-          <input
-            className="amount-input"
-            type="number"
-            min={prompt.min}
-            max={prompt.max}
-            value={amount}
-            placeholder={`${prompt.min}–${prompt.max}`}
-            onChange={(e) => setAmount(e.target.value)}
-          />
-          <button
-            className="btn primary"
-            onClick={() => onRespond('integer', amount === '' ? String(prompt.min) : amount)}
-          >
-            OK
-          </button>
-        </>
-      )}
-
-      {prompt.kind === 'choice' && !hideChoice && (
-        <div className="choice-list">
-          {prompt.choices.map((c) => (
-            <button key={c.key} className="btn" onClick={() => onRespond(prompt.choiceKind ?? 'string', c.key)}>
-              {c.label}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {prompt.kind === 'pile' && (
-        <div className="pile-choice">
-          <div className="pile">
-            <div className="pile-cards">
-              {(prompt.pile1 ?? []).map((c) => (
-                <span key={c.id} className="pile-card">
-                  {c.name}
-                </span>
-              ))}
-            </div>
-            <button className="btn primary" onClick={() => onRespond('boolean', 'true')}>
-              Take pile 1
-            </button>
-          </div>
-          <div className="pile">
-            <div className="pile-cards">
-              {(prompt.pile2 ?? []).map((c) => (
-                <span key={c.id} className="pile-card">
-                  {c.name}
-                </span>
-              ))}
-            </div>
-            <button className="btn primary" onClick={() => onRespond('boolean', 'false')}>
-              Take pile 2
-            </button>
-          </div>
-        </div>
-      )}
-
-      {prompt.kind === 'multiAmount' && <MultiAmountControl prompt={prompt} onRespond={onRespond} />}
-
-      {prompt.kind === 'generic' && prompt.canCancel && (
-        <button className="btn" onClick={() => onRespond('boolean', 'false')}>
-          Cancel
-        </button>
-      )}
     </div>
   )
 }

@@ -3,16 +3,19 @@ import { gotoScreen } from './harness'
 
 /* Legacy-parity skip controls (F3–F11 key map) + per-player match clock. */
 
-test('skip bar shows the legacy skip set; the armed skip is lit; Cancel appears only when armed', async ({ page }) => {
+test('the ⏭ fast-forward menu shows the legacy skip set; the armed skip is lit; Cancel appears only when armed', async ({ page }) => {
   await gotoScreen(page, 'game')
+  // harness arms PASS_PRIORITY_UNTIL_STACK_RESOLVED → the ⏭ button glows
+  const fab = page.getByRole('button', { name: 'Fast-forward' })
+  await expect(fab).toHaveClass(/armed/)
+  await fab.click()
   for (const label of ['Turn', 'End step', 'Main', 'Resolve', 'My turn', 'Pre-turn']) {
-    await expect(page.locator('.skip-btn', { hasText: label }).first()).toBeVisible()
+    await expect(page.locator('.skip-pop-item', { hasText: label }).first()).toBeVisible()
   }
-  // harness arms PASS_PRIORITY_UNTIL_STACK_RESOLVED on the viewer
-  await expect(page.locator('.skip-btn.armed')).toHaveCount(1)
-  await expect(page.locator('.skip-btn.armed')).toContainText('Resolve')
-  // something is armed → the F3 cancel button is offered
-  await expect(page.locator('.skip-btn', { hasText: 'Cancel' })).toBeVisible()
+  await expect(page.locator('.skip-pop-item.armed')).toHaveCount(1)
+  await expect(page.locator('.skip-pop-item.armed')).toContainText('Resolve')
+  // something is armed → the F3 cancel entry is offered
+  await expect(page.locator('.skip-pop-item', { hasText: 'Cancel' })).toBeVisible()
 })
 
 test('F5 / F9 fire their legacy skip actions', async ({ page }) => {

@@ -158,10 +158,11 @@ test.describe('Target-candidate picker', () => {
 })
 
 test.describe('Special actions', () => {
-  test('the Special dock button responds {kind:string, value:special}', async ({ page }) => {
+  test('the Special action (in the ⚡ popover) responds {kind:string, value:special}', async ({ page }) => {
     await gotoScreen(page, 'gameSpecial')
     const sent = await captureResponds(page)
-    const btn = page.locator('.dock-special .special-btn')
+    await page.locator('.cmd-plays-btn').click()
+    const btn = page.locator('.cmd-play-item.special')
     await expect(btn).toBeVisible()
     await expect(btn).toContainText('Special')
     await btn.click()
@@ -202,9 +203,10 @@ test.describe('Attachments & command zone (3D board)', () => {
     await expect
       .poll(async () => (await rendered(page)).some((c) => c.id === 'cmd1'), { timeout: 15000 })
       .toBe(true)
-    // … and castable from the playable bar like any other card (canPlay path)
+    // … and castable from the ⚡ plays popover like any other card (canPlay path)
     const sent = await captureResponds(page)
-    await page.locator('.play-chip', { hasText: 'Ghalta' }).click()
+    await page.locator('.cmd-plays-btn').click()
+    await page.locator('.cmd-play-item', { hasText: 'Ghalta' }).click()
     await expect.poll(() => sent.find((s) => s.kind === 'uuid')?.value).toBe('cmd1')
   })
 
