@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Board3D, type BrowsableZone } from './Board3D'
 import { ConfirmDialog } from './ConfirmDialog'
 import { ZoneBrowser } from './ZoneBrowser'
+import { ShortcutHints } from './ShortcutsOverlay'
 import type { RespondKind } from '../api'
 import { plain } from '../text'
 import { GROUP_LABEL, HAND_GROUPS, groupCards, type GroupBy } from '../cardGroup'
@@ -750,6 +751,7 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
           Waiting for {game.activePlayer && game.activePlayer !== game.me ? game.activePlayer : 'opponent'}…
         </div>
       )}
+      {interactive && <ShortcutHints />}
     </div>
   )
 }

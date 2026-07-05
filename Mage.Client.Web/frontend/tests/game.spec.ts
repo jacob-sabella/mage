@@ -243,6 +243,26 @@ test.describe('Game board (3D)', () => {
     for (const s of [withPlayables, noPlayables, combat]) expect(s.h).toBeLessThanOrEqual(72)
   })
 
+  test('the shortcut hints pin to the side, list the keys, and remember the choice', async ({ page }) => {
+    await gotoScreen(page, 'game')
+    // collapsed by default — just a slim ⌨ tab, no full panel
+    await expect(page.locator('.shortcut-hints')).toHaveCount(0)
+    const tab = page.getByRole('button', { name: 'Show keyboard shortcuts' })
+    await expect(tab).toBeVisible()
+    // pin it open → the in-game keys are listed (same source as the ? overlay)
+    await tab.click()
+    const panel = page.locator('.shortcut-hints')
+    await expect(panel).toBeVisible()
+    await expect(panel.locator('.hints-list li', { hasText: 'Skip to next turn' }).locator('.kbd')).toHaveText('F4')
+    await expect(panel.locator('.hints-list li', { hasText: 'Pass priority' })).toBeVisible()
+    // choice persists
+    expect(await page.evaluate(() => localStorage.getItem('mage.hintsOpen'))).toBe('1')
+    // collapse it back to the tab
+    await panel.getByRole('button', { name: 'Hide shortcuts' }).click()
+    await expect(page.locator('.shortcut-hints')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Show keyboard shortcuts' })).toBeVisible()
+  })
+
   test('hand cards show mana-cost pips', async ({ page }) => {
     await gotoScreen(page, 'game')
     // mana cost shows on each hand-fan card: Counterspell {U}{U}, Lightning Bolt {R}
