@@ -1727,6 +1727,10 @@ html.game-on .lobby-header { display: none; }
 .cmd-actions .btn { flex: 0 0 auto; }
 .cmd-primary { font-weight: 800; padding: 9px 18px; }
 .cmd-done { padding: 9px 14px; }
+/* undo: a quiet icon button — always there while you have priority, but it
+   doesn't compete with Done/Pass */
+.cmd-undo { padding: 8px 11px; font-size: 15px; line-height: 1; color: var(--text-dim); }
+.cmd-undo:hover { color: var(--accent-2); border-color: var(--accent-2); }
 .cmd-actions .choice-list { display: flex; flex-wrap: wrap; gap: 6px; max-width: 46vw; }
 .cmd-actions .pile-choice { display: flex; gap: 8px; }
 

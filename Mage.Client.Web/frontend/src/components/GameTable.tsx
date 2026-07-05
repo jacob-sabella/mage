@@ -236,6 +236,15 @@ export function GameTable({ game, prompt, interactive, result, onRespond, onTapM
         setHandHidden((v) => !v)
         return
       }
+      // undo the last committed action (a misclicked cast / ability / attacker)
+      // while you still hold priority — Ctrl/⌘+Z or Backspace. The server reverts
+      // to the bookmark it stored when you took the action (pulls the spell back
+      // off the stack, un-taps the mana); it no-ops once nothing is undoable.
+      if (prompt?.kind === 'select' && (e.key === 'Backspace' || ((e.ctrlKey || e.metaKey) && k === 'z'))) {
+        e.preventDefault()
+        onRespond('action', 'UNDO')
+        return
+      }
       if (prompt?.kind === 'select') {
         if (e.key === ' ' || k === 'p') {
           e.preventDefault()
@@ -1323,6 +1332,16 @@ function CommandPill({
       <div className="cmd-actions">
         {prompt?.kind === 'select' && (
           <>
+            {/* Undo the last committed action (cast / ability / declared
+                attacker) — reverts a misclick while you still hold priority. */}
+            <button
+              className="btn ghost cmd-undo"
+              onClick={() => onRespond('action', 'UNDO')}
+              title="Undo your last action — pull a just-cast spell back off the stack, un-tap the mana. Works while you still have priority (Ctrl+Z / Backspace)."
+              aria-label="Undo last action"
+            >
+              ↶
+            </button>
             {/* Done confirms the current selection (declared attackers/blockers,
                 or an empty selection); Pass yields priority. */}
             <button className="btn cmd-done" onClick={() => onRespond('boolean', 'true')}>

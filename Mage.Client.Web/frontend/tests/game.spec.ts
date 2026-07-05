@@ -91,6 +91,47 @@ test.describe('Game board (3D)', () => {
     await expect.poll(() => playedId).toBe('h1')
   })
 
+  // Undo sends the xmage UNDO action, which reverts your last committed action
+  // (cast / ability / attacker) while you still hold priority. One action per
+  // test: handleRespond clears the prompt optimistically until the server
+  // re-pushes, so a second action can't fire without a live WS round-trip.
+  const captureUndo = async (page: import('@playwright/test').Page) => {
+    let undo = 0
+    await page.route('**/api/game/respond', (route) => {
+      const b = JSON.parse(route.request().postData() || '{}')
+      if (b.kind === 'action' && b.value === 'UNDO') undo++
+      return route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) })
+    })
+    return () => undo
+  }
+
+  test('undo: the pill ↶ button sends the UNDO action', async ({ page }) => {
+    await gotoScreen(page, 'game')
+    const undo = await captureUndo(page)
+    await page.getByRole('button', { name: 'Undo last action' }).click()
+    await expect.poll(undo).toBe(1)
+  })
+
+  test('undo: Ctrl+Z sends the UNDO action', async ({ page }) => {
+    await gotoScreen(page, 'game')
+    await page.getByRole('button', { name: /^Pass/ }).waitFor()
+    const undo = await captureUndo(page)
+    await page.locator('.turn-label').click() // focus off any input
+    await page.keyboard.down('Control')
+    await page.keyboard.press('z')
+    await page.keyboard.up('Control')
+    await expect.poll(undo).toBe(1)
+  })
+
+  test('undo: Backspace sends the UNDO action', async ({ page }) => {
+    await gotoScreen(page, 'game')
+    await page.getByRole('button', { name: /^Pass/ }).waitFor()
+    const undo = await captureUndo(page)
+    await page.locator('.turn-label').click()
+    await page.keyboard.press('Backspace')
+    await expect.poll(undo).toBe(1)
+  })
+
   test('mulligan prompt offers Mulligan/Keep and strips HTML from the message', async ({ page }) => {
     await gotoScreen(page, 'mulligan')
     // server sends "Mulligan <font ...>down to 6 cards</font>?" — must render clean

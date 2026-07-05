@@ -15,6 +15,7 @@ export const IN_GAME_SHORTCUTS: Shortcut[] = [
   { keys: 'F3', label: 'Cancel skips' },
   { keys: 'D', label: 'Done / confirm selection' },
   { keys: 'P / Space', label: 'Pass priority' },
+  { keys: 'Ctrl+Z / ⌫', label: 'Undo last action (while you have priority)' },
   { keys: 'Y / N', label: 'Answer yes / no (Mulligan / Keep)' },
   { keys: 'H', label: 'Hide / show your hand' },
   { keys: '← / →', label: 'Move between hand cards' },
