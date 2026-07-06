@@ -72,3 +72,6 @@ mage-bundle.zip
 /deploy
 /temp
 Mage.Client.Web/src/main/resources/web/test-clips/
+
+# dev tools
+.devcontainer/**/*lock.json
