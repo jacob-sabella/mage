@@ -29,7 +29,7 @@
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
-            <version>3.25.8</version>
+            <version>3.25.9</version>
         </dependency>
     </dependencies>
 
@@ -58,7 +58,7 @@
                         </goals>
 
                         <configuration>
-                            <protocArtifact>com.google.protobuf:protoc:3.25.8</protocArtifact>
+                            <protocArtifact>com.google.protobuf:protoc:3.25.9</protocArtifact>
                             <inputDirectories>
                                 <include>${project.basedir}/src/main/proto</include>
                             </inputDirectories>
