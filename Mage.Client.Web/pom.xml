@@ -20,8 +20,13 @@
 
     <properties>
         <!-- Javalin/Jetty needs Java 11+; this module compiles to 17 (CI runs Temurin 17). -->
-        <javalin.version>5.6.3</javalin.version>
-        <jackson.version>2.18.8</jackson.version>
+        <!-- javalin: bumped to latest 5.x patch release (stayed on major 5 to avoid the
+             breaking API changes in javalin 6/7; no known CVE required a major jump). -->
+        <javalin.version>5.6.5</javalin.version>
+        <!-- jackson-databind: bumped to 2.18.9 to pick up the fix for CVE-2026-54515
+             (jackson-databind @JsonIgnoreProperties case-insensitive binding bypass,
+             affects 2.8.0-2.18.8 / up to 2.21.4 / up to 3.1.3; fixed in 2.18.9). -->
+        <jackson.version>2.18.9</jackson.version>
         <slf4j.version>2.0.17</slf4j.version>
     </properties>
 
