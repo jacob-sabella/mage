@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { importDeck, loadDeck, saveDeck, searchCards, uploadDeck } from '../api'
 import { useEscapeClose } from '../useEscapeClose'
@@ -161,17 +161,37 @@ export function DeckEditor() {
   useEffect(() => {
     localStorage.setItem('mage.deckListView', deckView)
   }, [deckView])
-  // hover a card (search result or deck entry) to preview its art
+  // hover a card (search result or deck entry) to float a preview bubble
+  // beside the cursor — same idiom as the in-game hover bubble, so the
+  // preview is always next to what you're pointing at, never scrolled away
   const [preview, setPreview] = useState<PreviewCard | null>(null)
+  const [previewAnchor, setPreviewAnchor] = useState<{ x: number; y: number } | null>(null)
   const previewClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const showPreview = useCallback((card: PreviewCard | null) => {
+  const showPreview = useCallback((card: PreviewCard | null, at?: { x: number; y: number }) => {
     if (previewClearTimer.current) clearTimeout(previewClearTimer.current)
     if (card !== null) {
       setPreview(card)
+      if (at) setPreviewAnchor(at)
     } else {
-      previewClearTimer.current = setTimeout(() => setPreview(null), 150)
+      previewClearTimer.current = setTimeout(() => {
+        setPreview(null)
+        setPreviewAnchor(null)
+      }, 150)
     }
   }, [])
+
+  // touch: a long-press opens the bubble and there is no mouseleave — the next
+  // touch anywhere dismisses it (mouse keeps its enter/leave semantics)
+  useEffect(() => {
+    if (!preview) return
+    const clear = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch') return
+      setPreview(null)
+      setPreviewAnchor(null)
+    }
+    document.addEventListener('pointerdown', clear, true)
+    return () => document.removeEventListener('pointerdown', clear, true)
+  }, [preview])
 
   const total = deck.reduce((s, e) => s + e.count, 0)
   const deckCount = useMemo(() => Object.fromEntries(deck.map((e) => [e.name, e.count])), [deck])
@@ -400,6 +420,7 @@ export function DeckEditor() {
 
   return (
     <div className="deck-editor">
+      <DeckHoverBubble card={preview} anchor={previewAnchor} />
       <section className="panel deck-search">
         <div className="deck-search-bar">
           <input
@@ -575,7 +596,7 @@ export function DeckEditor() {
                     <tr
                       key={`${card.name}-${card.set}-${i}`}
                       className={n > 0 ? 'in-deck' : ''}
-                      onMouseEnter={() => showPreview(card)}
+                      onMouseEnter={(e) => showPreview(card, { x: e.clientX, y: e.clientY })}
                       onMouseLeave={() => showPreview(null)}
                     >
                       <td className="deck-table-add">
@@ -623,7 +644,6 @@ export function DeckEditor() {
           if (c) addCard(c)
         }}
       >
-        <DeckCardPreview card={preview} />
         <div className="deck-list-head">
           <input
             className="deck-title deck-title-input"
@@ -635,7 +655,44 @@ export function DeckEditor() {
           />
           <span className="deck-title-pencil" aria-hidden>✎</span>
           <span className="spacer" />
-          <span className="chip">{total} cards</span>
+          <span
+            className={`chip deck-count-chip${fmt.minMain > 0 && total >= fmt.minMain ? ' ok' : ''}`}
+            title={
+              fmt.minMain > 0
+                ? `${fmt.label}: ${total} of ${fmt.minMain} cards${total >= fmt.minMain ? ' — ready' : ` — ${fmt.minMain - total} to go`}`
+                : `${total} cards`
+            }
+          >
+            {fmt.minMain > 0 ? `${total} / ${fmt.minMain}` : `${total} cards`}
+          </span>
+        </div>
+        {deck.length > 0 && fmt.minMain > 0 && (
+          <div
+            className={`deck-legality${total >= fmt.minMain ? ' ok' : ''}`}
+            title={`${fmt.label} decks want at least ${fmt.minMain} cards`}
+          >
+            <div className="deck-legality-bar">
+              <div className="deck-legality-fill" style={{ width: `${Math.min(100, (total / fmt.minMain) * 100)}%` }} />
+            </div>
+          </div>
+        )}
+
+        <div className="deck-format-row">
+          <select
+            id="deck-format"
+            className="filter-select"
+            value={format}
+            onChange={(e) => setFormat(e.target.value as FormatId)}
+            aria-label="Deck format"
+            title={fmt.blurb}
+          >
+            {FORMATS.map((f) => (
+              <option key={f.id} value={f.id}>{f.label}</option>
+            ))}
+          </select>
+          <span className="muted deck-format-blurb">{fmt.blurb}</span>
+        </div>
+        <div className="deck-toolbar">
           <button className="btn watch-btn" onClick={() => setImportOpen(true)}>
             Import
           </button>
@@ -651,24 +708,19 @@ export function DeckEditor() {
           <input ref={fileInputRef} type="file" accept=".dck" style={{ display: 'none' }} onChange={onUpload} />
         </div>
 
-        <div className="deck-format-row">
-          <label className="muted deck-format-label" htmlFor="deck-format">Format</label>
-          <select
-            id="deck-format"
-            className="filter-select"
-            value={format}
-            onChange={(e) => setFormat(e.target.value as FormatId)}
-            aria-label="Deck format"
+        {overLimitNames.length > 0 && (
+          <p
+            className="deck-limit-warn"
+            title={fmt.singleton ? 'Singleton: at most 1 of each non-basic card' : `At most ${fmt.copyLimit} copies of a card (basic lands are exempt)`}
           >
-            {FORMATS.map((f) => (
-              <option key={f.id} value={f.id}>{f.label}</option>
-            ))}
-          </select>
-          <span className="muted deck-format-blurb">{fmt.blurb}</span>
-        </div>
+            ⚠ {fmt.singleton ? 'Singleton — extra copies of' : `Over the ${fmt.copyLimit}-copy limit:`} {overLimitNames.join(', ')}
+          </p>
+        )}
+
+        {deck.length > 0 && <DeckStats stats={stats} />}
 
         <div className="deck-basics">
-          <span className="muted">Add basics</span>
+          <span className="muted" title="Add a basic land">Basics</span>
           {BASICS.map((b) => (
             <button
               key={b.name}
@@ -681,52 +733,26 @@ export function DeckEditor() {
               {b.c}
             </button>
           ))}
-        </div>
-
-        {deck.length > 0 && fmt.minMain > 0 && (
-          <div className={`deck-legality${total >= fmt.minMain ? ' ok' : ''}`} title={`${fmt.label} decks want at least ${fmt.minMain} cards`}>
-            <div className="deck-legality-bar">
-              <div className="deck-legality-fill" style={{ width: `${Math.min(100, (total / fmt.minMain) * 100)}%` }} />
+          <span className="spacer" />
+          {deck.length > 0 && (
+            <div className="view-switch deck-view-switch" role="group" aria-label="Deck view">
+              <button
+                className={`view-switch-btn${deckView === 'list' ? ' active' : ''}`}
+                onClick={() => setDeckView('list')}
+                aria-pressed={deckView === 'list'}
+              >
+                ☰ List
+              </button>
+              <button
+                className={`view-switch-btn${deckView === 'visual' ? ' active' : ''}`}
+                onClick={() => setDeckView('visual')}
+                aria-pressed={deckView === 'visual'}
+              >
+                ▦ Visual
+              </button>
             </div>
-            <span className="deck-legality-label muted">
-              {total} / {fmt.minMain} {total >= fmt.minMain ? '· ready' : `· ${fmt.minMain - total} to go`}
-            </span>
-          </div>
-        )}
-        {deck.length > 0 && fmt.minMain === 0 && (
-          <div className="deck-legality ok">
-            <span className="deck-legality-label muted">{total} cards</span>
-          </div>
-        )}
-        {overLimitNames.length > 0 && (
-          <p
-            className="deck-limit-warn"
-            title={fmt.singleton ? 'Singleton: at most 1 of each non-basic card' : `At most ${fmt.copyLimit} copies of a card (basic lands are exempt)`}
-          >
-            ⚠ {fmt.singleton ? 'Singleton — extra copies of' : `Over the ${fmt.copyLimit}-copy limit:`} {overLimitNames.join(', ')}
-          </p>
-        )}
-
-        {deck.length > 0 && <DeckStats stats={stats} />}
-
-        {deck.length > 0 && (
-          <div className="view-switch deck-view-switch" role="group" aria-label="Deck view">
-            <button
-              className={`view-switch-btn${deckView === 'list' ? ' active' : ''}`}
-              onClick={() => setDeckView('list')}
-              aria-pressed={deckView === 'list'}
-            >
-              ☰ List
-            </button>
-            <button
-              className={`view-switch-btn${deckView === 'visual' ? ' active' : ''}`}
-              onClick={() => setDeckView('visual')}
-              aria-pressed={deckView === 'visual'}
-            >
-              ▦ Visual
-            </button>
-          </div>
-        )}
+          )}
+        </div>
 
         <div className="deck-list-body">
           {deck.length === 0 ? (
@@ -743,7 +769,7 @@ export function DeckEditor() {
                       <div
                         key={e.name}
                         className={`deck-visual-card${overLimitFor(e, fmt) ? ' over-limit' : ''}`}
-                        onMouseEnter={() => showPreview(e)}
+                        onMouseEnter={(ev) => showPreview(e, { x: ev.clientX, y: ev.clientY })}
                         onMouseLeave={() => showPreview(null)}
                         title={`${e.count}× ${e.name}`}
                       >
@@ -781,9 +807,9 @@ export function DeckEditor() {
                       <li
                         key={e.name}
                         className={`deck-entry${overLimitFor(e, fmt) ? ' over-limit' : ''}`}
-                        onMouseEnter={() => showPreview(e)}
+                        onMouseEnter={(ev) => showPreview(e, { x: ev.clientX, y: ev.clientY })}
                         onMouseLeave={() => showPreview(null)}
-                        onClick={() => showPreview(e)}
+                        onClick={(ev) => showPreview(e, { x: ev.clientX, y: ev.clientY })}
                       >
                         <span className="deck-entry-count">{e.count}×</span>
                         <span className="deck-entry-name">{e.name}</span>
@@ -815,7 +841,7 @@ export function DeckEditor() {
               </div>
               <ul className="deck-entries">
                 {sideboard.map((e) => (
-                  <li key={e.name} className="deck-entry" onMouseEnter={() => showPreview(e)} onMouseLeave={() => showPreview(null)} onClick={() => showPreview(e)}>
+                  <li key={e.name} className="deck-entry" onMouseEnter={(ev) => showPreview(e, { x: ev.clientX, y: ev.clientY })} onMouseLeave={() => showPreview(null)} onClick={(ev) => showPreview(e, { x: ev.clientX, y: ev.clientY })}>
                     <span className="deck-entry-count">{e.count}×</span>
                     <span className="deck-entry-name">{e.name}</span>
                     {e.manaCost && <ManaCost cost={e.manaCost} className="deck-entry-cost" />}
@@ -835,15 +861,17 @@ export function DeckEditor() {
           <button className="btn primary block" onClick={onSave} disabled={saving || deck.length === 0}>
             {saving ? 'Saving…' : 'Save deck (.dck)'}
           </button>
-          <button className="btn ghost block" onClick={onCopyList} disabled={deck.length === 0}>
-            Copy decklist
-          </button>
-          <button className="btn ghost block" onClick={onDownloadTxt} disabled={deck.length === 0}>
-            Download .txt
-          </button>
-          <button className="btn ghost block" onClick={() => setSampleOpen(true)} disabled={deck.length === 0}>
-            Goldfish (playtest)
-          </button>
+          <div className="deck-foot-row">
+            <button className="btn ghost" onClick={onCopyList} disabled={deck.length === 0}>
+              Copy decklist
+            </button>
+            <button className="btn ghost" aria-label="Download .txt" onClick={onDownloadTxt} disabled={deck.length === 0}>
+              .txt
+            </button>
+            <button className="btn ghost" aria-label="Goldfish (playtest)" onClick={() => setSampleOpen(true)} disabled={deck.length === 0}>
+              Goldfish
+            </button>
+          </div>
           {saveStatus && <p className="deck-save-status muted">{saveStatus}</p>}
           {unresolved.length > 0 && <p className="deck-error">Not found: {unresolved.join(', ')}</p>}
         </div>
@@ -1057,7 +1085,7 @@ function CardTile({
   count: number
   onAdd: (c: CardInfoDto, playset?: boolean) => void
   onRemove: (name: string) => void
-  onHover: (c: PreviewCard | null) => void
+  onHover: (c: PreviewCard | null, at?: { x: number; y: number }) => void
   onDragCard?: (c: CardInfoDto | null) => void
 }) {
   const img = `/api/cardimg?set=${encodeURIComponent(card.set ?? '')}&num=${encodeURIComponent((card as { num?: string }).num ?? '')}&name=${encodeURIComponent(card.name)}`
@@ -1074,17 +1102,18 @@ function CardTile({
         onDragCard?.(card)
       }}
       onDragEnd={() => onDragCard?.(null)}
-      onMouseEnter={() => onHover(card)}
+      onMouseEnter={(e) => onHover(card, { x: e.clientX, y: e.clientY })}
       onMouseLeave={() => onHover(null)}
     >
       <button
         className="card-tile-art"
         onPointerDown={(e) => {
           if (e.pointerType !== 'touch') return
+          const at = { x: e.clientX, y: e.clientY }
           longPressed.current = false
           pressTimer.current = setTimeout(() => {
             longPressed.current = true
-            onHover(card)
+            onHover(card, at)
           }, 400)
         }}
         onPointerUp={() => {
@@ -1118,8 +1147,13 @@ function CardTile({
   )
 }
 
-/** Inline card-art preview pinned at the top of the deck list panel. */
-function DeckCardPreview({ card }: { card: PreviewCard | null }) {
+/** Floating card preview beside the cursor — the same idiom as the in-game
+ *  hover bubble: position:fixed, prefers the side away from the viewport edge,
+ *  clamped on-screen, pointer-events:none so it never steals the hover. It
+ *  costs the deck column no height, and it's always next to the row you're on. */
+function DeckHoverBubble({ card, anchor }: { card: PreviewCard | null; anchor: { x: number; y: number } | null }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null)
   const [imgSrc, setImgSrc] = useState<string | null>(null)
 
   useEffect(() => {
@@ -1141,15 +1175,48 @@ function DeckCardPreview({ card }: { card: PreviewCard | null }) {
     }
   }, [card?.name, card?.set, card?.num])
 
-  if (!card) return <div className="card-preview card-preview-empty muted">Hover a card to preview</div>
+  // measure AFTER render, then place: prefer the side of the cursor with room
+  // (deck rows sit at the right edge, so this usually flips left over the
+  // search panel), clamp vertically. A ResizeObserver re-places when the image
+  // loads and changes the bubble's size.
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!card || !anchor || !el) {
+      setPos(null)
+      return
+    }
+    const place = () => {
+      const w = el.offsetWidth
+      const h = el.offsetHeight
+      const vw = window.innerWidth
+      const vh = window.innerHeight
+      const GAP = 24
+      const M = 8
+      let left = anchor.x + GAP
+      if (left + w > vw - M) left = anchor.x - GAP - w
+      left = Math.max(M, Math.min(left, vw - w - M))
+      const top = Math.max(M, Math.min(anchor.y - h / 2, vh - h - M))
+      setPos({ left, top })
+    }
+    place()
+    const ro = new ResizeObserver(place)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [card, anchor])
+
+  if (!card || !anchor) return null
   const cost = (card.manaCost?.match(/\{([^}]+)\}/g) ?? []).map((s) => s.slice(1, -1))
   return (
-    <div className="card-preview deck-card-preview" role="dialog" aria-label={`Card: ${card.name}`}>
-      <div className="card-preview-imgbox">
-        {imgSrc && (
-          <img key={imgSrc} className="card-preview-img" src={imgSrc} alt={card.name} onError={(e) => (e.currentTarget.style.visibility = 'hidden')} />
-        )}
-      </div>
+    <div
+      ref={ref}
+      className="card-hover-bubble"
+      role="dialog"
+      aria-label={`Card: ${card.name}`}
+      style={pos ? { left: pos.left, top: pos.top } : { left: 0, top: 0, visibility: 'hidden' }}
+    >
+      {imgSrc && (
+        <img key={imgSrc} className="card-preview-img" src={imgSrc} alt={card.name} onError={(e) => (e.currentTarget.style.visibility = 'hidden')} />
+      )}
       <div className="card-preview-info">
         <div className="card-preview-head">
           <span className="card-preview-name">{card.name}</span>
@@ -1224,16 +1291,9 @@ function DeckStats({ stats }: { stats: Stats }) {
       <div className="curve">
         {stats.curve.map((n, i) => (
           <div className="curve-col" key={i} title={`CMC ${i === 7 ? '7+' : i}: ${n}`}>
-            <div className="curve-bar" style={{ height: `${(n / maxCurve) * 46 + 2}px` }} />
+            <div className="curve-bar" style={{ height: n ? `${(n / maxCurve) * 26 + 2}px` : '0' }} />
             <div className="curve-label">{i === 7 ? '7+' : i}</div>
           </div>
-        ))}
-      </div>
-      <div className="type-counts">
-        {TYPE_ORDER.filter((t) => stats.types[t]).map((t) => (
-          <span key={t} className="muted type-count">
-            {t} {stats.types[t]}
-          </span>
         ))}
       </div>
     </div>

@@ -1013,19 +1013,18 @@ input::placeholder { color: var(--text-dim); }
 .game-log-line:last-child { color: var(--text); }
 
 /* ----- deck editor stats ----- */
-.deck-stats { padding: 10px 0 12px; border-bottom: 1px solid var(--stroke); margin-bottom: 10px; }
-.deck-stats-row { display: flex; align-items: center; font-size: 12px; margin-bottom: 10px; }
+.deck-stats { padding: 2px 0 8px; border-bottom: 1px solid var(--stroke); }
+.deck-stats-row { display: flex; align-items: center; font-size: 12px; margin-bottom: 6px; }
 .pips { display: flex; gap: 5px; }
 .pip {
   min-width: 22px; height: 20px; padding: 0 5px;
   border-radius: 11px; color: #11141b; font-weight: 700; font-size: 11px;
   display: inline-flex; align-items: center; justify-content: center;
 }
-.curve { display: flex; align-items: flex-end; gap: 6px; height: 64px; padding: 0 2px; }
+.curve { display: flex; align-items: flex-end; gap: 6px; height: 42px; padding: 0 2px; }
 .curve-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
 .curve-bar { width: 100%; max-width: 26px; background: linear-gradient(var(--accent), var(--accent-2)); border-radius: 3px 3px 0 0; }
 .curve-label { font-size: 10px; color: var(--text-dim); margin-top: 3px; }
-.type-counts { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 10px; font-size: 11px; }
 .deck-side-title { margin-top: 14px; }
 .deck-entry-cost { font-size: 11px; }
 
@@ -1315,64 +1314,8 @@ button.mana-pip-pay:hover { transform: scale(1.18); box-shadow: 0 0 8px color-mi
 }
 .c3d-overflow-collapse { font-size: 12px; padding: 2px 8px; opacity: 0.8; }
 
-/* ----- hover card preview (inline inside deck list, top of right panel) ----- */
-.card-preview {
-  width: 100%;
-  /* In the deck list the preview and the entry list SHARE the leftover column
-     space (both flex). Crucially the empty placeholder and the filled preview
-     use the exact same flex box (see .card-preview-empty), so swapping
-     empty<->full on hover never changes height — otherwise the deck entries
-     below shift and trigger an onMouseLeave/onMouseEnter flicker loop. A
-     min-height keeps the card readable; the game board overrides to a fixed
-     size (it's position:fixed, not in a column). */
-  flex: 1 1 0;
-  min-height: 160px;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-raised);
-  border: 1px solid color-mix(in srgb, var(--accent-2) 35%, var(--stroke));
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  pointer-events: none;
-}
-/* In the deck-list column the preview must NOT flex-grow to half the panel —
-   that starved the entry list so its rows bled under the foot and the +/- and
-   row controls became unclickable. A fixed height (same for empty + filled, so
-   no reflow flicker on hover) leaves the scrollable entry list its full room. */
-.deck-list > .card-preview { flex: 0 0 auto; height: clamp(300px, 52vh, 540px); min-height: 0; }
-/* Deck-editor preview: the card image is the hero. Centre it in a transparent
-   box and let it size to fit (no forced full-bleed + dark backing = no black
-   letterbox bars), so the actual card is as large and readable as the panel
-   allows. Height-driven, so it stays card-shaped and crisp. */
-.card-preview-imgbox {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 8px 4px;
-}
-.deck-card-preview .card-preview-img {
-  flex: initial;
-  width: auto;
-  height: auto;
-  max-width: 100%;
-  max-height: 100%;
-  background: transparent;
-  border-radius: 9px;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
-}
-.deck-card-preview .card-preview-name { font-size: 16px; }
-.card-preview-empty {
-  /* Same fixed height as the filled preview (inherited from .card-preview):
-     must NOT flex-grow, or the empty<->filled swap on hover changes height and
-     shifts the deck entries below — an onMouseEnter/Leave flicker loop. */
-  align-items: center; justify-content: center;
-  font-size: 12px;
-  border-style: dashed;
-  border-color: var(--stroke);
-  background: transparent;
-}
+/* ----- hover card preview (shared image/info classes; the deck editor and
+   game board both float these inside .card-hover-bubble) ----- */
 .card-preview-img { width: 100%; flex: 1; min-height: 0; display: block; background: #11141b; object-fit: contain; }
 .card-preview-info { padding: 10px 12px; }
 .card-preview-head { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
@@ -2222,7 +2165,7 @@ html, body { overflow-x: hidden; }
 .deck-groups { display: flex; flex-direction: column; gap: 12px; }
 
 /* visual deck view — the maindeck as card images */
-.deck-view-switch { flex: 0 0 auto; align-self: flex-start; margin: 8px 0 4px; font-size: 12px; }
+.deck-view-switch { flex: 0 0 auto; margin: 0; font-size: 12px; }
 
 /* drag-and-drop: drag a search result onto the deck panel to add it */
 .deck-drop-active { outline: 2px dashed var(--accent); outline-offset: -5px; box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent) inset; }
@@ -2314,10 +2257,16 @@ html, body { overflow-x: hidden; }
 @media (max-width: 480px) { .login-hero-title { font-size: 40px; letter-spacing: 5px; } }
 
 /* quick-add basic lands */
-.deck-format-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
-.deck-format-label { font-size: 12px; font-weight: 700; }
-.deck-format-row .filter-select { min-width: 148px; }
-.deck-format-blurb { font-size: 11px; flex: 1 1 100%; }
+/* the deck console: format row, then one even row of file actions */
+.deck-format-row { display: flex; align-items: center; gap: 8px; }
+.deck-format-row .filter-select { min-width: 128px; flex: 0 0 auto; }
+.deck-format-blurb { font-size: 11px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.deck-toolbar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.deck-toolbar .btn { padding-inline: 4px; }
+.deck-count-chip { font-variant-numeric: tabular-nums; }
+.deck-count-chip.ok { color: var(--success); border-color: color-mix(in srgb, var(--success) 55%, transparent); }
+.deck-foot-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 6px; }
+.deck-foot-row .btn { padding-inline: 4px; font-size: 12px; }
 .deck-move-btn { font-size: 13px; opacity: 0.7; }
 .deck-move-btn:hover { opacity: 1; color: var(--accent); }
 .deck-basics { display: flex; align-items: center; gap: 6px; font-size: 12px; }

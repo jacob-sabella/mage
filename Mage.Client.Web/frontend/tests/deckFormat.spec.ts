@@ -13,12 +13,12 @@ const countOf = (page: Page, name: string) =>
 test('the format selector drives the legality target', async ({ page }) => {
   await openEditor(page)
   await page.getByRole('button', { name: 'Add Lightning Bolt' }).click()
-  const label = page.locator('.deck-legality-label')
-  await expect(label).toContainText('/ 60') // constructed default
+  const chip = page.locator('.deck-count-chip')
+  await expect(chip).toContainText('/ 60') // constructed default
   await page.getByLabel('Deck format').selectOption('commander')
-  await expect(label).toContainText('/ 100')
+  await expect(chip).toContainText('/ 100')
   await page.getByLabel('Deck format').selectOption('freeform')
-  await expect(label).toContainText('1 cards') // no minimum → plain count, no target
+  await expect(chip).toContainText('1 cards') // no minimum → plain count, no target
 })
 
 test('constructed tops up to a 4-of and caps there', async ({ page }) => {
