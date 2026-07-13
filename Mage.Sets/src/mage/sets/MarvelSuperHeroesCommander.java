@@ -63,9 +63,11 @@ public final class MarvelSuperHeroesCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Birds of Paradise", 377, Rarity.RARE, mage.cards.b.BirdsOfParadise.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Black Market Connections", 155, Rarity.RARE, mage.cards.b.BlackMarketConnections.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Black Market Connections", 346, Rarity.RARE, mage.cards.b.BlackMarketConnections.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Black Panther, Claws of Bast", 829, Rarity.MYTHIC, mage.cards.b.BlackPantherClawsOfBast.class));
         cards.add(new SetCardInfo("Black Tom Cassidy", 715, Rarity.COMMON, mage.cards.b.BlackTomCassidy.class));
         cards.add(new SetCardInfo("Black Widow, Agile Avenger", 395, Rarity.RARE, mage.cards.b.BlackWidowAgileAvenger.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Black Widow, Agile Avenger", 77, Rarity.RARE, mage.cards.b.BlackWidowAgileAvenger.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Black Widow, Daring Operative", 831, Rarity.MYTHIC, mage.cards.b.BlackWidowDaringOperative.class));
         cards.add(new SetCardInfo("Black Widow, Deadly Hunter", 648, Rarity.RARE, mage.cards.b.BlackWidowDeadlyHunter.class));
         cards.add(new SetCardInfo("Black Widow, Intel Expert", 504, Rarity.RARE, mage.cards.b.BlackWidowIntelExpert.class));
         cards.add(new SetCardInfo("Black Widow, Natasha Romanoff", 846, Rarity.COMMON, mage.cards.b.BlackWidowNatashaRomanoff.class));
@@ -165,6 +167,7 @@ public final class MarvelSuperHeroesCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Doctor Strange, Surgeon", 591, Rarity.RARE, mage.cards.d.DoctorStrangeSurgeon.class));
         cards.add(new SetCardInfo("Doom Blade", 576, Rarity.UNCOMMON, mage.cards.d.DoomBlade.class));
         cards.add(new SetCardInfo("Doom's Servo-Guards", 535, Rarity.COMMON, mage.cards.d.DoomsServoGuards.class));
+        cards.add(new SetCardInfo("Doombot Harbinger", 655, Rarity.UNCOMMON, mage.cards.d.DoombotHarbinger.class));
         cards.add(new SetCardInfo("Doomfall", 795, Rarity.UNCOMMON, mage.cards.d.Doomfall.class));
         cards.add(new SetCardInfo("Doomsday", 796, Rarity.RARE, mage.cards.d.Doomsday.class));
         cards.add(new SetCardInfo("Door of Destinies", 198, Rarity.RARE, mage.cards.d.DoorOfDestinies.class, NON_FULL_USE_VARIOUS));
@@ -226,6 +229,7 @@ public final class MarvelSuperHeroesCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Gallant Citizen", 820, Rarity.COMMON, mage.cards.g.GallantCitizen.class));
         cards.add(new SetCardInfo("Galvanic Iteration", 184, Rarity.RARE, mage.cards.g.GalvanicIteration.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Galvanic Iteration", 404, Rarity.RARE, mage.cards.g.GalvanicIteration.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Gamma Grotesque", 562, Rarity.RARE, mage.cards.g.GammaGrotesque.class));
         cards.add(new SetCardInfo("General Thunderbolt Ross", 595, Rarity.UNCOMMON, mage.cards.g.GeneralThunderboltRoss.class));
         cards.add(new SetCardInfo("Generous Gift", 133, Rarity.UNCOMMON, mage.cards.g.GenerousGift.class));
         cards.add(new SetCardInfo("Genesis Ultimatum", 283, Rarity.RARE, mage.cards.g.GenesisUltimatum.class, NON_FULL_USE_VARIOUS));
