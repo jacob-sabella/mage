@@ -4,7 +4,7 @@ import { TopBar } from './components/TopBar'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { LoginView } from './components/LoginView'
 import { LobbyView } from './components/LobbyView'
-import { DeckEditor } from './components/DeckEditor'
+import { DeckBuilder } from './components/DeckBuilder'
 import { ShortcutsOverlay } from './components/ShortcutsOverlay'
 import { TestClipsModal } from './components/TestClipsModal'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -559,7 +559,7 @@ export default function App() {
                 onOnlineChange={setOnline}
               />
             </div>
-            {view === 'decks' && <DeckEditor />}
+            {view === 'decks' && <DeckBuilder />}
             {view === 'settings' && <SettingsView />}
           </>
         ) : view === 'settings' ? (

@@ -140,10 +140,10 @@ export function searchCards(query: string, filters: CardSearchFilters = {}): Pro
   return request<CardInfoDto[]>(`/api/cards/search?${p.toString()}`)
 }
 
-export function saveDeck(name: string, cards: string[], path?: string): Promise<DeckSaveResponse> {
+export function saveDeck(name: string, cards: string[], path?: string, sideboard?: string[]): Promise<DeckSaveResponse> {
   return request<DeckSaveResponse>('/api/decks/save', {
     method: 'POST',
-    body: JSON.stringify({ name, cards, path: path ?? '' }),
+    body: JSON.stringify({ name, cards, sideboard: sideboard ?? [], path: path ?? '' }),
   })
 }
 

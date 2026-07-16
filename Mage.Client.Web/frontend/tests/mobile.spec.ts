@@ -6,8 +6,8 @@ test.use({ viewport: { width: 390, height: 844 } })
 test('deck editor stacks to a single column on mobile', async ({ page }) => {
   await gotoScreen(page, 'lobby')
   await page.getByRole('button', { name: 'Deck Editor' }).click()
-  const dir = await page.locator('.deck-editor').evaluate((e) => getComputedStyle(e).flexDirection)
-  expect(dir).toBe('column')
+  const cols = await page.getByTestId('deck-builder').evaluate((e) => getComputedStyle(e).gridTemplateColumns)
+  expect(cols.trim().split(/\s+/)).toHaveLength(1) // single column
 })
 
 test('in-game chat drops below the board on mobile', async ({ page }) => {

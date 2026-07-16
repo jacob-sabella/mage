@@ -665,6 +665,34 @@ public class WebClientApp {
      * each against the local DB for set/number) and write it to a {@code .dck}
      * file on the gateway host via the engine's {@link XmageDeckExporter}.
      */
+    /** Collapse a flat list of card names (one per copy) into DeckCardInfo
+     *  amounts, resolving set/number from the DB, preserving first-seen order. */
+    private static List<DeckCardInfo> toSavedDeckCards(List<String> names) {
+        LinkedHashMap<String, Integer> counts = new LinkedHashMap<>();
+        for (String cardName : names) {
+            if (cardName == null || cardName.trim().isEmpty()) {
+                continue;
+            }
+            counts.merge(cardName.trim(), 1, Integer::sum);
+        }
+        List<DeckCardInfo> out = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : counts.entrySet()) {
+            String setCode = "";
+            String cardNumber = "";
+            try {
+                CardInfo info = CardRepository.instance.findCard(entry.getKey());
+                if (info != null) {
+                    setCode = info.getSetCode() == null ? "" : info.getSetCode();
+                    cardNumber = info.getCardNumber() == null ? "" : info.getCardNumber();
+                }
+            } catch (Exception ignored) {
+                // unknown / empty DB: still record the card by name
+            }
+            out.add(new DeckCardInfo(entry.getKey(), cardNumber, setCode, entry.getValue()));
+        }
+        return out;
+    }
+
     private void handleDeckSave(Context ctx) {
         DeckSaveRequest req = ctx.bodyAsClass(DeckSaveRequest.class);
         if (req == null || req.cards == null || req.cards.isEmpty()) {
@@ -674,33 +702,10 @@ public class WebClientApp {
 
         DeckCardLists lists = new DeckCardLists();
         lists.setName(req.name == null || req.name.isEmpty() ? "Untitled" : req.name);
-
-        // Collapse duplicate names into amounts, preserving first-seen order.
-        LinkedHashMap<String, Integer> counts = new LinkedHashMap<>();
-        for (String cardName : req.cards) {
-            if (cardName == null || cardName.trim().isEmpty()) {
-                continue;
-            }
-            counts.merge(cardName.trim(), 1, Integer::sum);
+        lists.setCards(toSavedDeckCards(req.cards));
+        if (req.sideboard != null && !req.sideboard.isEmpty()) {
+            lists.setSideboard(toSavedDeckCards(req.sideboard));
         }
-
-        List<DeckCardInfo> deckCards = new ArrayList<>();
-        for (Map.Entry<String, Integer> entry : counts.entrySet()) {
-            String cardName = entry.getKey();
-            String setCode = "";
-            String cardNumber = "";
-            try {
-                CardInfo info = CardRepository.instance.findCard(cardName);
-                if (info != null) {
-                    setCode = info.getSetCode() == null ? "" : info.getSetCode();
-                    cardNumber = info.getCardNumber() == null ? "" : info.getCardNumber();
-                }
-            } catch (Exception ignored) {
-                // unknown / empty DB: still record the card by name
-            }
-            deckCards.add(new DeckCardInfo(cardName, cardNumber, setCode, entry.getValue()));
-        }
-        lists.setCards(deckCards);
 
         String path = req.path == null ? null : req.path.trim();
         if (path == null || path.isEmpty()) {
@@ -1620,6 +1625,7 @@ public class WebClientApp {
     public static class DeckSaveRequest {
         public String name;
         public List<String> cards;
+        public List<String> sideboard; // optional; flattened card names, one per copy
         public String path;  // optional .dck path on the gateway host
     }
 
