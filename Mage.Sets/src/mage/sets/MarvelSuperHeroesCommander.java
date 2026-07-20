@@ -69,6 +69,7 @@ public final class MarvelSuperHeroesCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Black Market Connections", 155, Rarity.RARE, mage.cards.b.BlackMarketConnections.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Black Market Connections", 346, Rarity.RARE, mage.cards.b.BlackMarketConnections.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Black Panther, Claws of Bast", 829, Rarity.MYTHIC, mage.cards.b.BlackPantherClawsOfBast.class));
+        cards.add(new SetCardInfo("Black Panther, Most Dangerous", 584, Rarity.RARE, mage.cards.b.BlackPantherMostDangerous.class));
         cards.add(new SetCardInfo("Black Tom Cassidy", 715, Rarity.COMMON, mage.cards.b.BlackTomCassidy.class));
         cards.add(new SetCardInfo("Black Widow, Agile Avenger", 395, Rarity.RARE, mage.cards.b.BlackWidowAgileAvenger.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Black Widow, Agile Avenger", 77, Rarity.RARE, mage.cards.b.BlackWidowAgileAvenger.class, NON_FULL_USE_VARIOUS));
@@ -84,6 +85,7 @@ public final class MarvelSuperHeroesCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Bountiful Promenade", 226, Rarity.RARE, mage.cards.b.BountifulPromenade.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Bountiful Promenade", 461, Rarity.RARE, mage.cards.b.BountifulPromenade.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Bovine Intervention", 123, Rarity.UNCOMMON, mage.cards.b.BovineIntervention.class));
+        cards.add(new SetCardInfo("Brawn, Amadeus Cho", 567, Rarity.UNCOMMON, mage.cards.b.BrawnAmadeusCho.class));
         cards.add(new SetCardInfo("Bucky Barnes, Eager Ally", 586, Rarity.UNCOMMON, mage.cards.b.BuckyBarnesEagerAlly.class));
         cards.add(new SetCardInfo("Bushmaster, Coiled Henchman", 716, Rarity.COMMON, mage.cards.b.BushmasterCoiledHenchman.class));
         cards.add(new SetCardInfo("Canopy Vista", 227, Rarity.RARE, mage.cards.c.CanopyVista.class, NON_FULL_USE_VARIOUS));
@@ -142,6 +144,7 @@ public final class MarvelSuperHeroesCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Criminal Enterprise", 652, Rarity.UNCOMMON, mage.cards.c.CriminalEnterprise.class));
         cards.add(new SetCardInfo("Crimson Cowl, Master of Evil", 653, Rarity.RARE, mage.cards.c.CrimsonCowlMasterOfEvil.class));
         cards.add(new SetCardInfo("Crimson Operative", 848, Rarity.COMMON, mage.cards.c.CrimsonOperative.class));
+        cards.add(new SetCardInfo("Crossover Collaboration", 684, Rarity.COMMON, mage.cards.c.CrossoverCollaboration.class));
         cards.add(new SetCardInfo("Crumbling Necropolis", 237, Rarity.UNCOMMON, mage.cards.c.CrumblingNecropolis.class));
         cards.add(new SetCardInfo("Cultivate", 172, Rarity.COMMON, mage.cards.c.Cultivate.class));
         cards.add(new SetCardInfo("Currency Converter", 197, Rarity.RARE, mage.cards.c.CurrencyConverter.class, NON_FULL_USE_VARIOUS));
@@ -172,6 +175,7 @@ public final class MarvelSuperHeroesCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Doctor Doom, Unrivaled", 654, Rarity.MYTHIC, mage.cards.d.DoctorDoomUnrivaled.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Doctor Spectrum", 590, Rarity.UNCOMMON, mage.cards.d.DoctorSpectrum.class));
         cards.add(new SetCardInfo("Doctor Strange, Surgeon", 591, Rarity.RARE, mage.cards.d.DoctorStrangeSurgeon.class));
+        cards.add(new SetCardInfo("Donald Blake, Guise of Thor", 592, Rarity.UNCOMMON, mage.cards.d.DonaldBlakeGuiseOfThor.class));
         cards.add(new SetCardInfo("Doom Blade", 576, Rarity.UNCOMMON, mage.cards.d.DoomBlade.class));
         cards.add(new SetCardInfo("Doom's Servo-Guards", 535, Rarity.COMMON, mage.cards.d.DoomsServoGuards.class));
         cards.add(new SetCardInfo("Doombot Harbinger", 655, Rarity.UNCOMMON, mage.cards.d.DoombotHarbinger.class));
@@ -187,6 +191,8 @@ public final class MarvelSuperHeroesCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Drowned Catacomb", 239, Rarity.RARE, mage.cards.d.DrownedCatacomb.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Drowned Catacomb", 469, Rarity.RARE, mage.cards.d.DrownedCatacomb.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Eerie Gravestone", 824, Rarity.COMMON, mage.cards.e.EerieGravestone.class));
+        cards.add(new SetCardInfo("Endless Ranks of HYDRA", 348, Rarity.RARE, mage.cards.e.EndlessRanksOfHYDRA.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Endless Ranks of HYDRA", 43, Rarity.RARE, mage.cards.e.EndlessRanksOfHYDRA.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Everett K. Ross, Hapless Attache", 13, Rarity.RARE, mage.cards.e.EverettKRossHaplessAttache.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Everett K. Ross, Hapless Attache", 303, Rarity.RARE, mage.cards.e.EverettKRossHaplessAttache.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Evolving Wilds", 240, Rarity.COMMON, mage.cards.e.EvolvingWilds.class));
@@ -267,7 +273,10 @@ public final class MarvelSuperHeroesCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Happy Hogan, Dauntless Driver", 545, Rarity.COMMON, mage.cards.h.HappyHoganDauntlessDriver.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Happy Hogan, Dauntless Driver", 849, Rarity.COMMON, mage.cards.h.HappyHoganDauntlessDriver.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Harmonize", 175, Rarity.UNCOMMON, mage.cards.h.Harmonize.class));
+        cards.add(new SetCardInfo("Hatut Zeraze Strike Force", 15, Rarity.RARE, mage.cards.h.HatutZerazeStrikeForce.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Hatut Zeraze Strike Force", 307, Rarity.RARE, mage.cards.h.HatutZerazeStrikeForce.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Hawkeye's Shot", 839, Rarity.COMMON, mage.cards.h.HawkeyesShot.class));
+        cards.add(new SetCardInfo("Hawkeye, Bowslinger", 596, Rarity.RARE, mage.cards.h.HawkeyeBowslinger.class));
         cards.add(new SetCardInfo("Hawkeye, Clint Barton", 518, Rarity.UNCOMMON, mage.cards.h.HawkeyeClintBarton.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Hawkeye, Clint Barton", 838, Rarity.UNCOMMON, mage.cards.h.HawkeyeClintBarton.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Hawkeye, Trick Shot", 506, Rarity.RARE, mage.cards.h.HawkeyeTrickShot.class));
@@ -290,6 +299,7 @@ public final class MarvelSuperHeroesCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Hull Breach", 185, Rarity.COMMON, mage.cards.h.HullBreach.class));
         cards.add(new SetCardInfo("Human Torch", 3, Rarity.MYTHIC, mage.cards.h.HumanTorch.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Human Torch", 877, Rarity.MYTHIC, mage.cards.h.HumanTorch.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Hyperion's Atomic Vision", 600, Rarity.UNCOMMON, mage.cards.h.HyperionsAtomicVision.class));
         cards.add(new SetCardInfo("Hyperion, Supreme Hero", 599, Rarity.MYTHIC, mage.cards.h.HyperionSupremeHero.class));
         cards.add(new SetCardInfo("Iceman and Firestar", 742, Rarity.UNCOMMON, mage.cards.i.IcemanAndFirestar.class));
         cards.add(new SetCardInfo("Iconic Shield", 520, Rarity.UNCOMMON, mage.cards.i.IconicShield.class));
@@ -305,6 +315,7 @@ public final class MarvelSuperHeroesCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Invisible Force Field", 311, Rarity.RARE, mage.cards.i.InvisibleForceField.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Invisible Woman", 1, Rarity.MYTHIC, mage.cards.i.InvisibleWoman.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Invisible Woman", 875, Rarity.MYTHIC, mage.cards.i.InvisibleWoman.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Iron Fist, Hero for Hire", 692, Rarity.RARE, mage.cards.i.IronFistHeroForHire.class));
         cards.add(new SetCardInfo("Iron Lad, Young Avenger", 569, Rarity.UNCOMMON, mage.cards.i.IronLadYoungAvenger.class));
         cards.add(new SetCardInfo("Iron Man, Armored Avenger", 33, Rarity.RARE, mage.cards.i.IronManArmoredAvenger.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Iron Man, Armored Avenger", 332, Rarity.RARE, mage.cards.i.IronManArmoredAvenger.class, NON_FULL_USE_VARIOUS));
@@ -320,6 +331,10 @@ public final class MarvelSuperHeroesCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Jack of Hearts, Volatile Hero", 693, Rarity.RARE, mage.cards.j.JackOfHeartsVolatileHero.class));
         cards.add(new SetCardInfo("Jarvis, Earth's Mightiest Butler", 333, Rarity.RARE, mage.cards.j.JarvisEarthsMightiestButler.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Jarvis, Earth's Mightiest Butler", 34, Rarity.RARE, mage.cards.j.JarvisEarthsMightiestButler.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Jocasta, Automaton Avenger", 108, Rarity.RARE, mage.cards.j.JocastaAutomatonAvenger.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Jocasta, Automaton Avenger", 439, Rarity.RARE, mage.cards.j.JocastaAutomatonAvenger.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Killmonger, Ruthless Usurper", 364, Rarity.RARE, mage.cards.k.KillmongerRuthlessUsurper.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Killmonger, Ruthless Usurper", 53, Rarity.RARE, mage.cards.k.KillmongerRuthlessUsurper.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Kindred Discovery", 150, Rarity.RARE, mage.cards.k.KindredDiscovery.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Kindred Discovery", 334, Rarity.RARE, mage.cards.k.KindredDiscovery.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Kindred Dominance", 156, Rarity.RARE, mage.cards.k.KindredDominance.class, NON_FULL_USE_VARIOUS));
@@ -341,6 +356,7 @@ public final class MarvelSuperHeroesCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Lurking Lizards", 816, Rarity.COMMON, mage.cards.l.LurkingLizards.class));
         cards.add(new SetCardInfo("Luxury Suite", 252, Rarity.RARE, mage.cards.l.LuxurySuite.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Luxury Suite", 482, Rarity.RARE, mage.cards.l.LuxurySuite.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("MACH-1, Swooping Scoundrel", 662, Rarity.COMMON, mage.cards.m.MACH1SwoopingScoundrel.class));
         cards.add(new SetCardInfo("MJ, Rising Star", 773, Rarity.UNCOMMON, mage.cards.m.MJRisingStar.class));
         cards.add(new SetCardInfo("Machine Man, Model X-51", 751, Rarity.UNCOMMON, mage.cards.m.MachineManModelX51.class));
         cards.add(new SetCardInfo("Madame Hydra, Reanimated", 538, Rarity.RARE, mage.cards.m.MadameHydraReanimated.class));
@@ -401,6 +417,9 @@ public final class MarvelSuperHeroesCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Nova Flame", 368, Rarity.RARE, mage.cards.n.NovaFlame.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Nova Flame", 57, Rarity.RARE, mage.cards.n.NovaFlame.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Origin of Black Widow", 664, Rarity.UNCOMMON, mage.cards.o.OriginOfBlackWidow.class));
+        cards.add(new SetCardInfo("Origin of Captain America", 605, Rarity.UNCOMMON, mage.cards.o.OriginOfCaptainAmerica.class));
+        cards.add(new SetCardInfo("Origin of the Hulk", 728, Rarity.UNCOMMON, mage.cards.o.OriginOfTheHulk.class));
+        cards.add(new SetCardInfo("Origin of Thor", 701, Rarity.UNCOMMON, mage.cards.o.OriginOfThor.class));
         cards.add(new SetCardInfo("Overwhelming Stampede", 178, Rarity.RARE, mage.cards.o.OverwhelmingStampede.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Overwhelming Stampede", 385, Rarity.RARE, mage.cards.o.OverwhelmingStampede.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Pacifism", 575, Rarity.COMMON, mage.cards.p.Pacifism.class));
@@ -447,6 +466,8 @@ public final class MarvelSuperHeroesCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Queen Mother Ramonda", 320, Rarity.RARE, mage.cards.q.QueenMotherRamonda.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Quicksilver, Pietro Maximoff", 551, Rarity.COMMON, mage.cards.q.QuicksilverPietroMaximoff.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Quicksilver, Pietro Maximoff", 853, Rarity.COMMON, mage.cards.q.QuicksilverPietroMaximoff.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Quicksilver, Speedster", 412, Rarity.RARE, mage.cards.q.QuicksilverSpeedster.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Quicksilver, Speedster", 91, Rarity.RARE, mage.cards.q.QuicksilverSpeedster.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Quinjet Technician", 703, Rarity.COMMON, mage.cards.q.QuinjetTechnician.class));
         cards.add(new SetCardInfo("Radiant Summit", 258, Rarity.RARE, mage.cards.r.RadiantSummit.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Radiant Summit", 486, Rarity.RARE, mage.cards.r.RadiantSummit.class, NON_FULL_USE_VARIOUS));
@@ -499,6 +520,8 @@ public final class MarvelSuperHeroesCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Shang-Chi and the Ten Rings", 94, Rarity.RARE, mage.cards.s.ShangChiAndTheTenRings.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("She-Hulk, Attorney-at-Law", 745, Rarity.UNCOMMON, mage.cards.s.SheHulkAttorneyAtLaw.class));
         cards.add(new SetCardInfo("She-Hulk, Jennifer Walters", 554, Rarity.UNCOMMON, mage.cards.s.SheHulkJenniferWalters.class));
+        cards.add(new SetCardInfo("She-Hulk, Wallbreaker", 372, Rarity.RARE, mage.cards.s.SheHulkWallbreaker.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("She-Hulk, Wallbreaker", 60, Rarity.RARE, mage.cards.s.SheHulkWallbreaker.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Shi'ar Soldier", 637, Rarity.UNCOMMON, mage.cards.s.ShiarSoldier.class));
         cards.add(new SetCardInfo("Shipwreck Patrol", 638, Rarity.COMMON, mage.cards.s.ShipwreckPatrol.class));
         cards.add(new SetCardInfo("Shock", 809, Rarity.COMMON, mage.cards.s.Shock.class));
@@ -508,6 +531,7 @@ public final class MarvelSuperHeroesCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Sif's Spearmaster", 765, Rarity.COMMON, mage.cards.s.SifsSpearmaster.class));
         cards.add(new SetCardInfo("Skullclamp", 210, Rarity.RARE, mage.cards.s.Skullclamp.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Skullclamp", 451, Rarity.RARE, mage.cards.s.Skullclamp.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Sky Cycle", 704, Rarity.UNCOMMON, mage.cards.s.SkyCycle.class));
         cards.add(new SetCardInfo("Smashing Spree", 555, Rarity.COMMON, mage.cards.s.SmashingSpree.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Smashing Spree", 856, Rarity.COMMON, mage.cards.s.SmashingSpree.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Smoldering Marsh", 266, Rarity.RARE, mage.cards.s.SmolderingMarsh.class, NON_FULL_USE_VARIOUS));
@@ -536,10 +560,13 @@ public final class MarvelSuperHeroesCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Spider-Mobile", 826, Rarity.UNCOMMON, mage.cards.s.SpiderMobile.class));
         cards.add(new SetCardInfo("Spider-Rex, Daring Dino", 818, Rarity.COMMON, mage.cards.s.SpiderRexDaringDino.class));
         cards.add(new SetCardInfo("Spider-UK", 777, Rarity.UNCOMMON, mage.cards.s.SpiderUK.class));
+        cards.add(new SetCardInfo("Stark's Ingenuity", 533, Rarity.RARE, mage.cards.s.StarksIngenuity.class));
         cards.add(new SetCardInfo("Starling, Aerial Ally", 778, Rarity.COMMON, mage.cards.s.StarlingAerialAlly.class));
         cards.add(new SetCardInfo("Stature, Young Avenger", 571, Rarity.UNCOMMON, mage.cards.s.StatureYoungAvenger.class));
         cards.add(new SetCardInfo("Stegron the Dinosaur Man", 810, Rarity.COMMON, mage.cards.s.StegronTheDinosaurMan.class));
+        cards.add(new SetCardInfo("Stick, Fearless Mentor", 706, Rarity.UNCOMMON, mage.cards.s.StickFearlessMentor.class));
         cards.add(new SetCardInfo("Storm, Shaker of Skies", 733, Rarity.UNCOMMON, mage.cards.s.StormShakerOfSkies.class));
+        cards.add(new SetCardInfo("Stunning Shot", 610, Rarity.UNCOMMON, mage.cards.s.StunningShot.class));
         cards.add(new SetCardInfo("Sudden Strike", 779, Rarity.UNCOMMON, mage.cards.s.SuddenStrike.class));
         cards.add(new SetCardInfo("Sulfur Falls", 269, Rarity.RARE, mage.cards.s.SulfurFalls.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Sulfur Falls", 496, Rarity.RARE, mage.cards.s.SulfurFalls.class, NON_FULL_USE_VARIOUS));
@@ -555,6 +582,7 @@ public final class MarvelSuperHeroesCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Sword of the Animist", 289, Rarity.RARE, mage.cards.s.SwordOfTheAnimist.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Sword of the Animist", 452, Rarity.RARE, mage.cards.s.SwordOfTheAnimist.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Swords to Plowshares", 143, Rarity.UNCOMMON, mage.cards.s.SwordsToPlowshares.class));
+        cards.add(new SetCardInfo("Swordsman's Steel", 752, Rarity.RARE, mage.cards.s.SwordsmansSteel.class));
         cards.add(new SetCardInfo("Syphon Mind", 159, Rarity.COMMON, mage.cards.s.SyphonMind.class));
         cards.add(new SetCardInfo("T'Challa, the Black Panther", 7, Rarity.MYTHIC, mage.cards.t.TChallaTheBlackPanther.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("T'Challa, the Black Panther", 881, Rarity.MYTHIC, mage.cards.t.TChallaTheBlackPanther.class, NON_FULL_USE_VARIOUS));
@@ -593,6 +621,7 @@ public final class MarvelSuperHeroesCommander extends ExpansionSet {
         cards.add(new SetCardInfo("The Wasp, Winsome Avenger", 343, Rarity.RARE, mage.cards.t.TheWaspWinsomeAvenger.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("The Wasp, Winsome Avenger", 39, Rarity.RARE, mage.cards.t.TheWaspWinsomeAvenger.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("The Whizzer, Classic Speedster", 710, Rarity.UNCOMMON, mage.cards.t.TheWhizzerClassicSpeedster.class));
+        cards.add(new SetCardInfo("Thing Swing", 564, Rarity.COMMON, mage.cards.t.ThingSwing.class));
         cards.add(new SetCardInfo("Think Twice", 787, Rarity.COMMON, mage.cards.t.ThinkTwice.class));
         cards.add(new SetCardInfo("Thor, Guardian of Midgard", 503, Rarity.RARE, mage.cards.t.ThorGuardianOfMidgard.class));
         cards.add(new SetCardInfo("Thought Vessel", 222, Rarity.UNCOMMON, mage.cards.t.ThoughtVessel.class));
@@ -661,6 +690,8 @@ public final class MarvelSuperHeroesCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Wakandan Shield Guard", 613, Rarity.COMMON, mage.cards.w.WakandanShieldGuard.class));
         cards.add(new SetCardInfo("Wakandan Tusker", 748, Rarity.UNCOMMON, mage.cards.w.WakandanTusker.class));
         cards.add(new SetCardInfo("Wall Off", 614, Rarity.COMMON, mage.cards.w.WallOff.class));
+        cards.add(new SetCardInfo("War Machine, Avenging Arsenal", 375, Rarity.RARE, mage.cards.w.WarMachineAvengingArsenal.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("War Machine, Avenging Arsenal", 63, Rarity.RARE, mage.cards.w.WarMachineAvengingArsenal.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("War Machine, James Rhodes", 572, Rarity.UNCOMMON, mage.cards.w.WarMachineJamesRhodes.class));
         cards.add(new SetCardInfo("Warriors of Wakanda", 565, Rarity.COMMON, mage.cards.w.WarriorsOfWakanda.class));
         cards.add(new SetCardInfo("Whirlwind of Thought", 190, Rarity.RARE, mage.cards.w.WhirlwindOfThought.class, NON_FULL_USE_VARIOUS));
@@ -671,6 +702,8 @@ public final class MarvelSuperHeroesCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Wiccan, Young Avenger", 557, Rarity.UNCOMMON, mage.cards.w.WiccanYoungAvenger.class));
         cards.add(new SetCardInfo("Wild Pack Squad", 781, Rarity.COMMON, mage.cards.w.WildPackSquad.class));
         cards.add(new SetCardInfo("Winter Soldier, Bucky Barnes", 845, Rarity.COMMON, mage.cards.w.WinterSoldierBuckyBarnes.class));
+        cards.add(new SetCardInfo("Winter Soldier, Reborn Avenger", 27, Rarity.RARE, mage.cards.w.WinterSoldierRebornAvenger.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Winter Soldier, Reborn Avenger", 326, Rarity.RARE, mage.cards.w.WinterSoldierRebornAvenger.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Wisecrack", 813, Rarity.UNCOMMON, mage.cards.w.Wisecrack.class));
         cards.add(new SetCardInfo("Withering Torment", 162, Rarity.UNCOMMON, mage.cards.w.WitheringTorment.class));
         cards.add(new SetCardInfo("Wolfsbane, Highland Hero", 767, Rarity.COMMON, mage.cards.w.WolfsbaneHighlandHero.class));
