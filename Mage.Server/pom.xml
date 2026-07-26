@@ -91,7 +91,7 @@
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>mage-player-ai-ma</artifactId>
+            <artifactId>mage-player-ai-mad</artifactId>
             <version>${project.version}</version>
             <scope>runtime</scope>
         </dependency>
@@ -276,13 +276,10 @@
                 </configuration>
             </plugin>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-            </plugin>
-            <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <configuration>
                     <appendAssemblyId>false</appendAssemblyId>
+                    <finalName>mage-server</finalName>
                     <descriptors>
                         <descriptor>src/main/assembly/distribution.xml</descriptor>
                     </descriptors>
@@ -297,12 +294,6 @@
                             <mainClass>mage.server.Main</mainClass>
                         </manifest>
                     </archive>
-                </configuration>
-            </plugin>
-            <plugin>
-                <artifactId>maven-resources-plugin</artifactId>
-                <configuration>
-                    <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
             <plugin>
@@ -333,8 +324,6 @@
                 <artifactId>markdown-page-generator-plugin</artifactId>
             </plugin>
         </plugins>
-
-        <finalName>mage-server</finalName>
     </build>
 
     <properties>

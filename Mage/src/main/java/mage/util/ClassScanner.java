@@ -19,19 +19,8 @@ public final class ClassScanner {
 
     private static final Logger logger = Logger.getLogger(ClassScanner.class);
 
-    private static void checkClassForInclusion(List<Class> cards, Class type, String name, ClassLoader cl) {
-        try {
-            Class clazz = Class.forName(name, true, cl);
-            if (clazz.getEnclosingClass() == null && type.isAssignableFrom(clazz)) {
-                cards.add(clazz);
-            }
-        } catch (ClassNotFoundException ex) {
-            // ignored
-        }
-    }
-
     public static List<Class> findClasses(ClassLoader classLoader, List<String> packages, Class<?> type) {
-        List<Class> cards = new ArrayList<>();
+        List<Class> cardSets = new ArrayList<>();
         try {
             if (classLoader == null) classLoader = Thread.currentThread().getContextClassLoader();
             assert classLoader != null;
@@ -61,17 +50,17 @@ public final class ClassScanner {
 
             // run by IDE - load classes from disk
             for (Map.Entry<String, String> dir : dirs.entrySet()) {
-                cards.addAll(findClassesInDir(classLoader, new File(dir.getKey()), dir.getValue(), type));
+                cardSets.addAll(findClassesInDir(classLoader, new File(dir.getKey()), dir.getValue(), type));
             }
 
             // run by launcher - load classes from jar
             for (String filePath : jars) {
                 File file = new File(CardUtil.urlDecode(filePath));
-                cards.addAll(findClassesInJar(classLoader, file, packages, type));
+                cardSets.addAll(findClassesInJar(classLoader, file, packages, type));
             }
         } catch (IOException ex) {
         }
-        return cards;
+        return cardSets;
     }
 
     private static List<Class> findClassesInDir(ClassLoader classLoader, File directory, String packageName, Class<?> type) {
@@ -81,7 +70,7 @@ public final class ClassScanner {
         if (files == null) return new ArrayList<>();
 
         long start = System.currentTimeMillis();
-        List<Class> res = Arrays.stream(files)
+        List<Class> cardSets = Arrays.stream(files)
                 .parallel()
                 .filter(file -> file.getName().endsWith(".class"))
                 .map(file -> {
@@ -93,8 +82,8 @@ public final class ClassScanner {
 
         // load set classes only, card classes are loaded indirectly by static import in the set
         logger.debug("Class files total processing time, ms: " + (System.currentTimeMillis() - start));
-        logger.debug("Class files loaded, count: " + res.size());
-        return res;
+        logger.debug("Class files loaded, count: " + cardSets.size());
+        return cardSets;
     }
 
     private static Class<?> resolveClassIfAssignable(Class<?> type, String name, ClassLoader cl) {
@@ -103,7 +92,8 @@ public final class ClassScanner {
             if (clazz.getEnclosingClass() == null && type.isAssignableFrom(clazz)) {
                 return clazz;
             }
-        } catch (ClassNotFoundException ignore) {
+        } catch (Throwable e) {
+            logger.error("Error reading class: " + name, e);
         }
         return null;
     }
@@ -113,7 +103,7 @@ public final class ClassScanner {
         if (!file.exists()) return new ArrayList<>();
 
         long start = System.currentTimeMillis();
-        List<Class> result = new ArrayList<>();
+        List<Class> cardSets = new ArrayList<>();
 
         try (JarInputStream jarFile = new JarInputStream(new FileInputStream(file))) {
             List<JarEntry> classEntries = new ArrayList<>();
@@ -132,7 +122,7 @@ public final class ClassScanner {
             }
 
             // process and init all classes
-            result = classEntries
+            cardSets = classEntries
                     .parallelStream()
                     .map(entry -> {
                         String className = entry.getName().replace(".class", "").replace('/', '.');
@@ -140,13 +130,13 @@ public final class ClassScanner {
                     })
                     .filter(Objects::nonNull)
                     .collect(Collectors.toList());
-        } catch (IOException ex) {
-            logger.error("Error reading JAR file: " + file.getPath(), ex);
+        } catch (Throwable e) {
+            logger.error("Error reading JAR file: " + file.getPath(), e);
         }
 
         // load set classes only, card classes are loaded indirectly by static import in the set
         logger.debug("Jar files total processing time, ms: " + (System.currentTimeMillis() - start));
-        logger.debug("Jar classes loaded, count: " + result.size());
-        return result;
+        logger.debug("Jar classes loaded, count: " + cardSets.size());
+        return cardSets;
     }
 }
