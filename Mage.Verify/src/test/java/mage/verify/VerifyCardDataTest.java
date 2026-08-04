@@ -1021,6 +1021,8 @@ public class VerifyCardDataTest {
         ignoreBoosterSets.add("Zendikar Rising Expeditions"); // box toppers
         ignoreBoosterSets.add("March of the Machine: The Aftermath"); // epilogue boosters aren't for draft
         ignoreBoosterSets.add("Mystery Booster"); // temporary
+        // TEMPORARY: Pending MTGJson updates
+        ignoreBoosterSets.add("The Hobbit");
     }
 
     @Test
@@ -1100,6 +1102,11 @@ public class VerifyCardDataTest {
 
         // CHECK: unknown set or wrong name
         for (ExpansionSet set : sets) {
+            if ("MBC".equals(set.getCode())) {
+                // TODO: skip name check until MBC metadata is updated in MtgJSON
+                continue;
+            }
+
             if (set.getSetType().equals(SetType.CUSTOM_SET)) {
                 // skip unofficial sets like Star Wars
                 continue;
