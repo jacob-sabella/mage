@@ -128,7 +128,7 @@ public class WebClientApp {
             // Don't drop idle game sockets — players sit on long mulligans / the
             // opponent's turn with no frames flowing. A heartbeat (below) keeps them
             // active, and this raises the hard ceiling well past any normal wait.
-            config.jetty.wsFactoryConfig(factory ->
+            config.jetty.modifyWebSocketServletFactory(factory ->
                     factory.setIdleTimeout(java.time.Duration.ofHours(2)));
         });
 
