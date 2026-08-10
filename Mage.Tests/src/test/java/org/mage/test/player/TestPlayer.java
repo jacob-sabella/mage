@@ -669,6 +669,7 @@ public class TestPlayer implements Player {
                         }
                     }
                     printStart(game, "Available for " + this.getName());
+                    printMana(game, this.getManaAvailable(game));
                     printAbilities(game, this.getPlayable(game, true));
                     printEnd();
                     Assert.fail("Can't find ability to activate command: " + command);
@@ -2207,11 +2208,6 @@ public class TestPlayer implements Player {
 
     @Override
     public Mode chooseMode(Modes modes, Ability source, Game game) {
-        if (modes.getSelectedModes().size() >= modes.getMaxModes(game, source)) {
-            // TODO: no needs here cause min/max mode must be checked by parent code? try to remove it from here
-            return null;
-        }
-
         StringBuilder modesInfo = new StringBuilder();
         modesInfo.append("\nAvailable modes:");
         int i = 1;
