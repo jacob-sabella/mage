@@ -23,7 +23,25 @@
         <javalin.version>5.6.5</javalin.version>
         <jackson.version>2.22.1</jackson.version>
         <slf4j.version>2.0.17</slf4j.version>
+        <!-- Javalin 5.6.5 transitively pulls Jetty 11.0.17, which is affected by
+             several patched DoS/resource-exhaustion CVEs (e.g. CVE-2024-6763,
+             CVE-2024-8184). Pin forward to the latest patched 11.0.x release via
+             jetty-bom below rather than bumping Javalin to a new major (Jetty 12,
+             wider API changes) with no CVE forcing it. -->
+        <jetty.version>11.0.26</jetty.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-bom</artifactId>
+                <version>${jetty.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <!-- Shared engine model + DTOs (GameView, CardView, TableView, ...) -->
