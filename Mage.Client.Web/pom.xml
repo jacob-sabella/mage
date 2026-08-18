@@ -23,7 +23,24 @@
         <javalin.version>5.6.5</javalin.version>
         <jackson.version>2.22.1</jackson.version>
         <slf4j.version>2.0.17</slf4j.version>
+        <!-- javalin 5.6.5 (latest 5.x) transitively pulls jetty 11.0.17, which is
+             vulnerable to CVE-2024-8184 (ThreadLimitHandler.getRemote() remote DoS
+             via OOM, fixed in 11.0.24). Pin jetty via jetty-bom below until javalin
+             bumps its own jetty dependency. -->
+        <jetty.version>11.0.26</jetty.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-bom</artifactId>
+                <version>${jetty.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <!-- Shared engine model + DTOs (GameView, CardView, TableView, ...) -->
