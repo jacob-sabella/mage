@@ -400,6 +400,26 @@
                 <artifactId>jsoup</artifactId>
                 <version>1.23.1</version>
             </dependency>
+            <dependency>
+                <!-- archive support, used directly by Mage.Server (deck/resource zips) -->
+                <!-- pinned here (not just in Mage.Server) so this patched version also wins
+                     over the vulnerable commons-compress 1.20 pulled in transitively by
+                     net.java.truevfs:truevfs-comp-zip (CVE-2021-35515/35516/35517/36090,
+                     resource-exhaustion DoS via crafted archives) in every module that
+                     depends on truevfs (e.g. Mage.Client). -->
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-compress</artifactId>
+                <version>1.28.0</version>
+            </dependency>
+            <dependency>
+                <!-- not a direct dependency: net.java.truevfs:truevfs-comp-zip pulls this in
+                     transitively (for encrypted zip support) at 1.68, which carries several
+                     fixed BouncyCastle CVEs (e.g. CVE-2021-43568). Pin to 1.70, the latest
+                     release published under this artifact id, to close those. -->
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk15on</artifactId>
+                <version>1.70</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 </project>
