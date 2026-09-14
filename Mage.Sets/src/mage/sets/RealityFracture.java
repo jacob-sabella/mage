@@ -32,6 +32,8 @@ public final class RealityFracture extends ExpansionSet {
         cards.add(new SetCardInfo("Ajani Unrelenting", 242, Rarity.MYTHIC, mage.cards.a.AjaniUnrelenting.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Ajani Unrelenting", 308, Rarity.MYTHIC, mage.cards.a.AjaniUnrelenting.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Arcane Amphisbaena", 97, Rarity.COMMON, mage.cards.a.ArcaneAmphisbaena.class));
+        cards.add(new SetCardInfo("Avatar of Burgeoning Echoes", 122, Rarity.MYTHIC, mage.cards.a.AvatarOfBurgeoningEchoes.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Avatar of Burgeoning Echoes", 348, Rarity.MYTHIC, mage.cards.a.AvatarOfBurgeoningEchoes.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Bestial Incursion", 98, Rarity.COMMON, mage.cards.b.BestialIncursion.class));
         cards.add(new SetCardInfo("Blazing Crescendo", 75, Rarity.COMMON, mage.cards.b.BlazingCrescendo.class));
         cards.add(new SetCardInfo("Bloodline Recollector", 402, Rarity.MYTHIC, mage.cards.b.BloodlineRecollector.class, FULL_ART_USE_VARIOUS));
@@ -41,6 +43,7 @@ public final class RealityFracture extends ExpansionSet {
         cards.add(new SetCardInfo("Campus Crier", 4, Rarity.COMMON, mage.cards.c.CampusCrier.class));
         cards.add(new SetCardInfo("Carnivorous Cultivator", 437, Rarity.RARE, mage.cards.c.CarnivorousCultivator.class));
         cards.add(new SetCardInfo("Cast Away Doubt", 51, Rarity.COMMON, mage.cards.c.CastAwayDoubt.class));
+        cards.add(new SetCardInfo("Chandra's Emberling", 76, Rarity.COMMON, mage.cards.c.ChandrasEmberling.class));
         cards.add(new SetCardInfo("Chandra, Chill of Compliance", 212, Rarity.MYTHIC, mage.cards.c.ChandraChillOfCompliance.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Chandra, Chill of Compliance", 297, Rarity.MYTHIC, mage.cards.c.ChandraChillOfCompliance.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Chandra, Torch of Defiance", 244, Rarity.MYTHIC, mage.cards.c.ChandraTorchOfDefiance.class, NON_FULL_USE_VARIOUS));
@@ -63,8 +66,11 @@ public final class RealityFracture extends ExpansionSet {
         cards.add(new SetCardInfo("Diviner of Victory", 28, Rarity.RARE, mage.cards.d.DivinerOfVictory.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Diviner of Victory", 425, Rarity.RARE, mage.cards.d.DivinerOfVictory.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Eardrum Rattler", 81, Rarity.COMMON, mage.cards.e.EardrumRattler.class));
+        cards.add(new SetCardInfo("Edgar, Ancient Bloodlord", 270, Rarity.UNCOMMON, mage.cards.e.EdgarAncientBloodlord.class));
         cards.add(new SetCardInfo("Edgar, Moonlit Sovereign", 257, Rarity.UNCOMMON, mage.cards.e.EdgarMoonlitSovereign.class));
         cards.add(new SetCardInfo("Emergency Phytomedic", 130, Rarity.COMMON, mage.cards.e.EmergencyPhytomedic.class));
+        cards.add(new SetCardInfo("Fatehold Charm", 132, Rarity.UNCOMMON, mage.cards.f.FateholdCharm.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Fatehold Charm", 432, Rarity.UNCOMMON, mage.cards.f.FateholdCharm.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Fatehold Chronologist", 133, Rarity.COMMON, mage.cards.f.FateholdChronologist.class));
         cards.add(new SetCardInfo("Forest", 394, Rarity.LAND, mage.cards.basiclands.Forest.class, FULL_ART_BFZ_VARIOUS));
         cards.add(new SetCardInfo("Forest", 395, Rarity.LAND, mage.cards.basiclands.Forest.class, FULL_ART_BFZ_VARIOUS));
@@ -78,6 +84,8 @@ public final class RealityFracture extends ExpansionSet {
         cards.add(new SetCardInfo("Generous Revival", 8, Rarity.UNCOMMON, mage.cards.g.GenerousRevival.class));
         cards.add(new SetCardInfo("Ghalta the Immovable", 197, Rarity.UNCOMMON, mage.cards.g.GhaltaTheImmovable.class));
         cards.add(new SetCardInfo("Ghalta the Unstoppable", 260, Rarity.UNCOMMON, mage.cards.g.GhaltaTheUnstoppable.class));
+        cards.add(new SetCardInfo("Gideon's Memorial", 198, Rarity.RARE, mage.cards.g.GideonsMemorial.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Gideon's Memorial", 292, Rarity.RARE, mage.cards.g.GideonsMemorial.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Greenhouse Propagator", 104, Rarity.COMMON, mage.cards.g.GreenhousePropagator.class));
         cards.add(new SetCardInfo("Hallway Heckler", 85, Rarity.COMMON, mage.cards.h.HallwayHeckler.class));
         cards.add(new SetCardInfo("Haunted Ridge", 180, Rarity.RARE, mage.cards.h.HauntedRidge.class, NON_FULL_USE_VARIOUS));
@@ -101,6 +109,8 @@ public final class RealityFracture extends ExpansionSet {
         cards.add(new SetCardInfo("Karn, Gilded Guardian", 316, Rarity.RARE, mage.cards.k.KarnGildedGuardian.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Keeper of the Quiet Hour", 171, Rarity.COMMON, mage.cards.k.KeeperOfTheQuietHour.class));
         cards.add(new SetCardInfo("Kiora of Fire and Ashes", 247, Rarity.UNCOMMON, mage.cards.k.KioraOfFireAndAshes.class));
+        cards.add(new SetCardInfo("Konstrari Charm", 138, Rarity.UNCOMMON, mage.cards.k.KonstrariCharm.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Konstrari Charm", 433, Rarity.UNCOMMON, mage.cards.k.KonstrariCharm.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Kwia Vigorbloom", 140, Rarity.MYTHIC, mage.cards.k.KwiaVigorbloom.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Kwia Vigorbloom", 352, Rarity.MYTHIC, mage.cards.k.KwiaVigorbloom.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Kwia Vigorbloom", 410, Rarity.MYTHIC, mage.cards.k.KwiaVigorbloom.class, NON_FULL_USE_VARIOUS));
@@ -116,7 +126,10 @@ public final class RealityFracture extends ExpansionSet {
         cards.add(new SetCardInfo("Loyal Tutor", 424, Rarity.RARE, mage.cards.l.LoyalTutor.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Lyra, Archangel of Dawn", 201, Rarity.RARE, mage.cards.l.LyraArchangelOfDawn.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Lyra, Archangel of Dawn", 294, Rarity.RARE, mage.cards.l.LyraArchangelOfDawn.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Lyra, Tolarian Archangel", 217, Rarity.RARE, mage.cards.l.LyraTolarianArchangel.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Lyra, Tolarian Archangel", 301, Rarity.RARE, mage.cards.l.LyraTolarianArchangel.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Mabel, Bitter Recluse", 233, Rarity.UNCOMMON, mage.cards.m.MabelBitterRecluse.class));
+        cards.add(new SetCardInfo("Mabel, Valley Hero", 274, Rarity.UNCOMMON, mage.cards.m.MabelValleyHero.class));
         cards.add(new SetCardInfo("Memory Trap", 15, Rarity.COMMON, mage.cards.m.MemoryTrap.class));
         cards.add(new SetCardInfo("Mountain", 391, Rarity.LAND, mage.cards.basiclands.Mountain.class, FULL_ART_BFZ_VARIOUS));
         cards.add(new SetCardInfo("Mountain", 392, Rarity.LAND, mage.cards.basiclands.Mountain.class, FULL_ART_BFZ_VARIOUS));
@@ -150,6 +163,7 @@ public final class RealityFracture extends ExpansionSet {
         cards.add(new SetCardInfo("Rewrite Regrets", 62, Rarity.UNCOMMON, mage.cards.r.RewriteRegrets.class));
         cards.add(new SetCardInfo("Rockfall Vale", 186, Rarity.RARE, mage.cards.r.RockfallVale.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Rockfall Vale", 400, Rarity.RARE, mage.cards.r.RockfallVale.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Ruric Thar, Biomagus", 219, Rarity.UNCOMMON, mage.cards.r.RuricTharBiomagus.class));
         cards.add(new SetCardInfo("Semester Foreseer", 39, Rarity.COMMON, mage.cards.s.SemesterForeseer.class));
         cards.add(new SetCardInfo("Shipwreck Marsh", 189, Rarity.RARE, mage.cards.s.ShipwreckMarsh.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Shipwreck Marsh", 401, Rarity.RARE, mage.cards.s.ShipwreckMarsh.class, NON_FULL_USE_VARIOUS));
@@ -158,6 +172,8 @@ public final class RealityFracture extends ExpansionSet {
         cards.add(new SetCardInfo("Solitary Cell", 149, Rarity.RARE, mage.cards.s.SolitaryCell.class));
         cards.add(new SetCardInfo("Solve for Disappointment", 67, Rarity.COMMON, mage.cards.s.SolveForDisappointment.class));
         cards.add(new SetCardInfo("Something Worth Saving", 114, Rarity.COMMON, mage.cards.s.SomethingWorthSaving.class));
+        cards.add(new SetCardInfo("Sphinx of False Conclusions", 338, Rarity.RARE, mage.cards.s.SphinxOfFalseConclusions.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Sphinx of False Conclusions", 40, Rarity.RARE, mage.cards.s.SphinxOfFalseConclusions.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Stingcaster Mage", 329, Rarity.MYTHIC, mage.cards.s.StingcasterMage.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Stingcaster Mage", 447, Rarity.MYTHIC, mage.cards.s.StingcasterMage.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Stingcaster Mage", 457, Rarity.MYTHIC, mage.cards.s.StingcasterMage.class, NON_FULL_USE_VARIOUS));
@@ -172,6 +188,8 @@ public final class RealityFracture extends ExpansionSet {
         cards.add(new SetCardInfo("Tethermage's Advantage", 117, Rarity.COMMON, mage.cards.t.TethermagesAdvantage.class));
         cards.add(new SetCardInfo("Thalia, the Survivor", 205, Rarity.UNCOMMON, mage.cards.t.ThaliaTheSurvivor.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Thalia, the Survivor", 296, Rarity.UNCOMMON, mage.cards.t.ThaliaTheSurvivor.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("The Echoverse Fulcrum", 169, Rarity.MYTHIC, mage.cards.t.TheEchoverseFulcrum.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("The Echoverse Fulcrum", 378, Rarity.MYTHIC, mage.cards.t.TheEchoverseFulcrum.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("The Theorist, Jace Beleren", 363, Rarity.MYTHIC, mage.cards.t.TheTheoristJaceBeleren.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("The Theorist, Jace Beleren", 405, Rarity.MYTHIC, mage.cards.t.TheTheoristJaceBeleren.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("The Theorist, Jace Beleren", 415, Rarity.MYTHIC, mage.cards.t.TheTheoristJaceBeleren.class, NON_FULL_USE_VARIOUS));
@@ -184,7 +202,11 @@ public final class RealityFracture extends ExpansionSet {
         cards.add(new SetCardInfo("Tinybones, Pocket Nuisance", 237, Rarity.UNCOMMON, mage.cards.t.TinybonesPocketNuisance.class));
         cards.add(new SetCardInfo("Titanbones, Towering Heart", 266, Rarity.UNCOMMON, mage.cards.t.TitanbonesToweringHeart.class));
         cards.add(new SetCardInfo("Vigorbloom Vanguard", 161, Rarity.UNCOMMON, mage.cards.v.VigorbloomVanguard.class));
+        cards.add(new SetCardInfo("Vraska's Final Mercy", 343, Rarity.RARE, mage.cards.v.VraskasFinalMercy.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Vraska's Final Mercy", 71, Rarity.RARE, mage.cards.v.VraskasFinalMercy.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Vraska, Soul of Stone", 277, Rarity.RARE, mage.cards.v.VraskaSoulOfStone.class));
+        cards.add(new SetCardInfo("Vraska, the Cutting Glare", 278, Rarity.RARE, mage.cards.v.VraskaTheCuttingGlare.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Vraska, the Cutting Glare", 319, Rarity.RARE, mage.cards.v.VraskaTheCuttingGlare.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Warrior's Blades", 163, Rarity.UNCOMMON, mage.cards.w.WarriorsBlades.class));
         cards.add(new SetCardInfo("Way of the Cryomancer", 223, Rarity.UNCOMMON, mage.cards.w.WayOfTheCryomancer.class));
         cards.add(new SetCardInfo("Way of the Deathbringer", 238, Rarity.UNCOMMON, mage.cards.w.WayOfTheDeathbringer.class));
