@@ -42,6 +42,7 @@ public final class RealityFracture extends ExpansionSet {
         cards.add(new SetCardInfo("Artifist Acumen", 73, Rarity.COMMON, mage.cards.a.ArtifistAcumen.class));
         cards.add(new SetCardInfo("Avatar of Burgeoning Echoes", 122, Rarity.MYTHIC, mage.cards.a.AvatarOfBurgeoningEchoes.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Avatar of Burgeoning Echoes", 348, Rarity.MYTHIC, mage.cards.a.AvatarOfBurgeoningEchoes.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Awaken the Inferno", 74, Rarity.COMMON, mage.cards.a.AwakenTheInferno.class));
         cards.add(new SetCardInfo("Bestial Incursion", 98, Rarity.COMMON, mage.cards.b.BestialIncursion.class));
         cards.add(new SetCardInfo("Blazing Crescendo", 75, Rarity.COMMON, mage.cards.b.BlazingCrescendo.class));
         cards.add(new SetCardInfo("Blessed Ghoul", 123, Rarity.COMMON, mage.cards.b.BlessedGhoul.class));
@@ -91,6 +92,8 @@ public final class RealityFracture extends ExpansionSet {
         cards.add(new SetCardInfo("Diviner of Victory", 28, Rarity.RARE, mage.cards.d.DivinerOfVictory.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Diviner of Victory", 425, Rarity.RARE, mage.cards.d.DivinerOfVictory.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Divining Duelist", 29, Rarity.COMMON, mage.cards.d.DiviningDuelist.class));
+        cards.add(new SetCardInfo("Draconic Visitor", 368, Rarity.RARE, mage.cards.d.DraconicVisitor.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Draconic Visitor", 80, Rarity.RARE, mage.cards.d.DraconicVisitor.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Eardrum Rattler", 81, Rarity.COMMON, mage.cards.e.EardrumRattler.class));
         cards.add(new SetCardInfo("Edgar, Ancient Bloodlord", 270, Rarity.UNCOMMON, mage.cards.e.EdgarAncientBloodlord.class));
         cards.add(new SetCardInfo("Edgar, Moonlit Sovereign", 257, Rarity.UNCOMMON, mage.cards.e.EdgarMoonlitSovereign.class));
@@ -156,6 +159,8 @@ public final class RealityFracture extends ExpansionSet {
         cards.add(new SetCardInfo("Hexhaven Invigorator", 330, Rarity.MYTHIC, mage.cards.h.HexhavenInvigorator.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Hexhaven Invigorator", 458, Rarity.MYTHIC, mage.cards.h.HexhavenInvigorator.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Icy Reception", 30, Rarity.COMMON, mage.cards.i.IcyReception.class));
+        cards.add(new SetCardInfo("Identity Echo", 371, Rarity.RARE, mage.cards.i.IdentityEcho.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Identity Echo", 87, Rarity.RARE, mage.cards.i.IdentityEcho.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Infinite Coursework", 31, Rarity.COMMON, mage.cards.i.InfiniteCoursework.class));
         cards.add(new SetCardInfo("Ingris Stingerquill", 137, Rarity.MYTHIC, mage.cards.i.IngrisStingerquill.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Ingris Stingerquill", 351, Rarity.MYTHIC, mage.cards.i.IngrisStingerquill.class, NON_FULL_USE_VARIOUS));
