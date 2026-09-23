@@ -179,7 +179,6 @@ public class VerifyCardDataTest {
         skipListAddName(SKIP_LIST_SUBTYPE, "UGL", "Miss Demeanor"); // uses multiple types as a joke card: Lady, of, Proper, Etiquette
         skipListAddName(SKIP_LIST_SUBTYPE, "UGL", "Elvish Impersonators"); // subtype is "Elves" pun
         skipListAddName(SKIP_LIST_SUBTYPE, "UND", "Elvish Impersonators");
-        subtypesToIgnore.add("Book"); // temporary
 
         // number
         // skipListAddName(SKIP_LIST_NUMBER, set, cardName);
@@ -1021,6 +1020,7 @@ public class VerifyCardDataTest {
         ignoreBoosterSets.add("March of the Machine: The Aftermath"); // epilogue boosters aren't for draft
         ignoreBoosterSets.add("Mystery Booster"); // temporary
         ignoreBoosterSets.add("The Zeta Set"); // Secret Lair adjacent, not draftable
+        ignoreBoosterSets.add("Reality Fracture"); // newly added set, pending MTGJson updates
     }
 
     @Test
