@@ -273,6 +273,8 @@ public final class RealityFracture extends ExpansionSet {
         cards.add(new SetCardInfo("Prudent Fateseer", 146, Rarity.UNCOMMON, mage.cards.p.PrudentFateseer.class));
         cards.add(new SetCardInfo("Puppet Crafting", 111, Rarity.RARE, mage.cards.p.PuppetCrafting.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Puppet Crafting", 373, Rarity.RARE, mage.cards.p.PuppetCrafting.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Pyre Rhymer", 91, Rarity.RARE, mage.cards.p.PyreRhymer.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Pyre Rhymer", 429, Rarity.RARE, mage.cards.p.PyreRhymer.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Rampart Hunter", 60, Rarity.COMMON, mage.cards.r.RampartHunter.class));
         cards.add(new SetCardInfo("Rank Rat", 61, Rarity.COMMON, mage.cards.r.RankRat.class));
         cards.add(new SetCardInfo("Refute Destiny", 18, Rarity.UNCOMMON, mage.cards.r.RefuteDestiny.class, NON_FULL_USE_VARIOUS));
@@ -292,6 +294,7 @@ public final class RealityFracture extends ExpansionSet {
         cards.add(new SetCardInfo("Roiling Canopy", 380, Rarity.RARE, mage.cards.r.RoilingCanopy.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Room of Refuge", 188, Rarity.COMMON, mage.cards.r.RoomOfRefuge.class));
         cards.add(new SetCardInfo("Ruric Thar, Biomagus", 219, Rarity.UNCOMMON, mage.cards.r.RuricTharBiomagus.class));
+        cards.add(new SetCardInfo("Ruric Thar, Magecrusher", 265, Rarity.UNCOMMON, mage.cards.r.RuricTharMagecrusher.class));
         cards.add(new SetCardInfo("Saheeli, Consul of Oversight", 203, Rarity.UNCOMMON, mage.cards.s.SaheeliConsulOfOversight.class));
         cards.add(new SetCardInfo("Saheeli, Jewel of Avishkar", 275, Rarity.UNCOMMON, mage.cards.s.SaheeliJewelOfAvishkar.class));
         cards.add(new SetCardInfo("Samut, Hazoret's Champion", 251, Rarity.RARE, mage.cards.s.SamutHazoretsChampion.class, NON_FULL_USE_VARIOUS));
@@ -314,6 +317,7 @@ public final class RealityFracture extends ExpansionSet {
         cards.add(new SetCardInfo("Something Worth Saving", 114, Rarity.COMMON, mage.cards.s.SomethingWorthSaving.class));
         cards.add(new SetCardInfo("Sphinx of False Conclusions", 338, Rarity.RARE, mage.cards.s.SphinxOfFalseConclusions.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Sphinx of False Conclusions", 40, Rarity.RARE, mage.cards.s.SphinxOfFalseConclusions.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Sphinx's Approach", 41, Rarity.COMMON, mage.cards.s.SphinxsApproach.class));
         cards.add(new SetCardInfo("Stingcaster Mage", 329, Rarity.MYTHIC, mage.cards.s.StingcasterMage.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Stingcaster Mage", 447, Rarity.MYTHIC, mage.cards.s.StingcasterMage.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Stingcaster Mage", 457, Rarity.MYTHIC, mage.cards.s.StingcasterMage.class, NON_FULL_USE_VARIOUS));
