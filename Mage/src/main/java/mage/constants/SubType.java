@@ -114,6 +114,7 @@ public enum SubType {
     AZRA("Azra", SubTypeSet.CreatureType),
     // B
     BADGER("Badger", SubTypeSet.CreatureType),
+    BAJORAN("Bajoran", SubTypeSet.CreatureType),
     BALLOON("Balloon", SubTypeSet.CreatureType),
     BARABEL("Barabel", SubTypeSet.CreatureType, true), // Star Wars
     BARBARIAN("Barbarian", SubTypeSet.CreatureType),
@@ -205,6 +206,7 @@ public enum SubType {
     ETERNAL("Eternal", SubTypeSet.CreatureType),
     EWOK("Ewok", SubTypeSet.CreatureType, true), // Star Wars
     EXPANSION_SYMBOL("Expansion-Symbol", SubTypeSet.CreatureType, true), // Unhinged
+    EXCALBIAN("Excalbian", SubTypeSet.CreatureType),
     EYE("Eye", SubTypeSet.CreatureType),
     // F
     FAERIE("Faerie", SubTypeSet.CreatureType),
