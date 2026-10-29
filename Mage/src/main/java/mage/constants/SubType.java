@@ -133,6 +133,7 @@ public enum SubType {
     BITH("Bith", SubTypeSet.CreatureType, true), // Star Wars
     BLINKMOTH("Blinkmoth", SubTypeSet.CreatureType),
     BOAR("Boar", SubTypeSet.CreatureType),
+    BOLIAN("Bolian", SubTypeSet.CreatureType),
     BORG("Borg", SubTypeSet.CreatureType),
     BRAINIAC("Brainiac", SubTypeSet.CreatureType, true), // Unstable
     BRINGER("Bringer", SubTypeSet.CreatureType),
@@ -252,6 +253,7 @@ public enum SubType {
     HERO("Hero", SubTypeSet.CreatureType),
     HIPPO("Hippo", SubTypeSet.CreatureType),
     HIPPOGRIFF("Hippogriff", SubTypeSet.CreatureType),
+    HIROGEN("Hirogen", SubTypeSet.CreatureType),
     HOMARID("Homarid", SubTypeSet.CreatureType),
     HOMUNCULUS("Homunculus", SubTypeSet.CreatureType),
     HORROR("Horror", SubTypeSet.CreatureType),
@@ -472,6 +474,7 @@ public enum SubType {
     TRANDOSHAN("Trandoshan", SubTypeSet.CreatureType, true), // Star Wars
     TREEFOLK("Treefolk", SubTypeSet.CreatureType),
     TRIBBLE("Tribble", SubTypeSet.CreatureType),
+    TRILL("Trill", SubTypeSet.CreatureType),
     TRILOBITE("Trilobite", SubTypeSet.CreatureType),
     TRISKELAVITE("Triskelavite", SubTypeSet.CreatureType),
     TROLL("Troll", SubTypeSet.CreatureType),
@@ -588,6 +591,7 @@ public enum SubType {
     SARKHAN("Sarkhan", SubTypeSet.PlaneswalkerType),
     SERRA("Serra", SubTypeSet.PlaneswalkerType),
     SIDIOUS("Sidious", SubTypeSet.PlaneswalkerType, true), // Star Wars
+    SIFA("Sifa", SubTypeSet.PlaneswalkerType),
     SIVITRI("Sivitri", SubTypeSet.PlaneswalkerType),
     SNOKE("Snoke", SubTypeSet.PlaneswalkerType, true), // Star Wars
     SORIN("Sorin", SubTypeSet.PlaneswalkerType),
