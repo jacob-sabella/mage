@@ -209,6 +209,8 @@ public final class RealityFracture extends ExpansionSet {
         cards.add(new SetCardInfo("Island", 387, Rarity.LAND, mage.cards.basiclands.Island.class, FULL_ART_BFZ_VARIOUS));
         cards.add(new SetCardInfo("Jace, Reality Sculptor", 216, Rarity.RARE, mage.cards.j.JaceRealitySculptor.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Jace, Reality Sculptor", 300, Rarity.RARE, mage.cards.j.JaceRealitySculptor.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Jace's Machinations", 32, Rarity.RARE, mage.cards.j.JacesMachinations.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Jace's Machinations", 337, Rarity.RARE, mage.cards.j.JacesMachinations.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Jiang Yanggu, Alone", 246, Rarity.UNCOMMON, mage.cards.j.JiangYangguAlone.class));
         cards.add(new SetCardInfo("Jiang Yanggu, Never Alone", 261, Rarity.UNCOMMON, mage.cards.j.JiangYangguNeverAlone.class));
         cards.add(new SetCardInfo("Karn, Argent Defender", 279, Rarity.RARE, mage.cards.k.KarnArgentDefender.class, NON_FULL_USE_VARIOUS));
@@ -336,6 +338,8 @@ public final class RealityFracture extends ExpansionSet {
         cards.add(new SetCardInfo("Samut, Hazoret's Champion", 311, Rarity.RARE, mage.cards.s.SamutHazoretsChampion.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Samut, Tyrant of Naktamun", 220, Rarity.RARE, mage.cards.s.SamutTyrantOfNaktamun.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Samut, Tyrant of Naktamun", 302, Rarity.RARE, mage.cards.s.SamutTyrantOfNaktamun.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Sanctum Lurker", 342, Rarity.RARE, mage.cards.s.SanctumLurker.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Sanctum Lurker", 64, Rarity.RARE, mage.cards.s.SanctumLurker.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Screeching Soulbreaker", 65, Rarity.COMMON, mage.cards.s.ScreechingSoulbreaker.class));
         cards.add(new SetCardInfo("Semester Foreseer", 39, Rarity.COMMON, mage.cards.s.SemesterForeseer.class));
         cards.add(new SetCardInfo("Shatterwing Pegasus", 21, Rarity.COMMON, mage.cards.s.ShatterwingPegasus.class));

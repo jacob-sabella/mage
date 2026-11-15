@@ -3075,7 +3075,7 @@ public class VerifyCardDataTest {
         refText = refText.replaceAll("\\[([\\−\\+]?\\d*)\\]\\: ", "$1: ").replaceAll("\\[\\−X\\]\\: ", "-X: ");
 
         // station fix
-        // mtgjson: 
+        // mtgjson:
         // - keeps the level in the first ability line and the P/T in the card's fields.
         // - "STATION 12+\n0/8\nFlying"
         // xmage:
