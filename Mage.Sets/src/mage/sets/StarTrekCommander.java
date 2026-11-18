@@ -210,6 +210,7 @@ public final class StarTrekCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Hinterland Harbor", 537, Rarity.RARE, mage.cards.h.HinterlandHarbor.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Howling Mine", 345, Rarity.RARE, mage.cards.h.HowlingMine.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Howling Mine", 494, Rarity.RARE, mage.cards.h.HowlingMine.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Hugh, First of Many", 94, Rarity.RARE, mage.cards.h.HughFirstOfMany.class));
         cards.add(new SetCardInfo("I.K.S. Negh'Var, Imperial Flagship", 113, Rarity.RARE, mage.cards.i.IKSNeghVarImperialFlagship.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("I.K.S. Negh'Var, Imperial Flagship", 346, Rarity.RARE, mage.cards.i.IKSNeghVarImperialFlagship.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Imperial Hullbreachers", 18, Rarity.RARE, mage.cards.i.ImperialHullbreachers.class, NON_FULL_USE_VARIOUS));
@@ -432,6 +433,8 @@ public final class StarTrekCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Training Center", 413, Rarity.RARE, mage.cards.t.TrainingCenter.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Training Center", 572, Rarity.RARE, mage.cards.t.TrainingCenter.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Tranquil Landscape", 573, Rarity.COMMON, mage.cards.t.TranquilLandscape.class));
+        cards.add(new SetCardInfo("Transwarp Hub", 266, Rarity.RARE, mage.cards.t.TranswarpHub.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Transwarp Hub", 52, Rarity.RARE, mage.cards.t.TranswarpHub.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Trelane, Squire of Gothos", 195, Rarity.RARE, mage.cards.t.TrelaneSquireOfGothos.class));
         cards.add(new SetCardInfo("Tribble Cluster", 242, Rarity.RARE, mage.cards.t.TribbleCluster.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Tribble Cluster", 32, Rarity.RARE, mage.cards.t.TribbleCluster.class, NON_FULL_USE_VARIOUS));
