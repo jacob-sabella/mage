@@ -117,6 +117,8 @@ public final class StarTrekCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Data, Exploring Humanity", 40, Rarity.RARE, mage.cards.d.DataExploringHumanity.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Data, Professor of Humanities", 189, Rarity.RARE, mage.cards.d.DataProfessorOfHumanities.class));
         cards.add(new SetCardInfo("Defense Force Aggressor", 161, Rarity.COMMON, mage.cards.d.DefenseForceAggressor.class));
+        cards.add(new SetCardInfo("Deliver from Chaos", 318, Rarity.RARE, mage.cards.d.DeliverFromChaos.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Deliver from Chaos", 93, Rarity.RARE, mage.cards.d.DeliverFromChaos.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Desolate Lighthouse", 374, Rarity.RARE, mage.cards.d.DesolateLighthouse.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Desolate Lighthouse", 523, Rarity.RARE, mage.cards.d.DesolateLighthouse.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Direct Hit", 162, Rarity.COMMON, mage.cards.d.DirectHit.class));
@@ -306,6 +308,8 @@ public final class StarTrekCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Professional Face-Breaker", 453, Rarity.RARE, mage.cards.p.ProfessionalFaceBreaker.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Promise of Loyalty", 234, Rarity.RARE, mage.cards.p.PromiseOfLoyalty.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Promise of Loyalty", 426, Rarity.RARE, mage.cards.p.PromiseOfLoyalty.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Queen's Diamond", 118, Rarity.RARE, mage.cards.q.QueensDiamond.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Queen's Diamond", 352, Rarity.RARE, mage.cards.q.QueensDiamond.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Radiant Summit", 395, Rarity.RARE, mage.cards.r.RadiantSummit.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Radiant Summit", 549, Rarity.RARE, mage.cards.r.RadiantSummit.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Rain-Slicked Copse", 396, Rarity.RARE, mage.cards.r.RainSlickedCopse.class, NON_FULL_USE_VARIOUS));
