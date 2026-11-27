@@ -189,6 +189,8 @@ public final class StarTrekCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Geordi La Forge, Innovator", 256, Rarity.RARE, mage.cards.g.GeordiLaForgeInnovator.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Geordi La Forge, Innovator", 42, Rarity.RARE, mage.cards.g.GeordiLaForgeInnovator.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Giant Space Amoeba", 43, Rarity.RARE, mage.cards.g.GiantSpaceAmoeba.class));
+        cards.add(new SetCardInfo("Gift of Perfection", 258, Rarity.RARE, mage.cards.g.GiftOfPerfection.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("Gift of Perfection", 44, Rarity.RARE, mage.cards.g.GiftOfPerfection.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Gin'tak Charge", 163, Rarity.COMMON, mage.cards.g.GintakCharge.class));
         cards.add(new SetCardInfo("Glacial Fortress", 385, Rarity.RARE, mage.cards.g.GlacialFortress.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("Glacial Fortress", 535, Rarity.RARE, mage.cards.g.GlacialFortress.class, NON_FULL_USE_VARIOUS));
@@ -426,6 +428,7 @@ public final class StarTrekCommander extends ExpansionSet {
         cards.add(new SetCardInfo("Terramorphic Expanse", 571, Rarity.COMMON, mage.cards.t.TerramorphicExpanse.class));
         cards.add(new SetCardInfo("The Beacon of Kahless", 279, Rarity.RARE, mage.cards.t.TheBeaconOfKahless.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("The Beacon of Kahless", 64, Rarity.RARE, mage.cards.t.TheBeaconOfKahless.class, NON_FULL_USE_VARIOUS));
+        cards.add(new SetCardInfo("The Best of Both Worlds", 83, Rarity.RARE, mage.cards.t.TheBestOfBothWorlds.class));
         cards.add(new SetCardInfo("The Borg Queen", 1, Rarity.MYTHIC, mage.cards.t.TheBorgQueen.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("The Borg Queen", 5, Rarity.MYTHIC, mage.cards.t.TheBorgQueen.class, NON_FULL_USE_VARIOUS));
         cards.add(new SetCardInfo("The Immortal Sun", 347, Rarity.MYTHIC, mage.cards.t.TheImmortalSun.class, NON_FULL_USE_VARIOUS));
